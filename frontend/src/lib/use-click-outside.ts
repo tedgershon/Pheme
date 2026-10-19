@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from "react";
+import { type RefObject, useEffect } from "react";
 
 // fires `onOutside` when a mousedown lands outside the referenced element
 export function useClickOutside<T extends HTMLElement>(

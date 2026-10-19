@@ -586,7 +586,9 @@ export default function AdminReviewPage() {
       fallback={
         <div className="space-y-5">
           <section>
-            <h1 className="text-3xl font-bold tracking-tight">Review Markets</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Review Markets
+            </h1>
           </section>
           <div className="flex justify-center py-12">
             <Spinner className="size-6" />

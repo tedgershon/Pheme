@@ -12,7 +12,7 @@ export function BadgeCircle({
 }) {
   const def = badge.badge_definitions;
   return (
-    <div title={def.name} aria-label={def.name}>
+    <div role="img" title={def.name} aria-label={def.name}>
       <BadgeIcon
         track={def.track}
         tier={badge.tier}

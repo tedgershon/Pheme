@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import type { NotificationResponse } from "@/lib/types";
 import {
   useDeleteNotification,
   useMarkNotificationsRead,
@@ -15,6 +14,7 @@ import {
   notificationsQuery,
   unreadCountQuery,
 } from "@/lib/query/queries/notifications";
+import type { NotificationResponse } from "@/lib/types";
 import { useClickOutside } from "@/lib/use-click-outside";
 import { cn } from "@/lib/utils";
 
@@ -54,9 +54,9 @@ export function NotificationsMenu() {
   const remove = useDeleteNotification();
 
   // auto-mark on open: clears the unread badge as soon as the user sees the list
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only fire on open edge
   useEffect(() => {
     if (open && unreadCount > 0) markAll.mutate();
-    // biome-ignore lint/correctness/useExhaustiveDependencies: only fire on open edge
   }, [open]);
 
   return (

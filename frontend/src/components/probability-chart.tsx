@@ -38,7 +38,12 @@ export function ProbabilityChart({ data }: { data: PricePoint[] }) {
   return (
     // minHeight/minWidth silences the recharts "-1" warning that fires on the
     // first render before ResizeObserver measures the parent
-    <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0}>
+    <ResponsiveContainer
+      width="100%"
+      height="100%"
+      minHeight={200}
+      minWidth={0}
+    >
       <AreaChart data={data} margin={{ top: 5, right: 40, bottom: 5, left: 5 }}>
         <defs>
           <linearGradient id="probGradient" x1="0" y1="0" x2="0" y2="1">
@@ -138,7 +143,12 @@ export function MultiProbabilityChart({
   const optionMap = new Map(options.map((o) => [o.id, o]));
 
   return (
-    <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0}>
+    <ResponsiveContainer
+      width="100%"
+      height="100%"
+      minHeight={200}
+      minWidth={0}
+    >
       <LineChart data={data} margin={{ top: 5, right: 40, bottom: 5, left: 5 }}>
         <CartesianGrid
           strokeDasharray="3 3"

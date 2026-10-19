@@ -15,7 +15,7 @@ from schemas.admin import (
     UserSearchResult,
 )
 from schemas.market import ReviewMarketRequest
-from services.market_state_machine import normalize_market_state
+from services.market_state_machine import normalize_market_state, normalize_markets
 
 logger = logging.getLogger(__name__)
 

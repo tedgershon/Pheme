@@ -196,7 +196,9 @@ export default function CreateMarketPage() {
       return;
     }
     if (link.trim().length > MAX_MARKET_LINK_LENGTH) {
-      setLinkError(`Link must be ${MAX_MARKET_LINK_LENGTH} characters or fewer.`);
+      setLinkError(
+        `Link must be ${MAX_MARKET_LINK_LENGTH} characters or fewer.`,
+      );
       return;
     }
     if (link && !URL_REGEX.test(link)) {
@@ -253,7 +255,9 @@ export default function CreateMarketPage() {
         setError(`At least ${MIN_OPTIONS} options are required.`);
         return;
       }
-      if (filledOptions.some((o) => o.trim().length > MAX_MARKET_OPTION_LENGTH)) {
+      if (
+        filledOptions.some((o) => o.trim().length > MAX_MARKET_OPTION_LENGTH)
+      ) {
         setError(
           `Each option must be ${MAX_MARKET_OPTION_LENGTH} characters or fewer.`,
         );
