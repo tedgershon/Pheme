@@ -188,7 +188,7 @@ from supabase import Client
 
 
 RESEND_API_KEY = ""  # Set via environment variable
-RESEND_FROM = "BananaGains <notifications@bananagains.app>"  # Or your verified domain
+RESEND_FROM = "Pheme <notifications@bananagains.app>"  # Or your verified domain
 
 
 async def create_notification(
@@ -228,14 +228,14 @@ async def _send_email(to: str, subject: str, body: str):
             json={
                 "from": RESEND_FROM,
                 "to": [to],
-                "subject": f"BananaGains: {subject}",
+                "subject": f"Pheme: {subject}",
                 "html": f"""
                     <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
-                        <h2 style="color: #333;">🍌 BananaGains</h2>
+                        <h2 style="color: #333;">🍌 Pheme</h2>
                         <p>{body}</p>
                         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                         <p style="color: #888; font-size: 12px;">
-                            This is an automated notification from BananaGains, CMU's prediction market.
+                            This is an automated notification from Pheme, CMU's prediction market.
                         </p>
                     </div>
                 """,
@@ -353,7 +353,7 @@ Add Resend configuration:
 class Settings(BaseSettings):
     # ... existing ...
     resend_api_key: str = ""
-    notification_from_email: str = "BananaGains <notifications@bananagains.app>"
+    notification_from_email: str = "Pheme <notifications@bananagains.app>"
 ```
 
 ### Modify: `backend/routers/admin.py`
@@ -432,7 +432,7 @@ app.include_router(notifications.router)
 4. **Add to `backend/.env`:**
    ```
    resend_api_key=re_xxxxxxxxxxxxxxxxxxxx
-   notification_from_email=BananaGains <notifications@yourdomain.com>
+   notification_from_email=Pheme <notifications@yourdomain.com>
    ```
 5. **For production:** Verify a custom domain in Resend for better deliverability.
 

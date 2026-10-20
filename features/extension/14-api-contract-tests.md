@@ -204,7 +204,7 @@ settings = get_settings()
 is_production = settings.sentry_environment == "production"
 
 app = FastAPI(
-    title="BananaGains API",
+    title="Pheme API",
     version="0.1.0",
     docs_url=None if is_production else "/docs",
     redoc_url=None if is_production else "/redoc",

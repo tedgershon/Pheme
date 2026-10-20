@@ -512,7 +512,7 @@ async def lifespan(app: FastAPI):
     await close_redis()
 
 
-app = FastAPI(title="BananaGains API", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Pheme API", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -1132,7 +1132,7 @@ REDIS_URL=redis://localhost:6379/0
 
 ## Deployment
 
-After this feature, BananaGains runs on two platforms:
+After this feature, Pheme runs on two platforms:
 
 | Service | Platform | URL |
 |---|---|---|
