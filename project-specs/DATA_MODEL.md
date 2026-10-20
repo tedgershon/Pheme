@@ -1,4 +1,4 @@
-# BananaGains Data Model
+# Pheme Data Model
 
 ## Core Entities
 

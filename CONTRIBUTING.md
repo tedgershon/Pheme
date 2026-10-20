@@ -1,7 +1,7 @@
-# Contributing to Hunch
+# Contributing to Pheme
 
 Thanks for contributing! Work is tracked entirely in [GitHub Issues](../../issues),
-which replaced the old in-repo `issues/` markdown format from BananaGains. This
+which replaced the old in-repo `issues/` markdown format. This
 guide covers the workflow, branch naming, and the rules enforced in review.
 
 ## 1. Workflow

@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-This document is the **single source of truth** for "who is allowed to do what" across the entire BananaGains application. Every gating decision — backend authorization dependency, frontend conditional render, automated test assertion — should ultimately resolve to a cell in this matrix.
+This document is the **single source of truth** for "who is allowed to do what" across the entire Pheme application. Every gating decision — backend authorization dependency, frontend conditional render, automated test assertion — should ultimately resolve to a cell in this matrix.
 
 ### Why this exists
 

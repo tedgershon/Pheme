@@ -1,4 +1,4 @@
-# BananaGains Product Backlog
+# Pheme Product Backlog
 
 Linear tag: `product-backlog`
 Linear link: https://linear.app/banangains/team/BAN/all
@@ -78,7 +78,7 @@ Includes:
 
 ## 7. Resolution and Settlement
 
-Markets can be resolved after they close, and winning positions receive their share of the pool according to BananaGains settlement rules
+Markets can be resolved after they close, and winning positions receive their share of the pool according to Pheme settlement rules
 
 Includes:
 

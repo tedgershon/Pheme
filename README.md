@@ -1,6 +1,6 @@
-# Hunch
+# Pheme
 
-Hunch is a campus prediction market. Verified students forecast
+Pheme is a campus prediction market. Verified students forecast
 campus-specific events using a free, non-cashable virtual currency, and
 outcomes are settled by the community instead of an admin calling every
 market by hand. When a market closes, its creator proposes the outcome, and
@@ -10,6 +10,9 @@ mechanism the whole trust model depends on, so nothing in the codebase
 resolves a market through a direct edit outside that path. Odds update in
 real time over WebSockets, backed by Redis pub/sub, so a market feels live
 rather than like a static poll.
+
+Documentation uses Pheme as the product name. Legacy service identifiers, domains,
+and external link targets are retained where they refer to existing resources.
 
 ## Layout
 
