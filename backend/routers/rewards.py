@@ -1,7 +1,9 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
-from supabase import Client
 
 from dependencies import get_current_user, get_supabase_client
+from supabase import Client
 
 router = APIRouter(prefix="/api", tags=["rewards"])
 
@@ -99,8 +101,8 @@ def _build_track_progress(
 
 @router.get("/rewards")
 async def get_user_rewards(
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Get the user's badge progress across all tracks."""
     # Ensure tier state is up-to-date before returning rewards/progress.
@@ -138,7 +140,7 @@ async def get_user_rewards(
 @router.get("/rewards/badges/{user_id}")
 async def get_user_badges(
     user_id: str,
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Get badges for any user (for leaderboard display)."""
     result = (
@@ -152,8 +154,8 @@ async def get_user_badges(
 
 @router.post("/rewards/check")
 async def check_badges(
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Manually trigger badge check for current user."""
     result = supabase.rpc("check_and_award_badges", {

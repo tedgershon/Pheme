@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,7 +7,17 @@ from config import get_settings
 from dependencies import require_admin
 from middleware.request_context import RequestContextMiddleware
 from observability import init_observability
-from routers import admin, auth, bets, leaderboard, markets, notifications, portfolio, resolution, rewards
+from routers import (
+    admin,
+    auth,
+    bets,
+    leaderboard,
+    markets,
+    notifications,
+    portfolio,
+    resolution,
+    rewards,
+)
 
 init_observability()
 
@@ -48,5 +60,5 @@ def health_check():
 if get_settings().sentry_environment == "development":
 
     @app.post("/api/__sentry-test")
-    def _sentry_test(_current_user: dict = Depends(require_admin)) -> dict:
+    def _sentry_test(_current_user: Annotated[dict, Depends(require_admin)]) -> dict:
         raise RuntimeError("sentry-test: intentional failure for verification")

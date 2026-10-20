@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC
 
 from supabase import Client
 
@@ -208,9 +209,9 @@ async def send_resolution_reminders_for_closed_markets(supabase: Client) -> int:
     Called periodically (e.g., by a cron job or background task).
     Only sends one reminder per market per 24 hours.
     """
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     reminder_interval = timedelta(hours=24)
 
     closed_markets = (
@@ -236,7 +237,7 @@ async def send_resolution_reminders_for_closed_markets(supabase: Client) -> int:
 
         recent_reminder = any(
             n.get("metadata", {}).get("market_id") == market["id"]
-            and (now - datetime.fromisoformat(n["created_at"].replace("Z", "+00:00"))) < reminder_interval
+            and (now - datetime.fromisoformat(n["created_at"])) < reminder_interval
             for n in (existing_reminders.data or [])
         )
 

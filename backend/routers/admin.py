@@ -1,12 +1,25 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from supabase import Client
+from postgrest.exceptions import APIError
 
-from dependencies import get_supabase_client, get_supabase_service_client, get_user_token, require_admin, require_super_admin, user_auth
-from notification_service import notify_market_approved, notify_market_denied, send_resolution_reminders_for_closed_markets
+from dependencies import (
+    get_supabase_client,
+    get_supabase_service_client,
+    get_user_token,
+    require_admin,
+    require_super_admin,
+    user_auth,
+)
+from notification_service import (
+    notify_market_approved,
+    notify_market_denied,
+    send_resolution_reminders_for_closed_markets,
+)
+from observability import report_and_safe_message
 from schemas.admin import (
     BackrollRequest,
     StatsResponse,
@@ -16,6 +29,7 @@ from schemas.admin import (
 )
 from schemas.market import ReviewMarketRequest
 from services.market_state_machine import normalize_market_state, normalize_markets
+from supabase import Client
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +39,8 @@ EASTERN_TZ = ZoneInfo("America/New_York")
 
 @router.post("/markets/resolution-reminders/run")
 async def run_resolution_reminders(
-    _current_user: dict = Depends(require_admin),
-    supabase: Client = Depends(get_supabase_client),
+    _current_user: Annotated[dict, Depends(require_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Run reminder dispatch for unresolved closed markets (admin-only trigger)."""
     reminders_sent = await send_resolution_reminders_for_closed_markets(supabase)
@@ -36,22 +50,22 @@ async def run_resolution_reminders(
 def _parse_dt(value: str | None) -> datetime | None:
     if not value:
         return None
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
+        return parsed.replace(tzinfo=UTC)
     return parsed
 
 
 def _to_eastern(dt: datetime) -> datetime:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.astimezone(EASTERN_TZ)
 
 
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats(
-    _current_user: dict = Depends(require_admin),
-    supabase: Client = Depends(get_supabase_client),
+    _current_user: Annotated[dict, Depends(require_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Return cumulative platform statistics (admin only)."""
     profiles = supabase.table("profiles").select("role").execute()
@@ -98,8 +112,9 @@ async def get_stats(
 @router.get("/users/search", response_model=list[UserSearchResult])
 async def search_users(
     q: str = Query(..., min_length=1),
-    _current_user: dict = Depends(require_super_admin),
-    supabase: Client = Depends(get_supabase_client),
+    *,
+    _current_user: Annotated[dict, Depends(require_super_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Search users by andrew_id (super admin only)."""
     result = (
@@ -116,8 +131,8 @@ async def search_users(
 async def update_user_role(
     user_id: str,
     body: UpdateRoleRequest,
-    current_user: dict = Depends(require_super_admin),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(require_super_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Change a user's role (super admin only)."""
@@ -167,8 +182,8 @@ async def update_user_role(
 async def backroll_market(
     market_id: str,
     body: BackrollRequest,
-    current_user: dict = Depends(require_admin),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(require_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Admin backroll: cancel bets placed after a cutoff date and refund bettors."""
     try:
@@ -179,19 +194,19 @@ async def backroll_market(
             "p_close_market": body.close_market,
         }).execute()
         return result.data
-    except Exception as e:
-        msg = str(e).lower()
+    except APIError as e:
+        msg = e.message.lower() if e.code == "P0001" else ""
         if "not found" in msg:
             raise HTTPException(status_code=404, detail="Market not found.")
         if "resolved" in msg:
             raise HTTPException(status_code=400, detail="Cannot backroll a resolved market.")
-        raise HTTPException(status_code=500, detail=f"Backroll failed: {e}")
+        raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Backroll failed."))
 
 
 @router.get("/markets/review")
 async def list_markets_for_review(
-    _current_user: dict = Depends(require_admin),
-    supabase: Client = Depends(get_supabase_client),
+    _current_user: Annotated[dict, Depends(require_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """List all markets organized by review status."""
     state_client = get_supabase_service_client() or supabase
@@ -248,8 +263,8 @@ async def list_markets_for_review(
 async def review_market(
     market_id: str,
     body: ReviewMarketRequest,
-    current_user: dict = Depends(require_admin),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(require_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Admin reviews a proposed market — approve or deny."""
     state_client = get_supabase_service_client() or supabase
@@ -261,7 +276,7 @@ async def review_market(
         raise HTTPException(status_code=400, detail="Market is not pending review.")
 
     close_at = _parse_dt(market.get("close_at"))
-    if close_at and close_at <= datetime.now(tz=timezone.utc):
+    if close_at and close_at <= datetime.now(tz=UTC):
         raise HTTPException(
             status_code=400,
             detail="Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
@@ -286,8 +301,8 @@ async def review_market(
                 "p_admin_id": current_user["id"],
                 "p_notes": body.notes,
             }).execute()
-        except Exception as e:
-            msg = str(e).lower()
+        except APIError as e:
+            msg = e.message.lower() if e.code == "P0001" else ""
             if "not found" in msg:
                 raise HTTPException(status_code=404, detail="Market not found.")
             if "not pending" in msg:
@@ -297,7 +312,7 @@ async def review_market(
                     status_code=400,
                     detail="Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
                 )
-            raise HTTPException(status_code=500, detail=f"Failed to approve market: {e}")
+            raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Failed to approve market."))
     else:
         notes = (body.notes or "").strip()
         if not notes:
@@ -309,7 +324,7 @@ async def review_market(
                 {
                     "status": "closed",
                     "reviewed_by": current_user["id"],
-                    "review_date": datetime.now(tz=timezone.utc).isoformat(),
+                    "review_date": datetime.now(tz=UTC).isoformat(),
                     "review_notes": notes,
                 }
             )

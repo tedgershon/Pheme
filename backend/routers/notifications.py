@@ -1,7 +1,14 @@
-from fastapi import APIRouter, Depends, Query
-from supabase import Client
+from typing import Annotated
 
-from dependencies import get_current_user, get_supabase_client, get_user_token, user_auth
+from fastapi import APIRouter, Depends, Query
+
+from dependencies import (
+    get_current_user,
+    get_supabase_client,
+    get_user_token,
+    user_auth,
+)
+from supabase import Client
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
@@ -10,8 +17,9 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 async def list_notifications(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    *,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """List the user's notifications, newest first."""
@@ -29,8 +37,8 @@ async def list_notifications(
 
 @router.get("/unread-count")
 async def get_unread_count(
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Get the count of unread notifications."""
     result = supabase.rpc("get_unread_notification_count", {
@@ -41,8 +49,8 @@ async def get_unread_count(
 
 @router.post("/read")
 async def mark_notifications_read(
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Mark all unread notifications as read."""
@@ -58,8 +66,8 @@ async def mark_notifications_read(
 @router.post("/{notification_id}/read")
 async def mark_single_read(
     notification_id: str,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Mark a single notification as read."""
@@ -75,8 +83,8 @@ async def mark_single_read(
 @router.delete("/{notification_id}")
 async def delete_notification(
     notification_id: str,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Delete a notification owned by the current user."""

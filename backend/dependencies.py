@@ -1,11 +1,12 @@
 from contextlib import contextmanager
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from supabase import Client, create_client
 
 from config import get_settings
 from observability import set_user_context
+from supabase import Client, create_client
 
 _security = HTTPBearer(auto_error=False)
 _security_optional = HTTPBearer(auto_error=False)
@@ -74,8 +75,8 @@ def _resolve_user(token: str, supabase: Client) -> dict:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_security),
-    supabase: Client = Depends(get_supabase_client),
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_security)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ) -> dict:
     """Required auth -- returns the authenticated user's profile or 401."""
     if credentials is None:
@@ -89,7 +90,7 @@ async def get_current_user(
 
 
 async def get_user_token(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_security),
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_security)],
 ) -> str | None:
     """Return the raw JWT from the Authorization header, or None."""
     if credentials is None:
@@ -111,7 +112,7 @@ def user_auth(supabase: Client, token: str | None):
 
 
 async def require_admin(
-    current_user: dict = Depends(get_current_user),
+    current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict:
     """Require the user to be an admin or super_admin."""
     if current_user.get("role") not in ("admin", "super_admin"):
@@ -120,7 +121,7 @@ async def require_admin(
 
 
 async def require_super_admin(
-    current_user: dict = Depends(get_current_user),
+    current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict:
     """Require the user to be a super_admin."""
     if current_user.get("role") != "super_admin":
@@ -129,8 +130,8 @@ async def require_super_admin(
 
 
 async def get_current_user_optional(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_security_optional),
-    supabase: Client = Depends(get_supabase_client),
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_security_optional)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ) -> dict | None:
     """Optional auth -- returns profile if a valid token is present, else None."""
     if credentials is None:

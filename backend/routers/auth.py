@@ -1,11 +1,19 @@
 import re
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from supabase import Client
+from postgrest.exceptions import APIError
 
-from dependencies import get_current_user, get_supabase_client, get_user_token, user_auth
+from dependencies import (
+    get_current_user,
+    get_supabase_client,
+    get_user_token,
+    user_auth,
+)
+from observability import report_and_safe_message
 from schemas.dispute import ClaimResponse
 from schemas.user import CreateProfileRequest, UpdateProfileRequest, UserProfileResponse
+from supabase import Client
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -44,8 +52,8 @@ def _sanitize_display_name(raw_name: str) -> str:
 
 @router.get("/me", response_model=UserProfileResponse)
 async def get_me(
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Return the authenticated user's profile with daily claim status."""
     eligibility = supabase.rpc("check_claim_eligibility", {
@@ -67,8 +75,8 @@ async def get_me(
 )
 async def create_or_update_profile(
     body: CreateProfileRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """
@@ -110,8 +118,8 @@ async def create_or_update_profile(
 @router.patch("/profile", response_model=UserProfileResponse)
 async def update_profile(
     body: UpdateProfileRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Update mutable profile fields (display_name, equipped badges, avatar_url)."""
@@ -249,8 +257,8 @@ async def update_profile(
 
 @router.post("/claim-daily", response_model=ClaimResponse)
 async def claim_daily_bananas(
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Claim daily bananas (up to 1000, capped at 5000 balance)."""
     try:
@@ -258,10 +266,10 @@ async def claim_daily_bananas(
             "p_user_id": current_user["id"],
         }).execute()
         return result.data
-    except Exception as e:
-        msg = str(e).lower()
+    except APIError as e:
+        msg = e.message.lower() if e.code == "P0001" else ""
         if "already claimed" in msg:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already claimed today.")
         if "cap" in msg or "above" in msg:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Balance is at or above the 5,000 coin daily claim cap.")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to claim: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=report_and_safe_message(e, "Failed to claim."))
