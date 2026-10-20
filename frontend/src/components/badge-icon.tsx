@@ -30,7 +30,7 @@ export function BadgeIcon({
   if (tier <= 1) {
     return (
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} viewBox="0 0 40 40">
+        <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
           <circle cx="20" cy="20" r="18" fill={fill} />
         </svg>
         <span
@@ -46,7 +46,7 @@ export function BadgeIcon({
   if (tier === 2) {
     return (
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} viewBox="0 0 40 40">
+        <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
           <circle
             cx="20"
             cy="20"
@@ -71,7 +71,7 @@ export function BadgeIcon({
   if (tier === 3) {
     return (
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} viewBox="0 0 40 40">
+        <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
           <polygon
             points="20,2 25,14 38,14 27,22 31,35 20,27 9,35 13,22 2,14 15,14"
             fill={fill}
@@ -92,7 +92,7 @@ export function BadgeIcon({
   if (tier === 4) {
     return (
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} viewBox="0 0 40 40">
+        <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
           {earned && (
             <circle cx="20" cy="20" r="19" fill={fill} opacity="0.15" />
           )}
@@ -123,7 +123,7 @@ export function BadgeIcon({
   // Tier 5 — ornate shield with crown
   return (
     <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox="0 0 40 40">
+      <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
         {earned && (
           <>
             <circle cx="20" cy="20" r="19" fill={fill} opacity="0.12" />

@@ -4,12 +4,11 @@ import asyncio
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from supabase import Client
-
 from notification_service import notify_market_closed, notify_market_denied
+from supabase import Client
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ def _parse_dt(value: str | None) -> datetime | None:
     s = _FRACTIONAL_RE.sub(lambda m: "." + m.group(1).ljust(6, "0"), s, count=1)
     parsed = datetime.fromisoformat(s)
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
+        return parsed.replace(tzinfo=UTC)
     return parsed
 
 
@@ -311,7 +310,7 @@ def normalize_market_state(
     if not market:
         return None
 
-    effective_now = now or datetime.now(tz=timezone.utc)
+    effective_now = now or datetime.now(tz=UTC)
     rules = apply_transition_rules(market, effective_now)
 
     for rule in rules:
@@ -356,7 +355,7 @@ def normalize_markets(
         )
         markets = result.data or []
 
-    effective_now = now or datetime.now(tz=timezone.utc)
+    effective_now = now or datetime.now(tz=UTC)
     normalized_by_id: dict[str, dict[str, Any]] = {}
 
     for market in markets:

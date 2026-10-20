@@ -1,14 +1,27 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from supabase import Client
+from postgrest.exceptions import APIError
 
-from dependencies import get_current_user, get_current_user_optional, get_supabase_client, get_supabase_service_client, get_user_token, user_auth
+from dependencies import (
+    get_current_user,
+    get_current_user_optional,
+    get_supabase_client,
+    get_supabase_service_client,
+    get_user_token,
+    user_auth,
+)
 from market_linter import lint_market_fields
-from services.market_state_machine import normalize_market_state, normalize_markets
-from schemas.dispute import CastVoteRequest, DisputeResponse, FileDisputeRequest, VoteResponse
+from observability import report_and_safe_message
+from schemas.dispute import (
+    CastVoteRequest,
+    DisputeResponse,
+    FileDisputeRequest,
+    VoteResponse,
+)
 from schemas.market import (
     CreateMarketRequest,
     MarketResponse,
@@ -17,15 +30,17 @@ from schemas.market import (
     ResolveMarketRequest,
     ResolveMarketResponse,
 )
+from services.market_state_machine import normalize_market_state, normalize_markets
+from supabase import Client
 
 router = APIRouter(prefix="/api/markets", tags=["markets"])
-_log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 EASTERN_TZ = ZoneInfo("America/New_York")
 
 
 def _to_eastern(dt: datetime) -> datetime:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.astimezone(EASTERN_TZ)
 
 def _normalize_for_response(markets: list[dict], supabase: Client) -> list[dict]:
@@ -71,8 +86,9 @@ async def list_markets(
     category: str | None = None,
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    *,
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     state_client = get_supabase_service_client() or supabase
     if market_status in {"pending_review", "denied"}:
@@ -87,7 +103,7 @@ async def list_markets(
             try:
                 normalize_markets(state_client, market_ids=pending_ids)
             except Exception:
-                _log.warning("Failed to normalize pending markets before list", exc_info=True)
+                logger.warning("Failed to normalize pending markets before list", exc_info=True)
 
     query = supabase.table("markets").select("*")
 
@@ -114,8 +130,9 @@ TRENDING_RECENCY_DAYS = 7
 @router.get("/hot", response_model=list[MarketResponse])
 async def get_hot_markets(
     limit: int = Query(5, ge=1, le=10),
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    *,
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """Top markets by total coin volume (yes_pool + no_pool)."""
     result = (
@@ -133,11 +150,12 @@ async def get_hot_markets(
 @router.get("/trending", response_model=list[MarketResponse])
 async def get_trending_markets(
     limit: int = Query(3, ge=1, le=10),
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    *,
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """Trending markets: recently created + minimum activity threshold."""
-    cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=TRENDING_RECENCY_DAYS)).isoformat()
+    cutoff = (datetime.now(tz=UTC) - timedelta(days=TRENDING_RECENCY_DAYS)).isoformat()
 
     result = (
         supabase.table("markets")
@@ -163,8 +181,9 @@ async def get_trending_markets(
 @router.get("/top", response_model=list[MarketResponse])
 async def get_top_markets(
     limit: int = Query(3, ge=1, le=10),
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    *,
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """Top markets by total coin investment volume."""
     result = (
@@ -182,8 +201,8 @@ async def get_top_markets(
 @router.get("/{market_id}", response_model=MarketResponse)
 async def get_market(
     market_id: str,
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     result = (
         supabase.table("markets").select("*").eq("id", market_id).single().execute()
@@ -199,8 +218,8 @@ async def get_market(
 @router.post("", response_model=MarketResponse, status_code=status.HTTP_201_CREATED)
 async def create_market(
     body: CreateMarketRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     linted = lint_market_fields(body)
@@ -250,7 +269,7 @@ async def create_market(
                 {"p_market_id": market["id"]},
             ).execute()
         except Exception:
-            _log.exception("notify_admins_market_submitted RPC failed")
+            logger.exception("notify_admins_market_submitted RPC failed")
 
     return market
 
@@ -262,8 +281,8 @@ async def create_market(
 async def propose_resolution(
     market_id: str,
     body: ProposeResolutionRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Creator proposes an outcome. Starts 24h dispute window — no payout yet."""
@@ -276,22 +295,22 @@ async def propose_resolution(
                 "p_proposer_id": current_user["id"],
             }).execute()
             return result.data
-        except Exception as e:
-            msg = str(e).lower()
+        except APIError as e:
+            msg = e.message.lower() if e.code == "P0001" else ""
             if "not found" in msg:
                 raise HTTPException(status_code=404, detail="Market not found.")
             if "creator" in msg:
                 raise HTTPException(status_code=403, detail="Only the market creator can propose a resolution.")
             if "closed" in msg:
                 raise HTTPException(status_code=400, detail="Market must be closed before proposing resolution.")
-            raise HTTPException(status_code=500, detail=f"Failed to propose resolution: {e}")
+            raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Failed to propose resolution."))
 
 
 @router.post("/{market_id}/community-resolution", response_model=MarketResponse)
 async def start_community_resolution(
     market_id: str,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Creator starts the 24h community-resolution flow on a just-closed market."""
@@ -322,7 +341,7 @@ async def start_community_resolution(
             "proposed_at": None,
             "dispute_deadline": None,
             "resolution_window_end": (
-                datetime.now(tz=timezone.utc) + timedelta(hours=24)
+                datetime.now(tz=UTC) + timedelta(hours=24)
             ).isoformat(),
         }
 
@@ -344,8 +363,8 @@ async def start_community_resolution(
 async def file_dispute(
     market_id: str,
     body: FileDisputeRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """File a dispute during the pending_resolution window."""
@@ -391,8 +410,8 @@ async def file_dispute(
 @router.get("/{market_id}/dispute", response_model=DisputeResponse)
 async def get_dispute(
     market_id: str,
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """Get the active dispute for a market."""
     result = (
@@ -407,8 +426,8 @@ async def get_dispute(
 async def cast_vote(
     market_id: str,
     body: CastVoteRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Cast a vote on a dispute. Only neutral users (not creator, not bettors) can vote."""
@@ -428,24 +447,24 @@ async def cast_vote(
                 "p_vote": body.vote,
             }).execute()
             return result.data
-        except Exception as e:
-            msg = str(e).lower()
+        except APIError as e:
+            msg = e.message.lower() if e.code == "P0001" else ""
             if "creator" in msg:
                 raise HTTPException(status_code=403, detail="Market creator cannot vote on disputes.")
             if "bets" in msg or "bettor" in msg:
                 raise HTTPException(status_code=403, detail="Users who placed bets cannot vote on disputes.")
             if "expired" in msg:
                 raise HTTPException(status_code=400, detail="Voting window has expired.")
-            if "unique" in msg or "duplicate" in msg:
+            if e.code == "23505" or "unique" in msg or "duplicate" in msg:
                 raise HTTPException(status_code=409, detail="You have already voted on this dispute.")
-            raise HTTPException(status_code=500, detail=f"Failed to cast vote: {e}")
+            raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Failed to cast vote."))
 
 
 @router.get("/{market_id}/dispute/votes", response_model=list[VoteResponse])
 async def list_votes(
     market_id: str,
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """List all votes on a market's dispute."""
     dispute = (
@@ -471,8 +490,8 @@ async def list_votes(
 async def admin_resolve(
     market_id: str,
     body: ResolveMarketRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Admin makes the final resolution call on an admin_review market."""
@@ -487,10 +506,10 @@ async def admin_resolve(
                 "p_admin_id": current_user["id"],
             }).execute()
             return result.data
-        except Exception as e:
-            msg = str(e).lower()
+        except APIError as e:
+            msg = e.message.lower() if e.code == "P0001" else ""
             if "not found" in msg:
                 raise HTTPException(status_code=404, detail="Market not found.")
             if "admin_review" in msg:
                 raise HTTPException(status_code=400, detail="Market is not in admin review.")
-            raise HTTPException(status_code=500, detail=f"Failed to resolve market: {e}")
+            raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Failed to resolve market."))

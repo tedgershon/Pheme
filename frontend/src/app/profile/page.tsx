@@ -189,7 +189,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Andrew ID</label>
+            <p className="text-sm font-medium">Andrew ID</p>
             <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
               {user.andrew_id}
             </p>

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import sys
 from copy import deepcopy
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-import sys
 from typing import Any
 
 # Make backend modules importable when tests run from repository root.
@@ -19,7 +19,7 @@ class FakeResult:
 
 
 class FakeRpc:
-    def __init__(self, supabase: "FakeSupabase", fn_name: str, args: dict[str, Any]):
+    def __init__(self, supabase: FakeSupabase, fn_name: str, args: dict[str, Any]):
         self.supabase = supabase
         self.fn_name = fn_name
         self.args = args
@@ -42,7 +42,7 @@ class FakeRpc:
 
 
 class FakeQuery:
-    def __init__(self, supabase: "FakeSupabase", table_name: str):
+    def __init__(self, supabase: FakeSupabase, table_name: str):
         self.supabase = supabase
         self.table_name = table_name
         self._filters_eq: dict[str, Any] = {}
@@ -109,7 +109,7 @@ class FakeSupabase:
             "disputes": lambda: self.disputes,
             "resolution_votes": lambda: self.resolution_votes,
             "community_votes": lambda: self.community_votes,
-            "bets": lambda: [],
+            "bets": list,
         }
 
     def table(self, name: str):
@@ -126,7 +126,7 @@ def _iso(value: datetime) -> str:
 
 
 def test_apply_transition_rules_close_at_boundary():
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     market = {
         "status": "open",
         "close_at": _iso(now),
@@ -136,7 +136,7 @@ def test_apply_transition_rules_close_at_boundary():
 
 
 def test_apply_transition_rules_pending_review_auto_deny_boundary():
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     market = {
         "status": "pending_review",
         "close_at": _iso(now),
@@ -151,7 +151,7 @@ def test_creator_resolution_without_dispute_auto_finalizes(monkeypatch):
 
     monkeypatch.setattr(msm, "notify_market_closed", _noop_notify)
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     supabase = FakeSupabase(
         markets=[
             {
@@ -177,7 +177,7 @@ def test_creator_resolution_with_dispute_auto_tallies_to_resolution(monkeypatch)
 
     monkeypatch.setattr(msm, "notify_market_closed", _noop_notify)
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     supabase = FakeSupabase(
         markets=[
             {
@@ -213,7 +213,7 @@ def test_explicit_community_resolution_flow_tallies_after_window(monkeypatch):
 
     monkeypatch.setattr(msm, "notify_market_closed", _noop_notify)
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     supabase = FakeSupabase(
         markets=[
             {
@@ -245,7 +245,7 @@ def test_closed_open_race_path_is_normalized_before_action(monkeypatch):
 
     monkeypatch.setattr(msm, "notify_market_closed", _noop_notify)
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     supabase = FakeSupabase(
         markets=[
             {
@@ -269,7 +269,7 @@ def test_pending_review_market_is_auto_denied_after_close(monkeypatch):
     monkeypatch.setattr(msm, "notify_market_closed", _noop_notify)
     monkeypatch.setattr(msm, "notify_market_denied", _noop_notify)
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     supabase = FakeSupabase(
         markets=[
             {

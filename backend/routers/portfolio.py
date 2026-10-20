@@ -1,17 +1,24 @@
-from fastapi import APIRouter, Depends, Query
-from supabase import Client
+from typing import Annotated
 
-from dependencies import get_current_user, get_supabase_client, get_user_token, user_auth
+from fastapi import APIRouter, Depends, Query
+
+from dependencies import (
+    get_current_user,
+    get_supabase_client,
+    get_user_token,
+    user_auth,
+)
 from schemas.bet import BetResponse
 from schemas.transaction import TransactionResponse
+from supabase import Client
 
 router = APIRouter(prefix="/api", tags=["portfolio"])
 
 
 @router.get("/portfolio", response_model=list[BetResponse])
 async def get_portfolio(
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Get the authenticated user's positions across all markets."""
@@ -31,8 +38,9 @@ async def get_portfolio(
 async def get_transactions(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    *,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
     """Get the authenticated user's transaction history, newest first."""

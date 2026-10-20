@@ -1,9 +1,8 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, field_validator
-
 
 MAX_MARKET_TITLE_LENGTH = 160
 MAX_MARKET_DESCRIPTION_LENGTH = 2000
@@ -123,10 +122,10 @@ class CreateMarketRequest(BaseModel):
     def close_at_in_future(cls, v: datetime) -> datetime:
         # Normalize to UTC so "future" matches DB timestamptz regardless of server TZ.
         if v.tzinfo is None:
-            v = v.replace(tzinfo=timezone.utc)
+            v = v.replace(tzinfo=UTC)
         else:
-            v = v.astimezone(timezone.utc)
-        if v <= datetime.now(timezone.utc):
+            v = v.astimezone(UTC)
+        if v <= datetime.now(UTC):
             raise ValueError("close_at must be in the future")
         return v
 
@@ -163,7 +162,7 @@ class CreateMarketRequest(BaseModel):
                     )
                 normalized.append(cleaned)
 
-            if len(set(opt.lower() for opt in normalized)) != len(normalized):
+            if len({opt.lower() for opt in normalized}) != len(normalized):
                 raise ValueError("Option labels must be unique")
             return normalized
         return v

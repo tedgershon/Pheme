@@ -1,10 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from supabase import Client
-
 import logging
+from typing import Annotated
 
-from dependencies import get_current_user, get_current_user_optional, get_supabase_client
-from schemas.bet import BetResponse, PlaceBetRequest, PlaceMultichoiceBetRequest, PlaceBetResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from dependencies import (
+    get_current_user,
+    get_current_user_optional,
+    get_supabase_client,
+)
+from schemas.bet import (
+    BetResponse,
+    PlaceBetRequest,
+    PlaceBetResponse,
+    PlaceMultichoiceBetRequest,
+)
+from supabase import Client
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +37,8 @@ router = APIRouter(prefix="/api/markets", tags=["bets"])
 async def place_bet(
     market_id: str,
     body: PlaceBetRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """
     Place a YES or NO bet on a market.
@@ -87,8 +97,8 @@ async def place_bet(
 async def place_multichoice_bet(
     market_id: str,
     body: PlaceMultichoiceBetRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     try:
         result = supabase.rpc(
@@ -142,8 +152,9 @@ async def list_bets_for_market(
     market_id: str,
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    *,
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """List recent bets for a market (activity feed)."""
     result = (

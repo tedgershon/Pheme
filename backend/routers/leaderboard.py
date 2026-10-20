@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
-from supabase import Client
 
 from dependencies import get_current_user_optional, get_supabase_client
 from schemas.user import LeaderboardEntry
+from supabase import Client
 
 router = APIRouter(prefix="/api", tags=["leaderboard"])
 
@@ -12,8 +13,9 @@ router = APIRouter(prefix="/api", tags=["leaderboard"])
 @router.get("/leaderboard", response_model=list[LeaderboardEntry])
 async def get_leaderboard(
     limit: int = Query(25, ge=1, le=100),
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    *,
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """Top users ranked by net worth (balance + open stakes on unresolved markets)."""
     result = supabase.rpc(
@@ -40,11 +42,12 @@ def _get_gains_leaderboard(supabase: Client, since_iso: str | None, limit: int) 
 @router.get("/leaderboard/weekly")
 async def get_weekly_leaderboard(
     limit: int = Query(10, ge=1, le=50),
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    *,
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """Top users by rolling 7-day gains from bets."""
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     seven_days_ago = (now - timedelta(days=7)).isoformat()
     thirty_days_ago = (now - timedelta(days=30)).isoformat()
 

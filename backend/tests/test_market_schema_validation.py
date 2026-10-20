@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
 import sys
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -14,7 +14,7 @@ from schemas.market import CreateMarketRequest, ReviewMarketRequest
 
 
 def _future_iso() -> datetime:
-    return datetime.now(tz=timezone.utc) + timedelta(days=3)
+    return datetime.now(tz=UTC) + timedelta(days=3)
 
 
 def _valid_create_payload() -> dict:

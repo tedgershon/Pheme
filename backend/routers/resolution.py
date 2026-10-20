@@ -1,17 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException
-from supabase import Client
+from typing import Annotated
 
-from dependencies import get_current_user, get_current_user_optional, get_supabase_client
-from services.market_state_machine import normalize_market_state, normalize_markets
+from fastapi import APIRouter, Depends, HTTPException
+from postgrest.exceptions import APIError
+
+from dependencies import (
+    get_current_user,
+    get_current_user_optional,
+    get_supabase_client,
+)
+from observability import report_and_safe_message
 from schemas.dispute import CastVoteRequest
+from services.market_state_machine import normalize_market_state, normalize_markets
+from supabase import Client
 
 router = APIRouter(prefix="/api/markets", tags=["resolution"])
 
 
 @router.get("/resolutions")
 async def list_resolution_markets(
-    supabase: Client = Depends(get_supabase_client),
-    _current_user: dict | None = Depends(get_current_user_optional),
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """List all markets in community resolution or dispute status."""
     normalize_markets(supabase)
@@ -56,8 +64,8 @@ async def list_resolution_markets(
 async def cast_community_vote(
     market_id: str,
     body: CastVoteRequest,
-    current_user: dict = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """Cast a community resolution vote during the 24h resolution window."""
     market = normalize_market_state(supabase, market_id)
@@ -73,23 +81,23 @@ async def cast_community_vote(
             "p_vote": body.vote,
         }).execute()
         return result.data
-    except Exception as e:
-        msg = str(e).lower()
+    except APIError as e:
+        msg = e.message.lower() if e.code == "P0001" else ""
         if "not in the resolution" in msg:
             raise HTTPException(400, "Market is not in the resolution period.")
         if "expired" in msg:
             raise HTTPException(400, "Resolution voting window has expired.")
-        if "unique" in msg or "duplicate" in msg:
+        if e.code == "23505" or "unique" in msg or "duplicate" in msg:
             raise HTTPException(409, "You have already voted on this market's resolution.")
         if "creator" in msg:
             raise HTTPException(403, "Market creators cannot cast community votes on their own market.")
-        raise HTTPException(500, f"Failed to cast vote: {e}")
+        raise HTTPException(500, report_and_safe_message(e, "Failed to cast vote."))
 
 
 @router.get("/{market_id}/community-votes")
 async def list_community_votes(
     market_id: str,
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
     """List all community resolution votes for a market."""
     result = (

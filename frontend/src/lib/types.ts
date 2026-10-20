@@ -343,7 +343,9 @@ export function getMarketProbability(market: Market): number {
 // endpoint hits, so there's a window where `status === "open"` lingers after
 // `close_at` has elapsed. Checking both here closes that window client-side
 // and keeps the bet button in sync with what `place_bet` will actually accept.
-export function isMarketOpen(market: Pick<Market, "status" | "close_at">): boolean {
+export function isMarketOpen(
+  market: Pick<Market, "status" | "close_at">,
+): boolean {
   if (market.status !== "open") return false;
   return new Date(market.close_at).getTime() > Date.now();
 }
