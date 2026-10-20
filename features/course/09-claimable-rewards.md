@@ -334,7 +334,7 @@ Add these calls to the respective endpoints or as database triggers.
 **Rewards Page** — accessible from the user profile dropdown.
 
 **Layout:**
-- Header: "Rewards" with subtitle "Track your achievements across BananaGains"
+- Header: "Rewards" with subtitle "Track your achievements across Pheme"
 - Organized by **track**, each in its own card:
 
 For each track:

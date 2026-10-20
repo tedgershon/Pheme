@@ -85,7 +85,7 @@ Same access spec for both routes per matrix §5 (`render-readonly` for anon/demo
 
 ### Navigation
 
-- **Top nav** keeps a "Markets" link pointing to `/markets` (today this entry points to `/`; just retarget it). The existing BananaGains brand element in `frontend/src/components/navbar.tsx` (line 28) is already a `<Link href="/">` — it continues to serve as the home link. **No new "Home" entry is added.**
+- **Top nav** keeps a "Markets" link pointing to `/markets` (today this entry points to `/`; just retarget it). The existing Pheme brand element in `frontend/src/components/navbar.tsx` (line 28) is already a `<Link href="/">` — it continues to serve as the home link. **No new "Home" entry is added.**
 - **The "Browse all markets" CTA** at the bottom of `/` deep-links to `/markets`.
 
 ---

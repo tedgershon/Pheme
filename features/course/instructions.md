@@ -1,8 +1,8 @@
-# BananaGains Feature Implementation — Master Instructions
+# Pheme Feature Implementation — Master Instructions
 
 ## Overview
 
-This document orchestrates the implementation of **10 new feature areas** for BananaGains. Each feature has its own detailed instruction file in this `features/course/` directory (numbered `01`–`10`). Features are organized into **four implementation phases** based on dependencies.
+This document orchestrates the implementation of **10 new feature areas** for Pheme. Each feature has its own detailed instruction file in this `features/course/` directory (numbered `01`–`10`). Features are organized into **four implementation phases** based on dependencies.
 
 > **Status (post-reorg):** features 01–10 have shipped. This document is preserved as a historical artifact of the course-era workflow; the canonical product behavior lives in `project-specs/`, and ongoing work uses the `issues/`-driven flow described in `issues/README.md`. Anything below describing *future* implementation work is no longer active.
 

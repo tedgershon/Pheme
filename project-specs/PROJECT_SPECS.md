@@ -1,8 +1,8 @@
-# BananaGains Project Specification
+# Pheme Project Specification
 
 ## Project Title
 
-BananaGains: CMU's Prediction Market
+Pheme: CMU's Prediction Market
 
 ## Team Members
 
@@ -12,7 +12,7 @@ BananaGains: CMU's Prediction Market
 
 ## Project Overview
 
-BananaGains is a campus prediction market for the CMU community Users create and trade on markets about campus events using a virtual banana currency The product is inspired by prediction market platforms such as Polymarket and Kalshi, but it is scoped around campus life and culture
+Pheme is a campus prediction market for the CMU community Users create and trade on markets about campus events using a virtual banana currency The product is inspired by prediction market platforms such as Polymarket and Kalshi, but it is scoped around campus life and culture
 
 Each user starts with an allocation of "banana currency" Users spend bananas to buy YES or NO positions on markets, and their balances grow when they make accurate predictions The platform uses a parimutuel-style pool model where displayed probability is derived from pool distribution, and winning positions receive a proportional share of the final pool after settlement
 
@@ -24,7 +24,7 @@ To address reviewer feedback about project direction, the team is explicitly sep
 
 ### MVP Goals
 
-The MVP is the smallest version of BananaGains that still feels like a real campus prediction market instead of a static demo
+The MVP is the smallest version of Pheme that still feels like a real campus prediction market instead of a static demo
 
 - Users can browse markets and open a market detail page
 - Users can create a market with a title, description, close time, and resolution criteria
@@ -36,7 +36,7 @@ The MVP is the smallest version of BananaGains that still feels like a real camp
 
 ### Main Goals
 
-These are the goals that make BananaGains distinct from a very simple betting site
+These are the goals that make Pheme distinct from a very simple betting site
 
 - Persistent backend data for users, markets, trades, and balances
 - Market lifecycle from open to close to resolved
@@ -132,7 +132,7 @@ Scope classification: MVP foundation
 Product owner: Aaron Tang (`at2`)
 
 Sprint goal:
-Build a cohesive, clickable MVP for BananaGains that proves the core market flow and gives the team a concrete frontend and API contract to iterate on
+Build a cohesive, clickable MVP for Pheme that proves the core market flow and gives the team a concrete frontend and API contract to iterate on
 
 Demo target:
 The team can demo browsing markets, opening a market, creating a market, and placing a YES or NO bet in a no-auth demo mode
@@ -197,7 +197,7 @@ Scope classification: MVP completion
 Product owner: Ted Gershon (`tgershon`)
 
 Sprint goal:
-Move BananaGains from a mock-first MVP into a persisted product flow where markets, trades, balances, and user-facing pages are backed by real data
+Move Pheme from a mock-first MVP into a persisted product flow where markets, trades, balances, and user-facing pages are backed by real data
 
 Demo target:
 The team can create a market, place trades against real backend data, and revisit portfolio and leaderboard views that reflect those trades
@@ -258,7 +258,7 @@ Scope classification: main goals
 Product owner: Jonathan Gu (`jgu2`)
 
 Sprint goal:
-Build the unique BananaGains market-resolution workflow so the product goes beyond a generic trading demo and demonstrates how outcomes are settled and contested
+Build the unique Pheme market-resolution workflow so the product goes beyond a generic trading demo and demonstrates how outcomes are settled and contested
 
 Demo target:
 The team can show a market being resolved, disputed, voted on, and carried through a believable settlement process
@@ -322,7 +322,7 @@ Sprint goal:
 Turn the feature-complete prototype into a stable, demo-ready product that can survive remote access, code review, and the final staff walkthrough
 
 Final sprint target:
-By the end of Sprint 4, BananaGains should be ready for the final demo week beginning April 13, 2026
+By the end of Sprint 4, Pheme should be ready for the final demo week beginning April 13, 2026
 
 Backlog items:
 

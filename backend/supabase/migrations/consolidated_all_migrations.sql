@@ -1,6 +1,6 @@
 -- ============================================================================
 -- CONSOLIDATED MIGRATION: 001 through 049
--- BananaGains — Complete database schema from initial setup to all features
+-- Pheme — Complete database schema from initial setup to all features
 -- ============================================================================
 -- This file concatenates every migration from 001 to 049 (inclusive) in
 -- numerical order.  Migrations that don't exist on disk are skipped.

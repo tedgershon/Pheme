@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 """
-One-time migration: turn the old `issues/*.md` frontmatter files (carried
-over when BananaGains became Hunch) into real GitHub Issues, using the `gh`
-CLI.
+One-time migration: turn the old `issues/*.md` frontmatter files into
+real GitHub Issues, using the `gh` CLI.
 
-Run this from inside your Hunch checkout, which still has the old `issues/`
+Run this from inside your Pheme checkout, which still has the old `issues/`
 folder sitting in it:
 
-    cd Hunch
+    cd Pheme
     gh auth login                       # if not already authenticated
     python scripts/migrate_issues_to_github.py --dry-run
     python scripts/migrate_issues_to_github.py
 
 With no --repo flag, `gh` infers the target repo from this checkout's git
-remote (i.e. Hunch itself). Pass --repo owner/repo explicitly only if you're
-running this somewhere that isn't the Hunch checkout.
+remote (i.e. Pheme itself). Pass --repo owner/repo explicitly only if you're
+running this somewhere that isn't the Pheme checkout.
 
 By default this skips issues/archive/ (status: done, already shipped) since
 those don't need to become open GitHub Issues. Pass --include-done to create
@@ -72,7 +71,7 @@ def build_body(frontmatter, body, source_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=None,
-                         help="owner/repo, e.g. tedgershon/Hunch. Optional: if omitted, "
+                         help="owner/repo, e.g. tedgershon/Pheme. Optional: if omitted, "
                               "gh infers it from this checkout's git remote.")
     parser.add_argument("--issues-dir", default="issues", help="path to the old issues/ folder")
     parser.add_argument("--include-done", action="store_true",

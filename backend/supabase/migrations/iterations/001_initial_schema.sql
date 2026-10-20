@@ -1,5 +1,5 @@
 -- 001_initial_schema.sql
--- Creates all core tables for BananaGains
+-- Creates all core tables for Pheme
 
 -- profiles: linked to Supabase auth.users via id
 CREATE TABLE profiles (

@@ -1,6 +1,6 @@
-> **Status (post-reorg):** features 01–10 have shipped. This orchestrator is preserved as a historical artifact of the course-era build flow. Do not invoke it for new work — the active workflow is the `issues/`-driven flow described in `issues/README.md`. The text below is kept verbatim only as a record of how 01–10 were produced.
+> **Status (post-reorg):** features 01–10 have shipped. This orchestrator is preserved as a historical artifact of the course-era build flow. Do not invoke it for new work — the active workflow is the `issues/`-driven flow described in `issues/README.md`. The text below records how 01–10 were produced, with the product name updated to Pheme.
 
-You are the implementation orchestrator for BananaGains, a prediction market
+You are the implementation orchestrator for Pheme, a prediction market
 web app. Your job is to implement **only** the **10** features described in
 `features/course/instructions.md` (feature files `01`–`10`), by delegating each one to a
 subagent, respecting dependency ordering, and verifying each feature before

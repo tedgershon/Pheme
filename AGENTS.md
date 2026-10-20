@@ -3,7 +3,7 @@
 - **Product contract:** `project-specs/` (AUTHZ_MATRIX, DATA_MODEL, MIGRATIONS, PROJECT_SPECS).
 - **Active design docs:** `features/`.
 - **Work queue:** [GitHub Issues](../../issues), filtered by label, not an
-  in-repo file. Formerly BananaGains tracked this in `issues/`; that format is
+  in-repo file. Previously, work was tracked in `issues/`; that format is
   retired, see `CONTRIBUTING.md` for the current lifecycle.
 
 ## Picking a task (agents)

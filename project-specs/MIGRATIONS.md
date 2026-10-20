@@ -1,4 +1,4 @@
-# BananaGains — New Migration Guide
+# Pheme — New Migration Guide
 
 This document lists all new SQL migrations required for the feature additions described in `features/`. Migrations must be run **manually in the Supabase SQL editor** in numeric order. The existing codebase has migrations `001` through `020`. New migrations start at `021`.
 
