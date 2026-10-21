@@ -23,6 +23,22 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Validation and API errors
+
+Run `pnpm test` for the frontend unit tests, or `pnpm test -t ApiError` to
+focus on API error handling. Run `pnpm lint`, `pnpm exec tsc --noEmit`, and
+`pnpm build` before opening a PR. CI runs all four checks.
+
+`ApiError` exposes `code`, `userMessage`, and `fieldErrors` from structured
+backend error responses. Its standard `message` is safe to display; legacy
+text or malformed responses use `Request failed (<status>).` instead of the
+raw body. `raw` and the compatibility property `body` retain the original
+response for existing callers; do not render them directly.
+
+Use `parseApiError(error, fallback)` to normalize API errors, cancelled
+requests, network failures, and unknown errors. Migrating existing page
+handlers to this helper is tracked separately in issue #7.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
