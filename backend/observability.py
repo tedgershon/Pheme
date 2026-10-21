@@ -12,9 +12,11 @@ from __future__ import annotations
 import logging
 import uuid
 from contextvars import ContextVar
+from enum import Enum
 from typing import Any
 
 import sentry_sdk
+from fastapi import HTTPException
 from pythonjsonlogger.jsonlogger import JsonFormatter
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
@@ -29,6 +31,88 @@ _HEALTH_CHECK_PATHS = {"/", "/health", "/api/health"}
 _SCRUB_HEADERS = {"authorization", "cookie", "x-api-key"}
 
 logger = logging.getLogger(__name__)
+
+
+class ErrorCode(str, Enum):
+    # Generic — middleware and fallbacks
+    UNAUTHORIZED = "UNAUTHORIZED"
+    FORBIDDEN = "FORBIDDEN"
+    NOT_FOUND = "NOT_FOUND"
+    VALIDATION_FAILED = "VALIDATION_FAILED"
+    RATE_LIMITED = "RATE_LIMITED"        # reserved for feature 11
+    INTERNAL_ERROR = "INTERNAL_ERROR"
+
+    # Auth
+    AUTH_PROFILE_INCOMPLETE = "AUTH_PROFILE_INCOMPLETE"
+
+    # Markets
+    MARKET_NOT_FOUND = "MARKET_NOT_FOUND"
+    MARKET_NOT_OPEN = "MARKET_NOT_OPEN"
+    MARKET_NOT_PENDING_REVIEW = "MARKET_NOT_PENDING_REVIEW"
+    MARKET_NOT_PENDING_RESOLUTION = "MARKET_NOT_PENDING_RESOLUTION"
+    MARKET_NOT_DISPUTED = "MARKET_NOT_DISPUTED"
+    MARKET_NOT_ADMIN_REVIEW = "MARKET_NOT_ADMIN_REVIEW"
+    MARKET_ALREADY_RESOLVED = "MARKET_ALREADY_RESOLVED"
+    MARKET_CLOSE_DATE_PASSED = "MARKET_CLOSE_DATE_PASSED"
+    MARKET_NOT_MULTICHOICE = "MARKET_NOT_MULTICHOICE"
+
+    # Bets
+    BET_INSUFFICIENT_BALANCE = "BET_INSUFFICIENT_BALANCE"
+    BET_INVALID_AMOUNT = "BET_INVALID_AMOUNT"
+    BET_INVALID_OPTION = "BET_INVALID_OPTION"
+    BET_CREATOR_RESTRICTED = "BET_CREATOR_RESTRICTED"
+
+    # Resolution
+    RESOLUTION_NOT_CREATOR = "RESOLUTION_NOT_CREATOR"
+    RESOLUTION_WINDOW_EXPIRED = "RESOLUTION_WINDOW_EXPIRED"
+    DISPUTE_ALREADY_FILED = "DISPUTE_ALREADY_FILED"
+    DISPUTE_BETTOR_RESTRICTED = "DISPUTE_BETTOR_RESTRICTED"
+    DISPUTE_CREATOR_RESTRICTED = "DISPUTE_CREATOR_RESTRICTED"
+    DISPUTE_VOTE_DUPLICATE = "DISPUTE_VOTE_DUPLICATE"
+    COMMUNITY_VOTE_DUPLICATE = "COMMUNITY_VOTE_DUPLICATE"
+    COMMUNITY_VOTE_CREATOR_RESTRICTED = "COMMUNITY_VOTE_CREATOR_RESTRICTED"
+
+    # Daily claim
+    CLAIM_ALREADY_TODAY = "CLAIM_ALREADY_TODAY"
+    CLAIM_AT_BALANCE_CAP = "CLAIM_AT_BALANCE_CAP"
+
+    # Admin / super-admin
+    ADMIN_REQUIRED = "ADMIN_REQUIRED"
+    SUPER_ADMIN_REQUIRED = "SUPER_ADMIN_REQUIRED"
+    ADMIN_CANNOT_CHANGE_OWN_ROLE = "ADMIN_CANNOT_CHANGE_OWN_ROLE"
+
+    # Notifications
+    NOTIFICATION_NOT_FOUND = "NOTIFICATION_NOT_FOUND"
+
+
+class AppError(HTTPException):
+    """Expose a safe HTTP error while capturing its underlying cause privately."""
+
+    def __init__(
+        self,
+        status_code: int,
+        code: ErrorCode,
+        message: str,
+        *,
+        original: BaseException | None = None,
+        extras: dict[str, Any] | None = None,
+        errors: list[dict[str, Any]] | None = None,
+    ) -> None:
+        if original is not None:
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("error_code", code.value)
+                if extras:
+                    for key, value in extras.items():
+                        scope.set_extra(key, value)
+                rid = _request_id.get()
+                if rid:
+                    scope.set_extra("request_id", rid)
+                sentry_sdk.capture_exception(original)
+
+        detail: dict[str, Any] = {"code": code.value, "message": message}
+        if errors is not None:
+            detail["errors"] = errors
+        super().__init__(status_code=status_code, detail=detail)
 
 
 class _ContextFilter(logging.Filter):
