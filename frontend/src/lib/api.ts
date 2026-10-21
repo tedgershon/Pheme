@@ -36,14 +36,88 @@ export const MAX_PROFILE_AVATAR_BYTES = 5 * 1024 * 1024;
 // Fetch helper
 // ---------------------------------------------------------------------------
 
+export interface ApiErrorBody {
+  code: string;
+  message: string;
+  errors?: { field: string; message: string; type: string }[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export class ApiError extends Error {
+  public readonly code: string;
+  public readonly userMessage: string;
+  public readonly fieldErrors: { field: string; message: string }[];
+  public readonly raw: string;
+
   constructor(
     public status: number,
+    // Preserve body for existing callers until their error handling is migrated.
     public body: string,
   ) {
-    super(`API ${status}: ${body}`);
+    let code = "UNKNOWN";
+    let userMessage = `Request failed (${status}).`;
+    const fieldErrors: { field: string; message: string }[] = [];
+
+    try {
+      const parsed: unknown = JSON.parse(body);
+      const detail = isRecord(parsed) ? parsed.detail : undefined;
+      if (
+        isRecord(detail) &&
+        typeof detail.code === "string" &&
+        typeof detail.message === "string"
+      ) {
+        code = detail.code;
+        userMessage = detail.message;
+        if (Array.isArray(detail.errors)) {
+          for (const error of detail.errors) {
+            if (
+              isRecord(error) &&
+              typeof error.field === "string" &&
+              typeof error.message === "string"
+            ) {
+              fieldErrors.push({ field: error.field, message: error.message });
+            }
+          }
+        }
+      }
+    } catch {
+      // Legacy text and malformed responses use the safe status-based fallback.
+    }
+
+    super(userMessage);
     this.name = "ApiError";
+    this.code = code;
+    this.userMessage = userMessage;
+    this.fieldErrors = fieldErrors;
+    this.raw = body;
   }
+}
+
+export function parseApiError(
+  err: unknown,
+  fallback = "Something went wrong.",
+): { code: string; message: string; fieldErrors: ApiError["fieldErrors"] } {
+  if (err instanceof ApiError) {
+    return {
+      code: err.code,
+      message: err.userMessage,
+      fieldErrors: err.fieldErrors,
+    };
+  }
+  if (err instanceof Error && err.name === "AbortError") {
+    return { code: "ABORTED", message: "Request cancelled.", fieldErrors: [] };
+  }
+  if (err instanceof TypeError && /fetch/i.test(err.message)) {
+    return {
+      code: "NETWORK_ERROR",
+      message: "Connection failed. Check your internet.",
+      fieldErrors: [],
+    };
+  }
+  return { code: "UNKNOWN", message: fallback, fieldErrors: [] };
 }
 
 async function authHeaders(): Promise<HeadersInit> {
