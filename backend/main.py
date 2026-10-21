@@ -1,12 +1,14 @@
 from typing import Annotated
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from config import get_settings
 from dependencies import require_admin
 from middleware.request_context import RequestContextMiddleware
-from observability import init_observability
+from observability import ErrorCode, init_observability, report_and_safe_message
 from routers import (
     admin,
     auth,
@@ -29,6 +31,39 @@ app = FastAPI(
     redoc_url=None if is_production else "/redoc",
     openapi_url=None if is_production else "/openapi.json",
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": {
+                "code": ErrorCode.VALIDATION_FAILED.value,
+                "message": "Validation failed.",
+                "errors": [
+                    {
+                        "field": ".".join(str(part) for part in error["loc"]),
+                        "message": error["msg"],
+                        "type": error["type"],
+                    }
+                    for error in exc.errors()
+                ],
+            }
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    if isinstance(exc, HTTPException):
+        raise exc
+    message = report_and_safe_message(exc, "Internal server error.")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": {"code": ErrorCode.INTERNAL_ERROR.value, "message": message}},
+    )
+
 
 app.add_middleware(RequestContextMiddleware)
 app.add_middleware(
