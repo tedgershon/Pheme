@@ -58,6 +58,7 @@ def rpc_endpoint(request, monkeypatch):
         yield SimpleNamespace(
             app=app, client=client, path=path, body=body, rpc_name=rpc_name,
             safe_message=safe_message, supabase=supabase, captured=captured, actor=actor,
+            migrated=request.param in {"propose", "dispute_vote"},
         )
 
 
@@ -91,7 +92,10 @@ def test_expected_database_errors_keep_client_status(rpc_endpoint, code, message
     response = case.client.post(case.path, json=case.body)
     assert response.status_code == expected
     assert "private" not in response.text
-    case.captured.assert_not_called()
+    if case.migrated:
+        case.captured.assert_called_once_with(case.supabase.rpc.return_value.execute.side_effect)
+    else:
+        case.captured.assert_not_called()
     assert case.supabase.rpc.call_args_list[0].args[0] == case.rpc_name
 
 
@@ -109,7 +113,8 @@ def test_unknown_database_errors_are_reported_and_sanitized(rpc_endpoint, code, 
     case.supabase.rpc.return_value.execute.side_effect = error
     response = case.client.post(case.path, json=case.body)
     assert response.status_code == 500
-    assert response.json() == {"detail": case.safe_message}
+    detail = {"code": "INTERNAL_ERROR", "message": case.safe_message} if case.migrated else case.safe_message
+    assert response.json() == {"detail": detail}
     case.captured.assert_called_once_with(error)
 
 

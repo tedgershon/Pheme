@@ -15,7 +15,7 @@ from dependencies import (
     user_auth,
 )
 from market_linter import lint_market_fields
-from observability import report_and_safe_message
+from observability import AppError, ErrorCode, report_and_safe_message
 from schemas.dispute import (
     CastVoteRequest,
     DisputeResponse,
@@ -209,7 +209,7 @@ async def get_market(
     )
 
     if result.data is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Market not found")
+        raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
 
     markets = _normalize_for_response([result.data], supabase)
     return _attach_options(markets, supabase)[0]
@@ -247,7 +247,7 @@ async def create_market(
         result = supabase.table("markets").insert(market_row).execute()
 
         if not result.data:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create market")
+            raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to create market.")
 
         market = result.data[0]
 
@@ -295,15 +295,28 @@ async def propose_resolution(
                 "p_proposer_id": current_user["id"],
             }).execute()
             return result.data
-        except APIError as e:
-            msg = e.message.lower() if e.code == "P0001" else ""
+        except APIError as exc:
+            msg = exc.message.lower() if exc.code == "P0001" else ""
+            extras = {"market_id": market_id, "outcome": body.outcome}
             if "not found" in msg:
-                raise HTTPException(status_code=404, detail="Market not found.")
+                raise AppError(
+                    404, ErrorCode.MARKET_NOT_FOUND, "Market not found.",
+                    original=exc, extras=extras,
+                ) from exc
             if "creator" in msg:
-                raise HTTPException(status_code=403, detail="Only the market creator can propose a resolution.")
+                raise AppError(
+                    403, ErrorCode.RESOLUTION_NOT_CREATOR, "Only the market creator can do this.",
+                    original=exc, extras=extras,
+                ) from exc
             if "closed" in msg:
-                raise HTTPException(status_code=400, detail="Market must be closed before proposing resolution.")
-            raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Failed to propose resolution."))
+                raise AppError(
+                    400, ErrorCode.MARKET_NOT_CLOSED, "Market must be closed before proposing resolution.",
+                    original=exc, extras=extras,
+                ) from exc
+            raise AppError(
+                500, ErrorCode.INTERNAL_ERROR, "Failed to propose resolution.",
+                original=exc, extras=extras,
+            ) from exc
 
 
 @router.post("/{market_id}/community-resolution", response_model=MarketResponse)
@@ -317,22 +330,18 @@ async def start_community_resolution(
     with user_auth(supabase, token):
         market = normalize_market_state(supabase, market_id)
         if not market:
-            raise HTTPException(status_code=404, detail="Market not found.")
+            raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
 
         if market.get("creator_id") != current_user.get("id"):
-            raise HTTPException(status_code=403, detail="Only the market creator can start community resolution.")
+            raise AppError(403, ErrorCode.RESOLUTION_NOT_CREATOR, "Only the market creator can do this.")
 
         if market.get("status") == "pending_resolution" and not market.get("proposed_outcome"):
             return market
 
         if market.get("status") != "closed":
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "message": "Community resolution can only be started for closed markets.",
-                    "current_status": market.get("status"),
-                    "expected_status": "closed",
-                },
+            raise AppError(
+                400, ErrorCode.MARKET_NOT_CLOSED,
+                "Community resolution can only be started for closed markets.",
             )
 
         update_payload: dict[str, str | None] = {
@@ -352,7 +361,7 @@ async def start_community_resolution(
             .execute()
         )
         if not updated.data:
-            raise HTTPException(status_code=500, detail="Failed to start community resolution.")
+            raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to start community resolution.")
         return updated.data[0]
 
 
@@ -380,7 +389,7 @@ async def file_dispute(
             rpc_data = result.data
             dispute_id = rpc_data.get("id") if isinstance(rpc_data, dict) else None
             if not dispute_id:
-                raise HTTPException(status_code=500, detail="Failed to file dispute.")
+                raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to file dispute.")
 
             dispute = (
                 supabase.table("disputes")
@@ -390,21 +399,37 @@ async def file_dispute(
                 .execute()
             )
             if not dispute.data:
-                raise HTTPException(status_code=500, detail="Failed to load filed dispute.")
+                raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to load filed dispute.")
             return dispute.data
-        except Exception as e:
-            if isinstance(e, HTTPException):
+        except Exception as exc:
+            if isinstance(exc, HTTPException):
                 raise
-            msg = str(e).lower()
+            msg = str(exc).lower()
+            extras = {"market_id": market_id}
             if "not found" in msg:
-                raise HTTPException(status_code=404, detail="Market not found.")
+                raise AppError(
+                    404, ErrorCode.MARKET_NOT_FOUND, "Market not found.",
+                    original=exc, extras=extras,
+                ) from exc
             if "pending_resolution" in msg:
-                raise HTTPException(status_code=400, detail="Market is not in pending resolution.")
+                raise AppError(
+                    400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "Market is not in pending resolution.",
+                    original=exc, extras=extras,
+                ) from exc
             if "expired" in msg:
-                raise HTTPException(status_code=400, detail="Dispute window has expired.")
+                raise AppError(
+                    400, ErrorCode.RESOLUTION_WINDOW_EXPIRED, "The resolution window has expired.",
+                    original=exc, extras=extras,
+                ) from exc
             if "unique" in msg or "duplicate" in msg:
-                raise HTTPException(status_code=409, detail="A dispute already exists for this market.")
-            raise HTTPException(status_code=500, detail=f"Failed to file dispute: {e}")
+                raise AppError(
+                    409, ErrorCode.DISPUTE_ALREADY_FILED, "A dispute already exists for this market.",
+                    original=exc, extras=extras,
+                ) from exc
+            raise AppError(
+                500, ErrorCode.INTERNAL_ERROR, "Failed to file dispute.",
+                original=exc, extras=extras,
+            ) from exc
 
 
 @router.get("/{market_id}/dispute", response_model=DisputeResponse)
@@ -418,7 +443,7 @@ async def get_dispute(
         supabase.table("disputes").select("*").eq("market_id", market_id).single().execute()
     )
     if not result.data:
-        raise HTTPException(status_code=404, detail="No dispute found for this market.")
+        raise AppError(404, ErrorCode.DISPUTE_NOT_FOUND, "No dispute found for this market.")
     return result.data
 
 
@@ -437,7 +462,7 @@ async def cast_vote(
         supabase.table("disputes").select("id").eq("market_id", market_id).single().execute()
     )
     if not dispute.data:
-        raise HTTPException(status_code=404, detail="No dispute found for this market.")
+        raise AppError(404, ErrorCode.DISPUTE_NOT_FOUND, "No dispute found for this market.")
 
     with user_auth(supabase, token):
         try:
@@ -447,17 +472,34 @@ async def cast_vote(
                 "p_vote": body.vote,
             }).execute()
             return result.data
-        except APIError as e:
-            msg = e.message.lower() if e.code == "P0001" else ""
+        except APIError as exc:
+            msg = exc.message.lower() if exc.code == "P0001" else ""
+            extras = {"market_id": market_id, "dispute_id": dispute.data["id"], "vote": body.vote}
             if "creator" in msg:
-                raise HTTPException(status_code=403, detail="Market creator cannot vote on disputes.")
+                raise AppError(
+                    403, ErrorCode.DISPUTE_CREATOR_RESTRICTED, "Market creator cannot vote on disputes.",
+                    original=exc, extras=extras,
+                ) from exc
             if "bets" in msg or "bettor" in msg:
-                raise HTTPException(status_code=403, detail="Users who placed bets cannot vote on disputes.")
+                raise AppError(
+                    403, ErrorCode.DISPUTE_BETTOR_RESTRICTED,
+                    "Bettors cannot vote on disputes for markets they bet on.",
+                    original=exc, extras=extras,
+                ) from exc
             if "expired" in msg:
-                raise HTTPException(status_code=400, detail="Voting window has expired.")
-            if e.code == "23505" or "unique" in msg or "duplicate" in msg:
-                raise HTTPException(status_code=409, detail="You have already voted on this dispute.")
-            raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Failed to cast vote."))
+                raise AppError(
+                    400, ErrorCode.RESOLUTION_WINDOW_EXPIRED, "The resolution window has expired.",
+                    original=exc, extras=extras,
+                ) from exc
+            if exc.code == "23505" or "unique" in msg or "duplicate" in msg:
+                raise AppError(
+                    409, ErrorCode.DISPUTE_VOTE_DUPLICATE, "You've already voted.",
+                    original=exc, extras=extras,
+                ) from exc
+            raise AppError(
+                500, ErrorCode.INTERNAL_ERROR, "Failed to cast vote.",
+                original=exc, extras=extras,
+            ) from exc
 
 
 @router.get("/{market_id}/dispute/votes", response_model=list[VoteResponse])
@@ -471,7 +513,7 @@ async def list_votes(
         supabase.table("disputes").select("id").eq("market_id", market_id).single().execute()
     )
     if not dispute.data:
-        raise HTTPException(status_code=404, detail="No dispute found for this market.")
+        raise AppError(404, ErrorCode.DISPUTE_NOT_FOUND, "No dispute found for this market.")
 
     result = (
         supabase.table("resolution_votes")

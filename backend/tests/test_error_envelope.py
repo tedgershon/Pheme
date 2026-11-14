@@ -3,11 +3,13 @@ import importlib
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
 from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -114,6 +116,52 @@ def test_app_error_capture_does_not_leak_tags_or_extras(sentry_events):
     assert len(sentry_events) == 2
     assert "error_code" not in sentry_events[1].get("tags", {})
     assert "market_id" not in sentry_events[1].get("extra", {})
+
+
+@pytest.mark.parametrize("path,body,sql_code,message,status,code,context", [
+    ("resolve", {"outcome": "YES"}, "P0001", "Market not found", 404, "MARKET_NOT_FOUND", {"outcome": "YES"}),
+    ("resolve", {"outcome": "YES"}, "P0001", "Only the creator can propose", 403, "RESOLUTION_NOT_CREATOR", {"outcome": "YES"}),
+    ("resolve", {"outcome": "YES"}, "P0001", "Market must be closed", 400, "MARKET_NOT_CLOSED", {"outcome": "YES"}),
+    ("resolve", {"outcome": "YES"}, "XX000", "Unexpected failure", 500, "INTERNAL_ERROR", {"outcome": "YES"}),
+    ("dispute/vote", {"vote": "NO"}, "P0001", "Creator cannot vote", 403, "DISPUTE_CREATOR_RESTRICTED", {"dispute_id": "d1", "vote": "NO"}),
+    ("dispute/vote", {"vote": "NO"}, "P0001", "Bettor cannot vote", 403, "DISPUTE_BETTOR_RESTRICTED", {"dispute_id": "d1", "vote": "NO"}),
+    ("dispute/vote", {"vote": "NO"}, "P0001", "Voting window expired", 400, "RESOLUTION_WINDOW_EXPIRED", {"dispute_id": "d1", "vote": "NO"}),
+    ("dispute/vote", {"vote": "NO"}, "23505", "Constraint violation", 409, "DISPUTE_VOTE_DUPLICATE", {"dispute_id": "d1", "vote": "NO"}),
+    ("dispute/vote", {"vote": "NO"}, "XX000", "Unexpected failure", 500, "INTERNAL_ERROR", {"dispute_id": "d1", "vote": "NO"}),
+    ("dispute", {"explanation": "Please review the outcome."}, None, "Unexpected failure", 500, "INTERNAL_ERROR", {}),
+])
+def test_market_rpc_errors_capture_tagged_private_context(
+    api, sentry_events, monkeypatch, path, body, sql_code, message, status, code, context,
+):
+    from routers import markets
+
+    supabase = Mock()
+    query = supabase.table.return_value
+    for method in ("select", "eq", "single"):
+        getattr(query, method).return_value = query
+    query.execute.return_value = SimpleNamespace(data={"id": "d1"})
+    monkeypatch.setattr(markets, "normalize_market_state", Mock())
+    api.dependency_overrides[get_supabase_client] = lambda: supabase
+    error = APIError({
+        "code": sql_code, "message": f"{message}: private diagnostic", "details": "private detail", "hint": "private hint",
+    }) if sql_code else RuntimeError("private diagnostic")
+    supabase.rpc.return_value.execute.side_effect = error
+
+    with TestClient(api) as client:
+        response = client.post(f"/api/markets/m1/{path}", json=body)
+
+    assert response.status_code == status
+    assert response.json()["detail"]["code"] == code
+    assert "private" not in response.text
+    assert "m1" not in response.text
+    assert len(sentry_events) == 1
+    event = sentry_events[0]
+    assert event["tags"]["error_code"] == code
+    assert event["extra"]["market_id"] == "m1"
+    assert event["extra"]["request_id"] == response.headers["x-request-id"]
+    for key, value in context.items():
+        assert event["extra"][key] == value
+    assert "private diagnostic" in event["exception"]["values"][-1]["value"]
 
 
 def test_market_validation_returns_field_envelope(api, sentry_events):
