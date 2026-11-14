@@ -3,8 +3,7 @@
 The single point of import for Sentry concerns. Routers and tests must
 never import :mod:`sentry_sdk` directly — they go through this module.
 
-See ``features/extension/12-observability.md`` §"Module Shape" for the
-design rationale behind the public surface defined here.
+See ``docs/OBSERVABILITY.md`` for the error-handling and diagnostics contract.
 """
 
 from __future__ import annotations

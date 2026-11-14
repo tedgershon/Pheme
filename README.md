@@ -1,60 +1,69 @@
 # Pheme
 
-Pheme is a campus prediction market. Verified students forecast
-campus-specific events using a free, non-cashable virtual currency, and
-outcomes are settled by the community instead of an admin calling every
-market by hand. When a market closes, its creator proposes the outcome, and
-if nobody disputes it within the resolution window, it stands; a dispute
-sends it to a community vote instead of one person's judgment, which is the
-mechanism the whole trust model depends on, so nothing in the codebase
-resolves a market through a direct edit outside that path. Odds update in
-real time over WebSockets, backed by Redis pub/sub, so a market feels live
-rather than like a static poll.
+Pheme is a prediction market for the CMU community. Users propose markets,
+trade with free virtual banana currency, and settle outcomes through creator
+proposals, community voting and disputes. The currency cannot be purchased,
+sold or cashed out.
 
-Documentation uses Pheme as the product name. Legacy service identifiers, domains,
-and external link targets are retained where they refer to existing resources.
+The application uses Next.js, FastAPI and Supabase (PostgreSQL, Auth and
+Storage). Client data uses TanStack Query with mutation invalidation and
+limited polling. Redis and WebSockets are a proposed
+[extension](https://github.com/tedgershon/Pheme/issues/30).
 
-## Layout
+## Repository layout
 
-```
-/backend                  FastAPI service: markets, transactional betting engine, auth
-  /supabase/migrations    SQL migrations, applied in order via the Supabase SQL editor
-/frontend                 Next.js app
-/features                 Active design docs for in-progress work
-/project-specs            Product contract: AUTHZ_MATRIX, DATA_MODEL, MIGRATIONS, PROJECT_SPECS
-/scripts                  One-off and maintenance scripts
-/seeds                    Seed data for local development
-```
+| Path | Purpose |
+| --- | --- |
+| [backend/](backend/README.md) | FastAPI endpoints, validation and lifecycle coordination |
+| [frontend/](frontend/README.md) | Next.js pages, components, authentication and query cache |
+| [docs/](docs/README.md) | Product behavior, authorization, data model and operations |
+| `backend/supabase/migrations/` | SQL schema and transactional functions; see the migration guide |
+| `scripts/` | Development and maintenance helpers |
+| [seeds/](seeds/README.md) | Legacy fixture cleanup tooling |
 
 ## Local development
 
-Backend: **http://127.0.0.1:8000** · Frontend: **http://localhost:3000** (run both, separate terminals).
+Use Python 3.12, Node.js 20 and pnpm 9 to match CI. Run the backend and
+frontend in separate terminals.
 
-**Backend** (`backend/`):
-
-```
+```sh
 cd backend
 python -m venv .venv
-source .venv/bin/activate   # Windows: .\.venv\Scripts\Activate.ps1
+source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
+```
+
+On PowerShell, activate with `.\.venv\Scripts\Activate.ps1` and copy the
+environment template with `Copy-Item .env.example .env`. Configure Supabase
+using [backend setup](backend/README.md), then run:
+
+```sh
 uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Set `backend/.env` (see `backend/config.py` for the full `Settings` schema).
-Apply SQL migrations in order via the Supabase SQL editor: `backend/supabase/migrations/`.
+For the frontend:
 
-**Frontend** (`frontend/`):
-
-```
+```sh
 cd frontend
 pnpm install
+cp .env.local.example .env.local
 pnpm dev
 ```
 
-Copy `frontend/.env.local.example` to `frontend/.env.local`. `NEXT_PUBLIC_API_URL`
-defaults to `http://localhost:8000`.
+On PowerShell use `Copy-Item .env.local.example .env.local`. Configure the
+public Supabase URL/key in that file. The frontend is at
+`http://localhost:3000`; the API defaults to `http://localhost:8000`.
 
-## Contributing
+Database setup has a known migration-history gap: read
+[MIGRATIONS.md](docs/MIGRATIONS.md) before applying SQL. The current scripts
+are not a verified single ordered bootstrap chain.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, branch naming, and
-how issues are tracked.
+## Development references
+
+- [Documentation index](docs/README.md)
+- [Contribution workflow and checks](CONTRIBUTING.md)
+- [GitHub Issues](https://github.com/tedgershon/Pheme/issues) for planned work and acceptance criteria
+
+Existing service identifiers may still use the legacy product name; keep
+them aligned with their configured external resources.

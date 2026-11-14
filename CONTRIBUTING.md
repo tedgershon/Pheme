@@ -1,65 +1,88 @@
 # Contributing to Pheme
 
-Thanks for contributing! Work is tracked entirely in [GitHub Issues](../../issues),
-which replaced the old in-repo `issues/` markdown format. This
-guide covers the workflow, branch naming, and the rules enforced in review.
+Work is tracked in [GitHub Issues](https://github.com/tedgershon/Pheme/issues).
+Keep durable behavior and operational documentation in [docs/](docs/README.md).
+Feature proposals, implementation plans and acceptance criteria belong in issues.
 
 ## 1. Workflow
 
-1. Pick an open issue (see "Picking up an issue" below), or open one first for
-   anything nontrivial.
-2. Create a **type-prefixed** branch off `main` (see below).
-3. Push it: `git push -u origin <branch>`.
-4. Open a **PR to `main`**. Fill in the PR template and reference the issue
-   (`Closes #12`).
-5. CI must be green and you need **one review** before merge. Squash-merge.
+1. Pick an open issue or create one for nontrivial work. Comment to claim it,
+   assign yourself and apply `in-progress`.
+2. Branch from `origin/main` with a prefix from the table below.
+3. Commit in 2 to 4 logical steps, each leaving the codebase valid.
+4. Push the branch and open a PR to `main`, using the PR template and
+   `Closes #<number>` for the issue being completed.
+5. Wait for green CI and one review before squash-merging.
 
 ## 2. Branch naming
 
-The prefix maps to the area you're touching, so branches are self-describing
-and reviews route by area.
+| Prefix | Area | Example |
+| --- | --- | --- |
+| `backend/` | API, betting engine, resolution, auth | `backend/settlement` |
+| `frontend/` | Pages, components, client state | `frontend/market-card` |
+| `infra/` | CI, migrations, deployment | `infra/migration-bootstrap` |
+| `docs/` | Development documentation | `docs/resolution-flow` |
+| `fix/` | Bug fixes | `fix/claim-validation` |
+| `chore/` | Dependencies and tooling | `chore/update-dependencies` |
 
-| Prefix            | Use for                               | Example                     |
-| ------------------ | -------------------------------------- | ---------------------------- |
-| `backend/<slug>`   | betting engine, resolution, auth, API | `backend/parimutuel-payout`  |
-| `frontend/<slug>`  | UI, pages, client state               | `frontend/market-card`       |
-| `infra/<slug>`     | CI, migrations, deploy                | `infra/add-staging-env`      |
-| `docs/<slug>`      | README, specs, architecture           | `docs/resolution-flow`       |
-| `fix/<slug>`       | bug fixes                             | `fix/websocket-reconnect`    |
-| `chore/<slug>`     | dependencies, tooling                 | `chore/bump-nextjs`          |
+## 3. Issue lifecycle
 
-Keep branches short-lived and one-contribution-each.
+Use area labels (`backend`, `frontend`, `infra`, `documentation`) and status
+labels (`ready`, `blocked`, `in-progress`). A blocked issue must link its open
+prerequisites by GitHub issue number. Remove `blocked` when those prerequisites
+are complete. Optional proposals need not be labeled `ready`.
 
-## 3. Picking up an issue
-
-Issues are labeled by area (`backend`, `frontend`, `infra`) and status
-(`ready`, `blocked`, `in-progress`). `blocked` means it depends on another
-open issue, noted in the issue body.
-
-1. Comment to claim it and assign yourself.
-2. Move it to `in-progress` (label, or the Project board column).
-3. Reference it in your PR (`Closes #<n>`); merging the PR closes it.
+Prefix major architecture proposals with `[EXTENSION]`. Check existing issues
+before adding a proposal; add missing design detail to the existing issue when
+it already covers the work. Keep issue references current when docs move.
 
 ## 4. Rules (enforced in review)
 
-1. Markets resolve only through the dual-track path (creator call, then
-   community vote on dispute). No direct admin edits to a resolved outcome.
-2. All balance changes go through the transactional engine. No ad hoc writes
-   to a user's balance from elsewhere in the codebase.
-3. Real-time updates (odds, resolution) publish over the existing Redis
-   pub/sub channel, not a new one, so the frontend has one source of truth.
-4. The virtual currency is never exposed through a purchase, sale, or
-   cash-out path, in code or in copy. This is a compliance rule, not a style
-   preference.
+1. Preserve the dual-track resolution process: creator proposals with a dispute
+   window, or community voting, with admin adjudication for escalated markets.
+   Do not bypass it with direct edits to settled outcomes.
+2. Balance changes and their ledger entries belong in the transactional database
+   engine. Do not add ad hoc application writes to balances.
+3. Keep client state consistent through existing query keys and invalidators.
+   Redis/WebSocket delivery is proposed in [#30](https://github.com/tedgershon/Pheme/issues/30)
+   and is not a current dependency.
+4. Virtual currency is never purchasable, saleable or cashable, in code or copy.
+5. Update [AUTHZ_MATRIX.md](docs/AUTHZ_MATRIX.md) when routes or permissions change.
+   UI visibility does not replace server authorization. Treat the matrix as the
+   intended policy; its linked issues identify known implementation gaps.
 
-## 5. Local commands
+## 5. Local checks
 
-**Backend** (from `backend/`): `pytest` (test) · `ruff check .` (lint)
+From `backend/` with the virtual environment active:
 
-**Frontend** (from `frontend/`): `pnpm lint` · `pnpm exec tsc --noEmit` · `pnpm build`
+```sh
+pip install ruff==0.17.1 pytest==9.1.1
+ruff check .
+pytest
+```
+
+From `frontend/`:
+
+```sh
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm test
+pnpm build
+```
+
+Use `pnpm format` for frontend formatting (Biome). For documentation-only
+changes, verify links, source claims and `git diff --check`; no runtime test
+additions are needed.
 
 ## 6. CI
 
-Every PR runs `.github/workflows/ci.yml`: lint, type-check, and test for both
-the backend and frontend. Keep `requirements.txt` and `pnpm-lock.yaml` in
-sync with any dependency changes, since CI installs from the lockfiles.
+[ci.yml](.github/workflows/ci.yml) runs backend Ruff and pytest, plus frontend
+Biome, TypeScript, Vitest and the Next.js build on PRs and pushes to `main`.
+Keep `backend/requirements.txt` and `frontend/pnpm-lock.yaml` consistent with
+dependency changes. Backend requirements are installed directly; frontend CI
+uses `pnpm install --frozen-lockfile`.
+
+Matrix-driven API coverage, optional schema fuzzing and Playwright coverage are
+planned in [API testing issues](https://github.com/tedgershon/Pheme/issues/11)
+and [browser testing issues](https://github.com/tedgershon/Pheme/issues/14);
+they are not all present in CI yet.

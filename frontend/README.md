@@ -1,55 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pheme frontend
 
-## Getting Started
+Next.js App Router application with Supabase sessions, TanStack Query API data,
+Zustand UI state and Biome formatting/linting.
 
-First, run the development server:
+## Setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
+Use Node.js 20 and pnpm 9 to match CI. From this directory:
+
+```sh
+pnpm install
+cp .env.local.example .env.local
 pnpm dev
-# or
-bun dev
 ```
 
-### For code formatting
-Run `pnpm exec prettier . --write` in `frontend/`
+On PowerShell use `Copy-Item .env.local.example .env.local`.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to the
+same Supabase project used by the backend. Set `NEXT_PUBLIC_API_URL` if the
+API is not at `http://localhost:8000`. Never use a service-role key in a
+`NEXT_PUBLIC_*` setting. Without Supabase configuration the UI uses the
+guest shell; it does not provide a substitute authenticated backend.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Open `http://localhost:3000` with the backend running separately.
+Configure the Supabase auth provider and allowed callback URL for
+`/auth/callback` on the frontend origin.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Code layout
 
-## Validation and API errors
+- `src/app/`: routes and server/client page components.
+- `src/components/`: reusable UI.
+- `src/lib/api.ts`: API client and safe error parsing.
+- `src/lib/SessionProvider.tsx`: session shell and guest sentinel.
+- `src/lib/query/`: query keys, options, mutations and invalidators.
+- `src/proxy.ts`: Supabase session-cookie refresh; it currently does not
+  implement the full authorization matrix's page redirects.
 
-Run `pnpm test` for the frontend unit tests, or `pnpm test -t ApiError` to
-focus on API error handling. Run `pnpm lint`, `pnpm exec tsc --noEmit`, and
-`pnpm build` before opening a PR. CI runs all four checks.
+Use existing query keys/invalidators after mutations. The resolutions list
+and notification unread count poll; Redis/WebSocket synchronization remains
+a proposed extension.
 
-`ApiError` exposes `code`, `userMessage`, and `fieldErrors` from structured
-backend error responses. Its standard `message` is safe to display; legacy
-text or malformed responses use `Request failed (<status>).` instead of the
-raw body. `raw` and the compatibility property `body` retain the original
-response for existing callers; do not render them directly.
+## Checks
 
-Use `parseApiError(error, fallback)` to normalize API errors, cancelled
-requests, network failures, and unknown errors. Migrating existing page
-handlers to this helper is tracked separately in issue #7.
+```sh
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm test
+pnpm build
+```
 
-## Learn More
+`pnpm format` runs Biome formatting. `pnpm test` runs Vitest; Playwright
+setup is planned in [#14](https://github.com/tedgershon/Pheme/issues/14).
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Render safe messages from `parseApiError(error, fallback)`; do not expose
+raw backend response bodies. See [OBSERVABILITY.md](../docs/OBSERVABILITY.md)
+for the error contract and Sentry configuration, and
+[AUTHZ_MATRIX.md](../docs/AUTHZ_MATRIX.md) for page/control policy.

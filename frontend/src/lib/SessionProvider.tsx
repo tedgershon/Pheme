@@ -17,7 +17,7 @@ import { supabase } from "./supabase";
 import type { UserProfile } from "./types";
 
 // DEMO MODE: GUEST_USER is the frontend-only sentinel that lets signed-out
-// visitors render the app shell as if logged in (see project-specs/
+// visitors render the app shell as if logged in (see docs/
 // AUTHZ_MATRIX.md section 2 for the demo role definition). The backend never
 // sees this user -- any actual API call from a demo client is `anon` from
 // the backend's perspective. Do not extend this with backend writes.
@@ -103,7 +103,7 @@ export function SessionProvider({
         // only refetch when it's actually a different user (sign-in, switch)
         if (changed) qc.invalidateQueries({ queryKey: queryKeys.me });
         // UUID only — never andrew_id or email
-        // (features/extension/12-observability.md §Architecture Overview)
+        // (docs/OBSERVABILITY.md)
         Sentry.setUser({ id: session.user.id });
       } else {
         setIsDemo(true);

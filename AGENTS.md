@@ -1,10 +1,10 @@
 # Agents / new contributors, start here
 
-- **Product contract:** `project-specs/` (AUTHZ_MATRIX, DATA_MODEL, MIGRATIONS, PROJECT_SPECS).
-- **Active design docs:** `features/`.
-- **Work queue:** [GitHub Issues](../../issues), filtered by label, not an
-  in-repo file. Previously, work was tracked in `issues/`; that format is
-  retired, see `CONTRIBUTING.md` for the current lifecycle.
+- **Development documentation:** [docs/](docs/README.md) (AUTHZ_MATRIX, DATA_MODEL, MIGRATIONS, PROJECT_SPECS, OBSERVABILITY).
+- **Design plans and work queue:** [GitHub Issues](https://github.com/tedgershon/Pheme/issues), filtered by label.
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for the issue lifecycle. Keep feature
+  plans in remote issues and durable contracts in `docs/`. Prefix major
+  architecture proposals with `[EXTENSION]`.
 
 ## Picking a task (agents)
 
