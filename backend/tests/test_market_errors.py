@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -72,3 +73,32 @@ def test_community_resolution_errors_preserve_status(market_api, creator, status
     market_api.captured.assert_not_called()
     if expected != 500:
         market_api.supabase.table.return_value.update.assert_not_called()
+
+
+@pytest.mark.parametrize("message,status,code,safe_message", [
+    ("Market not found", 404, "MARKET_NOT_FOUND", "Market not found."),
+    ("Market is not in pending_resolution status", 400, "MARKET_NOT_PENDING_RESOLUTION", "Market is not in pending resolution."),
+    ("Dispute window has expired", 400, "RESOLUTION_WINDOW_EXPIRED", "The resolution window has expired."),
+    ("duplicate key violates unique constraint", 409, "DISPUTE_ALREADY_FILED", "A dispute already exists for this market."),
+    ("Unexpected database condition", 500, "INTERNAL_ERROR", "Failed to file dispute."),
+])
+def test_file_dispute_wraps_database_errors(market_api, message, status, code, safe_message):
+    error = APIError({"code": "P0001", "message": message, "details": "private diagnostic", "hint": "private hint"})
+    market_api.supabase.rpc.return_value.execute.side_effect = error
+    response = market_api.client.post("/api/markets/m1/dispute", json={"explanation": "Please review the outcome."})
+    assert response.status_code == status
+    assert response.json() == {"detail": {"code": code, "message": safe_message}}
+    market_api.captured.assert_called_once_with(error)
+
+
+@pytest.mark.parametrize("rpc_data,message", [
+    (None, "Failed to file dispute."),
+    ({}, "Failed to file dispute."),
+    ({"id": "d1"}, "Failed to load filed dispute."),
+])
+def test_file_dispute_preserves_its_own_app_errors(market_api, rpc_data, message):
+    market_api.supabase.rpc.return_value.execute.return_value = SimpleNamespace(data=rpc_data)
+    response = market_api.client.post("/api/markets/m1/dispute", json={"explanation": "Please review the outcome."})
+    assert response.status_code == 500
+    assert response.json() == {"detail": {"code": "INTERNAL_ERROR", "message": message}}
+    market_api.captured.assert_not_called()

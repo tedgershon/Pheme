@@ -24,8 +24,13 @@ Rejected inputs and Pydantic exception context are omitted. Unhandled errors
 are reported through `report_and_safe_message` and return status 500 with
 code `INTERNAL_ERROR` and message `Internal server error.`
 
-Existing router `HTTPException` responses retain their current behavior until
-the router migrations in issues #4–#6. Run `pytest tests/test_error_envelope.py`
+The markets router uses `AppError` for its explicit error responses, preserving
+existing status codes. RPC failures include private market/outcome/vote context
+in Sentry. `MARKET_NOT_CLOSED` and `DISPUTE_NOT_FOUND` distinguish closed-market
+requirements and missing disputes. The legacy `admin_resolve` handler remains
+unchanged pending its route move in issue #10. Other router `HTTPException`
+responses retain their current behavior until their migrations.
+Run `pytest tests/test_error_envelope.py tests/test_market_errors.py`
 for HTTP smoke checks and Sentry capture tests; the Sentry transport stays in
 memory and temporary test routes never become production endpoints.
 
