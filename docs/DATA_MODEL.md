@@ -1,5 +1,9 @@
 # Pheme Data Model
 
+This describes the repository schema, not a verified deployed database. Exact
+constraints and RPC definitions live in `backend/supabase/migrations/`; read
+[MIGRATIONS.md](MIGRATIONS.md) for gaps in the migration history.
+
 ## Core Entities
 
 ### UserProfile
@@ -10,6 +14,9 @@
 - `banana_balance` — current coin balance (excludes coins locked in active bets)
 - `role` — `'user'`, `'admin'`, or `'super_admin'` (default: `'user'`)
 - `is_admin` — boolean, auto-synced from `role` for backward compatibility
+- `avatar_url` — optional profile image URL; uploads use the public `avatars` storage bucket
+- `equipped_badge_id` — legacy single equipped badge FK (nullable)
+- `equipped_badges` — JSONB map of track to equipped badge ID, default `{}`
 - `created_at` — timestamp
 
 Purpose:
@@ -30,15 +37,15 @@ Stores the identity, wallet state, and role of each user
 - `multichoice_type` — `'exclusive'` or `'non_exclusive'` (nullable, required for multichoice)
 - `yes_pool_total` — total coins bet on YES (binary markets)
 - `no_pool_total` — total coins bet on NO (binary markets)
-- `official_source` — source for resolution verification (admin-only field)
-- `yes_criteria` — what counts as YES (admin-only field, binary markets)
-- `no_criteria` — what counts as NO (admin-only field, binary markets)
-- `ambiguity_criteria` — how to handle ambiguous outcomes (admin-only field)
+- `official_source` — source for resolution verification
+- `yes_criteria` — what counts as YES (binary markets)
+- `no_criteria` — what counts as NO (binary markets)
+- `ambiguity_criteria` — how to handle ambiguous outcomes
 - `link` — optional URL for additional context (displayed publicly)
 - `proposed_outcome` — creator's proposed resolution (`'YES'` or `'NO'`)
 - `proposed_at` — when creator proposed resolution
 - `dispute_deadline` — deadline for filing disputes after creator proposal
-- `resolution_window_end` — end of 24h community voting window (auto-set on close)
+- `resolution_window_end` — community voting deadline; set on close and reset when the creator explicitly starts community resolution
 - `resolved_outcome` — final resolution (`'YES'` or `'NO'`)
 - `resolved_at` — when market was resolved
 - `reviewed_by` — FK to `profiles`, admin who reviewed the market proposal
@@ -54,8 +61,8 @@ Stores the market question, timing, pool totals, review state, and settlement st
 |--------|-------------|
 | `pending_review` | Market proposed by user, awaiting admin approval |
 | `open` | Approved and accepting bets |
-| `closed` | Past `close_at`, no longer accepting bets; resolution period active |
-| `pending_resolution` | Creator has proposed an outcome; 24h dispute window open |
+| `closed` | No longer accepting bets; awaiting creator proposal or community-resolution start |
+| `pending_resolution` | Creator proposal with dispute deadline, or community track with no proposed outcome and a voting deadline |
 | `disputed` | A dispute has been filed; voter-based adjudication in progress |
 | `admin_review` | Escalated to admin for final resolution |
 | `resolved` | Market has been resolved; payouts distributed |
@@ -73,6 +80,12 @@ Stores the market question, timing, pool totals, review state, and settlement st
 
 Purpose:
 Represents one option in a multichoice market (2–10 options per market)
+
+The SQL multichoice settlement function exists, but the application resolution
+path still uses binary outcomes. Option-based settlement integration is tracked
+in [#32](https://github.com/tedgershon/Pheme/issues/32). AMBIGUOUS is not an
+accepted binary outcome in the current schema; refund support is tracked in
+[#31](https://github.com/tedgershon/Pheme/issues/31).
 
 ### Bet
 
@@ -101,6 +114,9 @@ Represents a single user trade on a market outcome
 
 Purpose:
 Represents a neutral voter participation record for disputed markets
+
+The historical `staked_amount` column was removed in iteration 011; current
+dispute votes do not require a currency stake.
 
 ### CommunityVote (resolution voting)
 
@@ -145,7 +161,7 @@ Append-only audit log tracking wallet-affecting events
 
 - `id` — UUID, PK
 - `user_id` — FK to `profiles`
-- `type` — notification category (`market_approved`, `market_denied`, `market_resolved`, `payout_received`, `badge_earned`, `system`)
+- `type` — category: `market_approved`, `market_denied`, `market_closed`, `market_resolved`, `payout_received`, `badge_earned`, `system`, `market_submitted`, `resolution_reminder` (requires the later notification migrations)
 - `title` — notification title
 - `body` — notification content
 - `metadata` — JSONB for flexible data (market_id, badge_id, etc.)
@@ -154,6 +170,11 @@ Append-only audit log tracking wallet-affecting events
 
 Purpose:
 Stores in-app notifications for users
+
+Lifecycle notifications use a partial unique index and the
+`create_market_notification` RPC to deduplicate by user, type and market.
+Defined types do not imply all producers exist: settlement, payout and badge
+events are tracked in [#35](https://github.com/tedgershon/Pheme/issues/35).
 
 ### BadgeDefinition
 
@@ -206,3 +227,17 @@ Tracks which badges each user has earned (highest tier per track)
 - The `role` column on `profiles` replaces the older `is_admin` boolean for access control, with `is_admin` kept in sync via trigger for backward compatibility
 - Community votes (resolution voting) are separate from resolution votes (dispute voting) to support the dual-track resolution model
 - Badge progression within a track replaces the previous badge (only the highest tier is stored)
+
+## Access and transaction boundaries
+
+- RLS policies live in the SQL history. Public profile/market data and
+  owner-scoped wallet/notification data have different rules; API authorization
+  policy is in [AUTHZ_MATRIX.md](AUTHZ_MATRIX.md).
+- Labels such as "internal criteria" in a form do not guarantee confidentiality.
+  Market response models include source and criteria fields; review serialization
+  and database policy before describing any field as admin-only.
+- The ledger records signed wallet changes. `voter_stake` and `voter_reward`
+  remain accepted legacy types; their presence does not imply current vote staking.
+- Balance and ledger changes must stay together in transactional RPCs. Separate
+  settlement and reward RPC calls are not one transaction; retry/concurrency
+  behavior must be verified when changing the lifecycle engine.

@@ -1,48 +1,57 @@
-Create the venv (macOS):
-`python -m venv .venv`
-Activate it with
-`source venv/bin/activate`
+# Pheme backend
 
-Probably similar on Windows. I'd use WSL or bash instead of powershell though. If bash, the setup is the same as above
+FastAPI handles authentication, market actions and queries. PostgreSQL RPCs
+perform transactional bets, claims and settlement; the Python state machine
+coordinates deadline-based transitions.
 
-To run the server, we use uvicorn. FastAPI even says for production you should use FastAPI run, and it also uses uvicorn internally. We have more control over the executable path, hard reload, and server path
+## Setup
 
-`uvicorn main:app --host 127.0.0.1 --port 8000 --reload`
+Use Python 3.12. From this directory:
 
-## Error responses
+```sh
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
 
-`observability.AppError` is an `HTTPException` with a structured `detail`:
-`{"code": "<ErrorCode value>", "message": "<safe message>"}`. Pass an underlying
-exception as `original` to capture it in Sentry with the `error_code` tag,
-request ID, and optional diagnostic `extras`. Diagnostics stay out of the
-HTTP response. Without `original`, no event is captured.
+PowerShell equivalents for activation and copying:
 
-Request validation returns status 422 with code `VALIDATION_FAILED` and an
-`errors` list containing `field`, `message`, and `type`. Field paths join the
-complete FastAPI location, for example `body.title` or `body.options.0.label`.
-Rejected inputs and Pydantic exception context are omitted. Unhandled errors
-are reported through `report_and_safe_message` and return status 500 with
-code `INTERNAL_ERROR` and message `Internal server error.`
+```powershell
+.\.venv\Scripts\Activate.ps1
+Copy-Item .env.example .env
+```
 
-The markets router uses `AppError` for its explicit error responses, preserving
-existing status codes. RPC failures include private market/outcome/vote context
-in Sentry. `MARKET_NOT_CLOSED` and `DISPUTE_NOT_FOUND` distinguish closed-market
-requirements and missing disputes. The legacy `admin_resolve` handler remains
-unchanged pending its route move in issue #10. Other router `HTTPException`
-responses retain their current behavior until their migrations.
-Run `pytest tests/test_error_envelope.py tests/test_market_errors.py`
-for HTTP smoke checks and Sentry capture tests; the Sentry transport stays in
-memory and temporary test routes never become production endpoints.
+Configure `SUPABASE_URL` and `SUPABASE_KEY` in `.env`. The
+`SUPABASE_SERVICE_ROLE_KEY` is backend-only and supports trusted operations
+such as reminder notifications. Never put it in frontend public variables.
+`config.py` defines all settings; `CORS_ORIGINS` is a JSON array and defaults
+to `["http://localhost:3000"]`. Match it to the frontend origin.
 
-## Supabase migrations
+Read [MIGRATIONS.md](../docs/MIGRATIONS.md) before setting up the database:
+the SQL files are not a complete, verified, numerically ordered bootstrap.
+Auth signups are restricted to `@andrew.cmu.edu` by the domain trigger.
 
-Run the SQL files in `backend/supabase/migrations/` in order inside the Supabase SQL editor.
+```sh
+uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+```
 
-Notable auth enforcement migrations:
+`GET /` is the health check. Interactive API docs are at `/docs` in
+development; `SENTRY_ENVIRONMENT=production` disables the docs, ReDoc and
+OpenAPI HTTP routes.
 
-- `005_cmu_email_rls.sql` restricts database access to `@andrew.cmu.edu` users.
-- `006_auth_cmu_domain_trigger.sql` blocks account creation unless the email ends with `@andrew.cmu.edu`.
+## Checks and implementation references
 
-Dispute/voting migration:
+```sh
+pip install ruff==0.17.1 pytest==9.1.1
+ruff check .
+pytest
+```
 
-- `007_dispute_voting.sql` adds dispute fields and voting RPCs.
+- [Authorization policy](../docs/AUTHZ_MATRIX.md)
+- [Product lifecycle and architecture](../docs/PROJECT_SPECS.md)
+- [Data model](../docs/DATA_MODEL.md)
+- [Error envelopes, request IDs and Sentry](../docs/OBSERVABILITY.md)
+
+Keep balance writes in SQL transactions and use the shared lifecycle service
+rather than introducing a separate settlement path.

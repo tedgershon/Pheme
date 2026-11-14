@@ -1,10 +1,10 @@
 -- seeds/TEARDOWN.sql
 --
--- Companion to seeds/PLAN.md. Removes the 8 Silicon Valley fixture users
+-- See seeds/README.md. Removes the 8 legacy fixture users
 -- (rhendrix, ebachman, bgilfoyl, dchughta, jdunn, mhall, gbelson, nbighett)
 -- and every market, bet, vote, dispute, transaction, and notification owned
--- by them or attached to their markets. Scoping is by Andrew ID, so real
--- OAuth signups under @andrew.cmu.edu are never touched.
+-- by them or attached to their markets. Scoping is by Andrew ID; inspect
+-- matching profiles before use because an ID match does not prove fixture origin.
 --
 -- This file is documentation, not auto-applied. Paste into the Supabase
 -- SQL editor (or psql with service-role credentials) to run.

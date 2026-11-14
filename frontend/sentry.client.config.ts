@@ -8,8 +8,7 @@ Sentry.init({
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
   // strip andrew_id off event.user — only the Supabase UUID is allowed to
-  // leave the browser (see features/extension/12-observability.md
-  // §"Architecture Overview")
+  // leave the browser (see docs/OBSERVABILITY.md).
   beforeSend(event) {
     if (event.user && "andrew_id" in event.user) {
       const { andrew_id: _omit, ...rest } = event.user as Record<
