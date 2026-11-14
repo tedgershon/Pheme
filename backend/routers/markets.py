@@ -15,7 +15,7 @@ from dependencies import (
     user_auth,
 )
 from market_linter import lint_market_fields
-from observability import report_and_safe_message
+from observability import AppError, ErrorCode, report_and_safe_message
 from schemas.dispute import (
     CastVoteRequest,
     DisputeResponse,
@@ -209,7 +209,7 @@ async def get_market(
     )
 
     if result.data is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Market not found")
+        raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
 
     markets = _normalize_for_response([result.data], supabase)
     return _attach_options(markets, supabase)[0]
@@ -247,7 +247,7 @@ async def create_market(
         result = supabase.table("markets").insert(market_row).execute()
 
         if not result.data:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create market")
+            raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to create market.")
 
         market = result.data[0]
 
@@ -317,22 +317,18 @@ async def start_community_resolution(
     with user_auth(supabase, token):
         market = normalize_market_state(supabase, market_id)
         if not market:
-            raise HTTPException(status_code=404, detail="Market not found.")
+            raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
 
         if market.get("creator_id") != current_user.get("id"):
-            raise HTTPException(status_code=403, detail="Only the market creator can start community resolution.")
+            raise AppError(403, ErrorCode.RESOLUTION_NOT_CREATOR, "Only the market creator can do this.")
 
         if market.get("status") == "pending_resolution" and not market.get("proposed_outcome"):
             return market
 
         if market.get("status") != "closed":
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "message": "Community resolution can only be started for closed markets.",
-                    "current_status": market.get("status"),
-                    "expected_status": "closed",
-                },
+            raise AppError(
+                400, ErrorCode.MARKET_NOT_CLOSED,
+                "Community resolution can only be started for closed markets.",
             )
 
         update_payload: dict[str, str | None] = {
@@ -352,7 +348,7 @@ async def start_community_resolution(
             .execute()
         )
         if not updated.data:
-            raise HTTPException(status_code=500, detail="Failed to start community resolution.")
+            raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to start community resolution.")
         return updated.data[0]
 
 
@@ -418,7 +414,7 @@ async def get_dispute(
         supabase.table("disputes").select("*").eq("market_id", market_id).single().execute()
     )
     if not result.data:
-        raise HTTPException(status_code=404, detail="No dispute found for this market.")
+        raise AppError(404, ErrorCode.DISPUTE_NOT_FOUND, "No dispute found for this market.")
     return result.data
 
 
@@ -437,7 +433,7 @@ async def cast_vote(
         supabase.table("disputes").select("id").eq("market_id", market_id).single().execute()
     )
     if not dispute.data:
-        raise HTTPException(status_code=404, detail="No dispute found for this market.")
+        raise AppError(404, ErrorCode.DISPUTE_NOT_FOUND, "No dispute found for this market.")
 
     with user_auth(supabase, token):
         try:
@@ -471,7 +467,7 @@ async def list_votes(
         supabase.table("disputes").select("id").eq("market_id", market_id).single().execute()
     )
     if not dispute.data:
-        raise HTTPException(status_code=404, detail="No dispute found for this market.")
+        raise AppError(404, ErrorCode.DISPUTE_NOT_FOUND, "No dispute found for this market.")
 
     result = (
         supabase.table("resolution_votes")
