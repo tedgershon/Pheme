@@ -17,7 +17,8 @@ limited polling. Redis and WebSockets are a proposed
 | [backend/](backend/README.md) | FastAPI endpoints, validation and lifecycle coordination |
 | [frontend/](frontend/README.md) | Next.js pages, components, authentication and query cache |
 | [docs/](docs/README.md) | Product behavior, authorization, data model and operations |
-| `backend/supabase/migrations/` | SQL schema and transactional functions; see the migration guide |
+| `supabase/migrations/` | Canonical, versioned SQL schema and transactional functions |
+| `backend/supabase/migrations/` | Archived SQL history; never replay as a chain |
 | `scripts/` | Development and maintenance helpers |
 | [seeds/](seeds/README.md) | Legacy fixture cleanup tooling |
 
@@ -55,9 +56,9 @@ On PowerShell use `Copy-Item .env.local.example .env.local`. Configure the
 public Supabase URL/key in that file. The frontend is at
 `http://localhost:3000`; the API defaults to `http://localhost:8000`.
 
-Database setup has a known migration-history gap: read
-[MIGRATIONS.md](docs/MIGRATIONS.md) before applying SQL. The current scripts
-are not a verified single ordered bootstrap chain.
+Use [MIGRATIONS.md](docs/MIGRATIONS.md) for database bootstrap and upgrades.
+Existing databases must pass legacy adoption before applying the canonical
+chain; never reset an existing deployment to install these migrations.
 
 ## Development references
 

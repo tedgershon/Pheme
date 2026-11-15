@@ -37,6 +37,10 @@ A request authenticates a Supabase JWT, then reads the role from the matching da
 | `admin` | Valid JWT, `profiles.role = 'admin'`. Backend: `require_admin` accepts. | Can review markets, run admin tools, backroll. |
 | `super_admin` | Valid JWT, `profiles.role = 'super_admin'`. Backend: `require_super_admin` accepts; also passes `require_admin`. | Can manage user roles. |
 
+Initial super-admin assignment is an explicit database-operator procedure,
+described in [MIGRATIONS.md](MIGRATIONS.md#initial-super-admin). Migrations do
+not promote a named account, and no public bootstrap API is provided.
+
 ### Role-preview override (admin tooling)
 
 Admins can use the role-preview toggle to *render the UI as if* they were `user`. **This is presentation-only:** the backend still reads the actual profile role for authorization. The tables below describe intended page, control and API authorization; the role-preview toggle must not bypass server-side checks.

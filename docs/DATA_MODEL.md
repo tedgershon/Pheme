@@ -1,8 +1,8 @@
 # Pheme Data Model
 
 This describes the repository schema, not a verified deployed database. Exact
-constraints and RPC definitions live in `backend/supabase/migrations/`; read
-[MIGRATIONS.md](MIGRATIONS.md) for gaps in the migration history.
+constraints and RPC definitions live in `supabase/migrations/`; read
+[MIGRATIONS.md](MIGRATIONS.md) for bootstrap and checked legacy upgrades.
 
 ## Core Entities
 
