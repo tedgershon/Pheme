@@ -25,3 +25,7 @@ node_modules/
 
 # MCP server configs (may contain project refs / tokens)
 .mcp.json
+
+# Disposable database migration harness
+.migration-test/
+.worktrees/

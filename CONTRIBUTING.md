@@ -74,10 +74,15 @@ Use `pnpm format` for frontend formatting (Biome). For documentation-only
 changes, verify links, source claims and `git diff --check`; no runtime test
 additions are needed.
 
+For database migration changes, install the root lockfile with `npm ci`, start
+Docker, and run `python scripts/db/test_migrations.py` from the repository root.
+See [MIGRATIONS.md](docs/MIGRATIONS.md) for the disposable project and cleanup.
+
 ## 6. CI
 
 [ci.yml](.github/workflows/ci.yml) runs backend Ruff and pytest, plus frontend
 Biome, TypeScript, Vitest and the Next.js build on PRs and pushes to `main`.
+It also runs fresh-database and legacy-upgrade checks in disposable Supabase.
 Keep `backend/requirements.txt` and `frontend/pnpm-lock.yaml` consistent with
 dependency changes. Backend requirements are installed directly; frontend CI
 uses `pnpm install --frozen-lockfile`.

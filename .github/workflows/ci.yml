@@ -7,6 +7,25 @@ on:
     branches: [main]
 
 jobs:
+  database:
+    name: Database (bootstrap and legacy upgrade)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - name: Test migrations in disposable Supabase
+        run: python scripts/db/test_migrations.py
+      - name: Stop disposable Supabase
+        if: always()
+        run: npx --no-install supabase stop --workdir .migration-test --no-backup
+
   backend:
     name: Backend (Python)
     runs-on: ubuntu-latest
