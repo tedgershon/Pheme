@@ -126,6 +126,7 @@ def preserved_rows():
 
 def verify():
     psql(read_sql("supabase/tests/application.sql"))
+    psql(read_sql("supabase/tests/signup_exceptions.sql"))
     # Check every literal app RPC exists in the database, including service calls.
     rpc_names = set()
     for path in (ROOT / "backend").rglob("*.py"):
@@ -210,6 +211,28 @@ def verify_operator_bootstrap():
     assert "super-admin already exists" in error, error
     psql(f"""DELETE FROM transactions WHERE user_id IN ('{target}', '{other}');
         DELETE FROM auth.users WHERE id IN ('{target}', '{other}');""")
+    # Exact operator approval permits non-CMU bootstrap, but never bypasses confirmation.
+    allow = read_sql("scripts/db/allow_signup_email.sql")
+    psql("\\set email externaloperator@example.com\n" + allow)
+    psql("\\set email externaloperator@example.com\n" + allow)
+    psql(
+        f"INSERT INTO auth.users (id, email) VALUES ('{target}', 'externaloperator@example.com');"
+    )
+    error = psql(f"\\set user_id {target}\n" + script, fail=True)
+    assert "existing confirmed" in error, error
+    psql(f"UPDATE auth.users SET email_confirmed_at = now() WHERE id = '{target}';")
+    psql(
+        "DELETE FROM private.signup_email_exceptions WHERE email = 'externaloperator@example.com';"
+    )
+    error = psql(f"\\set user_id {target}\n" + script, fail=True)
+    assert "operator-approved" in error, error
+    psql("\\set email externaloperator@example.com\n" + allow)
+    psql(f"\\set user_id {target}\n" + script)
+    psql(f"\\set user_id {target}\n" + script)
+    assert psql(f"SELECT role FROM profiles WHERE id = '{target}'") == "super_admin"
+    psql(f"""DELETE FROM transactions WHERE user_id = '{target}';
+        DELETE FROM auth.users WHERE id = '{target}';
+        DELETE FROM private.signup_email_exceptions WHERE email = 'externaloperator@example.com';""")
     print("  explicit super-admin bootstrap and refusal checks passed", flush=True)
 
 
@@ -221,6 +244,12 @@ def main():
         r"(?m)^project_id = .*$", 'project_id = "pheme-issue36"', config
     )
     assert replaced == 1, "Could not isolate the test project; refusing to start/reset"
+    # Browser OAuth credentials must never be required by the disposable SQL tests.
+    config = re.sub(
+        r"(\[auth.external.google\]\s*\n)enabled = true",
+        r"\1enabled = false",
+        config,
+    )
     config = re.sub(
         r"(?m)^(port|shadow_port|inspector_port) = (\d+)$",
         lambda m: f"{m[1]} = {int(m[2]) + 10000}",

@@ -24,6 +24,10 @@ limited polling. Redis and WebSockets are a proposed
 
 ## Local development
 
+Start with [the local setup guide](docs/LOCAL_DEVELOPMENT.md) for the `pheme`
+Docker stack, Windows ports, environment files, Google OAuth and initial admin.
+Local Supabase does not require a hosted project or appear in the cloud dashboard.
+
 Use Python 3.12, Node.js 20 and pnpm 9 to match CI. Run the backend and
 frontend in separate terminals.
 

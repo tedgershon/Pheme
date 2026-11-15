@@ -40,6 +40,10 @@ A request authenticates a Supabase JWT, then reads the role from the matching da
 Initial super-admin assignment is an explicit database-operator procedure,
 described in [MIGRATIONS.md](MIGRATIONS.md#initial-super-admin). Migrations do
 not promote a named account, and no public bootstrap API is provided.
+Ordinary signup requires an Andrew email. A database operator can approve an
+exact external email in `private.signup_email_exceptions`; clients and the
+service role cannot write that list. Approved signups still receive only the
+`user` role. Super-admin bootstrap requires a separately confirmed identity.
 
 ### Role-preview override (admin tooling)
 

@@ -14,9 +14,15 @@ BEGIN
     IF NOT EXISTS (
         SELECT FROM auth.users u JOIN public.profiles p ON p.id = u.id
         WHERE u.id = target AND u.email_confirmed_at IS NOT NULL
-          AND lower(u.email) LIKE '%@andrew.cmu.edu'
+          AND (
+              lower(u.email) LIKE '%@andrew.cmu.edu'
+              OR EXISTS (
+                  SELECT FROM private.signup_email_exceptions e
+                  WHERE e.email = lower(u.email)
+              )
+          )
     ) THEN
-        RAISE EXCEPTION 'Target must be an existing confirmed CMU user with a profile';
+        RAISE EXCEPTION 'Target must be an existing confirmed CMU user or operator-approved account with a profile';
     END IF;
     UPDATE public.profiles SET role = 'super_admin' WHERE id = target;
 END;
