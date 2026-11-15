@@ -1,0 +1,2 @@
+# Biome expects LF on every platform, including Windows checkouts.
+frontend/** text=auto eol=lf
