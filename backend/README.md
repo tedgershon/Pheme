@@ -28,8 +28,8 @@ such as reminder notifications. Never put it in frontend public variables.
 `config.py` defines all settings; `CORS_ORIGINS` is a JSON array and defaults
 to `["http://localhost:3000"]`. Match it to the frontend origin.
 
-Read [MIGRATIONS.md](../docs/MIGRATIONS.md) before setting up the database:
-the SQL files are not a complete, verified, numerically ordered bootstrap.
+Use [MIGRATIONS.md](../docs/MIGRATIONS.md) for the canonical bootstrap and
+checked legacy upgrade procedure. Do not replay the archived SQL iterations.
 Auth signups are restricted to `@andrew.cmu.edu` by the domain trigger.
 
 ```sh

@@ -1,0 +1,17 @@
+-- Representative persisted data, created using the historical engine.
+INSERT INTO auth.users (id, email, email_confirmed_at) VALUES
+    ('50000000-0000-0000-0000-000000000001', 'legacycreator@andrew.cmu.edu', now()),
+    ('50000000-0000-0000-0000-000000000002', 'legacybettor@andrew.cmu.edu', now());
+UPDATE profiles SET role = 'super_admin', avatar_url = 'https://example.com/existing.png'
+WHERE id = '50000000-0000-0000-0000-000000000001';
+UPDATE profiles SET equipped_badge_id = (SELECT id FROM badge_definitions WHERE track = 'oracle' AND tier = 1),
+    equipped_badges = jsonb_build_object('oracle', (SELECT id::text FROM badge_definitions WHERE track = 'oracle' AND tier = 1))
+WHERE id = '50000000-0000-0000-0000-000000000002';
+INSERT INTO markets (id, title, description, creator_id, close_at, resolution_criteria, status)
+VALUES ('60000000-0000-0000-0000-000000000001', 'Existing market', 'Preserve me',
+    '50000000-0000-0000-0000-000000000001', now() + interval '1 day', 'Fixture', 'open');
+SELECT place_bet('50000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', 'YES', 100);
+SELECT claim_daily_bananas('50000000-0000-0000-0000-000000000002');
+INSERT INTO notifications (user_id, type, title, body, metadata) VALUES
+    ('50000000-0000-0000-0000-000000000002', 'market_approved', 'Existing', 'Preserve me',
+    '{"market_id": "60000000-0000-0000-0000-000000000001"}');
