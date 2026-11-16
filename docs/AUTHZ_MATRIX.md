@@ -350,3 +350,5 @@ Dispute filing allows active and refunded bettors, enforces creator exclusion an
 Active/refunded bettors may submit explanations during the dispute window but remain excluded from dispute voting. Grouped admin review of submissions is tracked in [#49](https://github.com/tedgershon/Pheme/issues/49); it is not implemented by the eligibility fix.
 
 Refunding and deleting a bet does not restore voting neutrality: dispute voting checks both current bets and historical bet-placement ledger entries. Refunded bettors may still file explanations.
+
+Community rewards require a matching atomic settlement receipt; direct calls cannot change the 4% rate or replay credits. The settlement transaction checks the expired community window, three-vote quorum and majority.

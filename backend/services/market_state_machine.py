@@ -283,13 +283,6 @@ def _execute_community_tally_transition(supabase: Client, market: dict[str, Any]
         market["status"] = "resolved"
         market["resolved_outcome"] = winning
 
-        supabase.rpc(
-            "distribute_voter_rewards",
-            {
-                "p_market_id": market["id"],
-                "p_winning_outcome": winning,
-            },
-        ).execute()
         _check_badges_for_market_participants(supabase, market["id"])
         _log_transition(market["id"], "pending_resolution", "resolved", "community_resolution_window_elapsed", now)
     else:
