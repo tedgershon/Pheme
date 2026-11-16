@@ -10,8 +10,8 @@ SELECT pg_temp.check_true((SELECT bool_and(yes_pool_total=0 AND no_pool_total=0)
 SELECT pg_temp.check_true((SELECT sum(amount)=0 AND count(*)=4 FROM transactions WHERE market_id::text LIKE '91000000-%'),'one debit and refund per bet');
 SELECT pg_temp.check_true((SELECT count(*)=0 FROM bets WHERE market_id::text LIKE '91000000-%'),'refunded bets removed');
 UPDATE markets SET status='pending_resolution',proposed_outcome='YES',dispute_deadline=now()+interval '1 day' WHERE id='91000000-0000-0000-0000-000000000001';
-SELECT pg_temp.reject_sql($q$SELECT file_dispute('91000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000002','Review')$q$,'placed bets cannot');
-SELECT file_dispute('91000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000003','Review');
+SELECT file_dispute('91000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000002','Refunded bettor requests review.');
+SELECT pg_temp.check_true((SELECT disputer_id='90000000-0000-0000-0000-000000000002' AND explanation='Refunded bettor requests review.' FROM disputes WHERE market_id='91000000-0000-0000-0000-000000000001'),'refunded bettor can file an explanation under the market');
 SELECT pg_temp.reject_sql(format('SELECT cast_dispute_vote(%L,%L,%L)',(SELECT id FROM disputes WHERE market_id='91000000-0000-0000-0000-000000000001'),'90000000-0000-0000-0000-000000000002','YES'),'placed bets cannot');
 SELECT cast_dispute_vote(id,'90000000-0000-0000-0000-000000000005','YES') FROM disputes WHERE market_id='91000000-0000-0000-0000-000000000001';
 ROLLBACK;
