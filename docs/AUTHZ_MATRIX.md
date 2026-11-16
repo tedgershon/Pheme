@@ -58,7 +58,7 @@ These are not standalone roles. They combine with one of the roles in §2 to det
 | Overlay ID | Definition | Used in |
 |---|---|---|
 | `creator(M)` | `current_user.id == markets.creator_id` for market `M` | Resolution proposal, community-resolution start, dispute restrictions |
-| `bettor(M)` | `current_user.id` appears in `bets.user_id` for market `M` | Dispute filing, dispute voting (excluded for fairness) |
+| `bettor(M)` | `current_user.id` appears in `bets.user_id` for market `M` | Dispute voting (excluded for fairness); filing is allowed |
 | `community-voter(M)` | `current_user.id` appears in `community_votes.voter_id` for market `M` | Prevent double voting in community resolution |
 | `dispute-voter(D)` | `current_user.id` appears in `resolution_votes.voter_id` for dispute `D` | Prevent double voting in dispute |
 | `notification-owner(N)` | `notifications.user_id == current_user.id` | Mark-read, delete |
@@ -153,7 +153,7 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | Place Bet (multichoice) | `hidden` | `visible` if `M.status='open'` and option selected | `hidden` | `visible` | same as `user` | same as `user` |
 | Propose Resolution (YES / NO) | `hidden` | `hidden` | `visible` if `M.status='closed'` | `hidden` | same creator restriction | same creator restriction |
 | Start Community Resolution | `hidden` | `hidden` | `visible` if `M.status='closed'` | `hidden` | same creator restriction | same creator restriction |
-| Submit Dispute | `hidden` | `visible` if `M.status='pending_resolution'` and `M.proposed_outcome` set | `hidden` | `hidden` | `visible` if `M.status='pending_resolution'` and `M.proposed_outcome` set | `visible` if `M.status='pending_resolution'` and `M.proposed_outcome` set |
+| Submit Dispute | `hidden` | `visible` if `M.status='pending_resolution'` and `M.proposed_outcome` set | `hidden` | `visible` if proposal and dispute window active | `visible` if `M.status='pending_resolution'` and `M.proposed_outcome` set | `visible` if `M.status='pending_resolution'` and `M.proposed_outcome` set |
 | Cast Dispute Vote (YES / NO) | `hidden` | `visible` if `M.status='disputed'` and not `dispute-voter(D)` | `hidden` | `hidden` (bettors excluded for fairness) | `visible` if `M.status='disputed'` and not `dispute-voter(D)` | `visible` if `M.status='disputed'` and not `dispute-voter(D)` |
 | Cast Community Vote (YES / NO) | `hidden` | `visible` if community window active and not `community-voter(M)` | `hidden` | `visible` | `visible` | `visible` |
 | Backroll Panel | `hidden` | `hidden` | `hidden` | `hidden` | `visible` if `M.status != 'resolved'` | `visible` |
@@ -346,4 +346,6 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
 - [Home/browse layout work](https://github.com/tedgershon/Pheme/issues/19)
 - [Input-validation work](https://github.com/tedgershon/Pheme/issues/20)
 
-Dispute filing enforces creator/bettor exclusion and requires a creator proposal with an active deadline. Multichoice betting enforces creator exclusion and close_at in SQL, including for admin creators.
+Dispute filing allows active and refunded bettors, enforces creator exclusion and requires a creator proposal with an active deadline. Multichoice betting enforces creator exclusion and close_at in SQL, including for admin creators.
+
+Active/refunded bettors may submit explanations during the dispute window but remain excluded from dispute voting. Grouped admin review of submissions is tracked in [#49](https://github.com/tedgershon/Pheme/issues/49); it is not implemented by the eligibility fix.

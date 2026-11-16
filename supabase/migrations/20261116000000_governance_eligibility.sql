@@ -29,9 +29,6 @@ BEGIN
     IF p_disputer_id = v_creator THEN
         RAISE EXCEPTION 'Market creator cannot file disputes';
     END IF;
-    IF EXISTS (SELECT 1 FROM bets WHERE market_id = p_market_id AND user_id = p_disputer_id) THEN
-        RAISE EXCEPTION 'Users who placed bets cannot file disputes';
-    END IF;
     IF clock_timestamp() >= v_dispute_deadline THEN
         RAISE EXCEPTION 'Dispute window has expired';
     END IF;
