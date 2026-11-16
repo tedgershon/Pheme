@@ -72,7 +72,7 @@ that a continuously running scheduler is deployed.
 2. The creator can propose YES/NO, entering `pending_resolution` with a
    24-hour dispute window. An uncontested proposal is finalized after expiry.
 3. Policy allows an eligible non-creator, non-bettor to dispute a proposal;
-   the filing RPC does not yet enforce those identity exclusions (#38).
+   the filing RPC enforces both exclusions and requires a non-null proposal and dispute deadline.
    Neutral dispute voters choose YES/NO; voting no longer requires a stake.
    After the 48-hour voting deadline, at least three votes and a non-tied majority settle the market;
    otherwise it enters `admin_review`.
@@ -123,3 +123,5 @@ against edits. See the SQL source for the currently implemented restrictions.
 
 See [DATA_MODEL.md](DATA_MODEL.md) for persistence details and
 [MIGRATIONS.md](MIGRATIONS.md) before provisioning a database.
+
+Multichoice betting enforces creator exclusion (including admin creators) and the closing deadline inside the transaction.
