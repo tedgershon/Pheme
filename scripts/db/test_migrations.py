@@ -11,6 +11,8 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from governance_concurrency import verify as verify_governance_concurrency
+
 ROOT = Path(__file__).resolve().parents[2]
 WORK = ROOT / ".migration-test"
 CONTAINER = "supabase_db_pheme-issue36"
@@ -125,6 +127,7 @@ def preserved_rows():
 
 
 def verify():
+    verify_governance_concurrency(psql, read_sql)
     for test in sorted((ROOT / 'supabase/tests').glob('governance_*.sql')):
         if test.name != 'governance_fixture.sql':
             psql(read_sql(test))

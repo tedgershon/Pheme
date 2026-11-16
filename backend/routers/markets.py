@@ -406,6 +406,12 @@ async def file_dispute(
                 raise
             msg = str(exc).lower()
             extras = {"market_id": market_id}
+            if "creator cannot" in msg:
+                raise AppError(403, ErrorCode.DISPUTE_CREATOR_RESTRICTED, "Market creator cannot file disputes.", original=exc, extras=extras) from exc
+            if "placed bets cannot" in msg:
+                raise AppError(403, ErrorCode.DISPUTE_BETTOR_RESTRICTED, "Users who placed bets cannot file disputes.", original=exc, extras=extras) from exc
+            if "proposal and dispute deadline" in msg:
+                raise AppError(400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "A creator proposal with a dispute deadline is required.", original=exc, extras=extras) from exc
             if "not found" in msg:
                 raise AppError(
                     404, ErrorCode.MARKET_NOT_FOUND, "Market not found.",

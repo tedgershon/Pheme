@@ -348,3 +348,5 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
 Dispute filing enforces creator/bettor exclusion and requires a creator proposal with an active deadline. Multichoice betting enforces creator exclusion and close_at in SQL, including for admin creators.
 
 Refunding and deleting a bet does not restore dispute neutrality: filing and voting check both current bets and historical bet-placement ledger entries.
+
+Community rewards require a matching atomic settlement receipt; direct calls cannot change the 4% rate or replay credits. The settlement transaction checks the expired community window, three-vote quorum and majority.
