@@ -71,8 +71,9 @@ that a continuously running scheduler is deployed.
    closed market's community track.
 2. The creator can propose YES/NO, entering `pending_resolution` with a
    24-hour dispute window. An uncontested proposal is finalized after expiry.
-3. Policy allows an eligible non-creator, non-bettor to dispute a proposal;
-   the filing RPC does not yet enforce those identity exclusions (#38).
+3. Authenticated non-creators, including active and refunded bettors, may
+   dispute a proposal with an explanation. The filing RPC excludes creators
+   and requires a non-null proposal and active dispute deadline.
    Neutral dispute voters choose YES/NO; voting no longer requires a stake.
    After the 48-hour voting deadline, at least three votes and a non-tied majority settle the market;
    otherwise it enters `admin_review`.
@@ -123,3 +124,7 @@ against edits. See the SQL source for the currently implemented restrictions.
 
 See [DATA_MODEL.md](DATA_MODEL.md) for persistence details and
 [MIGRATIONS.md](MIGRATIONS.md) before provisioning a database.
+
+Multichoice betting enforces creator exclusion (including admin creators) and the closing deadline inside the transaction.
+
+Dispute filing and dispute voting have different eligibility rules: bettors may file concerns but cannot vote on disputes. Grouped submissions and explanations for admin review are planned in [#49](https://github.com/tedgershon/Pheme/issues/49). The current implementation retains one dispute per market; the follow-up must preserve one voting lifecycle while collecting multiple submissions.

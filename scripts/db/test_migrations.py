@@ -125,6 +125,9 @@ def preserved_rows():
 
 
 def verify():
+    for test in sorted((ROOT / 'supabase/tests').glob('governance_*.sql')):
+        if test.name != 'governance_fixture.sql':
+            psql(read_sql(test))
     psql(read_sql("supabase/tests/application.sql"))
     psql(read_sql("supabase/tests/signup_exceptions.sql"))
     # Check every literal app RPC exists in the database, including service calls.
