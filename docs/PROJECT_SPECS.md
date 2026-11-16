@@ -98,8 +98,7 @@ the multichoice settlement RPC are tracked in
 [#32](https://github.com/tedgershon/Pheme/issues/32).
 
 Admin backroll cancels bets after a cutoff and refunds affected users through
-an RPC. Multichoice pool accounting and preservation of refunded bettors'
-dispute-voting restrictions need the fixes in #38. It cannot operate on a resolved market. Resolved content is guarded
+an RPC. Refunds adjust the matching binary or option pool. The bet-placement ledger remains an auditable participation record, so refunded bettors cannot file disputes or cast dispute votes. It cannot operate on a resolved market. Resolved content is guarded
 against edits. See the SQL source for the currently implemented restrictions.
 
 ## Supporting surfaces

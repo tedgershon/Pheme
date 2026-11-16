@@ -311,7 +311,6 @@ There is currently no admin endpoint to view another user's portfolio or transac
 | B-3: relocate the legacy admin resolution endpoint and use role dependencies | [#10](https://github.com/tedgershon/Pheme/issues/10) |
 | B-4: admin resolution queue, dashboard entry and ambiguous refund support | [#31](https://github.com/tedgershon/Pheme/issues/31), blocked by #10 |
 | Consistent error envelopes, notification ownership responses and dependency audit | [#5](https://github.com/tedgershon/Pheme/issues/5), [#6](https://github.com/tedgershon/Pheme/issues/6) |
-| SQL enforcement of post-backroll neutrality | [#38](https://github.com/tedgershon/Pheme/issues/38) |
 
 Admins retain normal user permissions with creator/bettor/voter restrictions,
 plus explicit administrative capabilities. Role-preview controls never change
@@ -347,3 +346,5 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
 - [Input-validation work](https://github.com/tedgershon/Pheme/issues/20)
 
 Dispute filing enforces creator/bettor exclusion and requires a creator proposal with an active deadline. Multichoice betting enforces creator exclusion and close_at in SQL, including for admin creators.
+
+Refunding and deleting a bet does not restore dispute neutrality: filing and voting check both current bets and historical bet-placement ledger entries.
