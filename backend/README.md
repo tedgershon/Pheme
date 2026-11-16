@@ -48,6 +48,26 @@ ruff check .
 pytest
 ```
 
+The shared `backend/tests/conftest.py` fixtures provide a session `app_client`,
+`as_role("anon" | "user" | "admin" | "super_admin")`, and `seed_market` /
+`seed_bet` factories for HTTP tests. The role fixture uses stable profile IDs
+and per-request bearer headers; authentication still passes through the real
+`get_current_user` dependency. The fixture's Supabase client is an in-memory
+stub. Factory rows are removed after each test. `seed_bet` only creates an
+overlay row; it does not verify balance or pool updates.
+
+For SQL, RLS, ledger, and concurrency behavior, use the disposable Supabase
+database suite from the repository root with Docker and `npm ci`:
+
+```sh
+python scripts/db/test_migrations.py
+```
+
+That harness resets only its own `pheme-issue36` project. Neither the HTTP
+fixtures nor the database suite read application `.env` files, and neither
+requires hosted project credentials. Install Python test dependencies with
+`pip install -r backend/requirements-dev.txt`.
+
 - [Authorization policy](../docs/AUTHZ_MATRIX.md)
 - [Product lifecycle and architecture](../docs/PROJECT_SPECS.md)
 - [Data model](../docs/DATA_MODEL.md)
