@@ -1,4 +1,10 @@
-# Local application setup
+# Development application setup
+
+Two supported database targets use the same migrations: local Docker for
+disposable tests, or a hosted Supabase project for browser sign-in and manual
+development. The current Pheme setup runs the frontend/API locally against the
+hosted project; follow [the hosted setup guide](HOSTED_DEVELOPMENT.md) for that
+path. The instructions below configure the disposable Docker target.
 
 The Docker project is `pheme`. It is independent of the Supabase cloud dashboard;
 no hosted project is required. Start Docker Desktop with Linux containers.
@@ -53,6 +59,8 @@ pnpm --dir frontend install --frozen-lockfile
 The environment helper preserves unrelated settings and writes local keys to
 ignored `backend/.env` and `frontend/.env.local`. It never prints credentials.
 The frontend receives only the anon key. Run it again after recreating the stack.
+Running this helper switches both applications back to Docker. Use
+`scripts/configure_hosted_env.py --project-ref PROJECT_REF` for the hosted target.
 
 In one terminal, from the repository root:
 
@@ -134,3 +142,5 @@ account separately; it must retain the `user` role.
 
 Keep browser verification pending until someone completes the real Google flow.
 Database tests alone do not prove OAuth credentials or browser cookies work.
+Hosted browser verification was completed on 2026-11-15; see the operator
+record in [issue #42](https://github.com/tedgershon/Pheme/issues/42).

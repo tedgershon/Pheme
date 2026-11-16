@@ -27,6 +27,9 @@ limited polling. Redis and WebSockets are a proposed
 Start with [the local setup guide](docs/LOCAL_DEVELOPMENT.md) for the `pheme`
 Docker stack, Windows ports, environment files, Google OAuth and initial admin.
 Local Supabase does not require a hosted project or appear in the cloud dashboard.
+For local app servers connected to hosted Pheme, use
+[the hosted development guide](docs/HOSTED_DEVELOPMENT.md). The Docker database
+remains available for disposable tests.
 
 Use Python 3.12, Node.js 20 and pnpm 9 to match CI. Run the backend and
 frontend in separate terminals.
