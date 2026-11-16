@@ -25,7 +25,9 @@ invalidation. Persistent hosting and push updates are proposed in
 ## Identity, roles and wallets
 
 Supabase authenticates accounts; the auth trigger restricts new accounts to
-`@andrew.cmu.edu`. Profiles have `user`, `admin` or `super_admin` roles. Admins
+`@andrew.cmu.edu`, with exact-email exceptions explicitly approved by a database
+operator. Exceptions permit signup only, never automatic role promotion.
+Profiles have `user`, `admin` or `super_admin` roles. Admins
 review markets and adjudicate escalations; super admins additionally manage
 roles. Role-preview controls affect presentation only. See
 [AUTHZ_MATRIX.md](AUTHZ_MATRIX.md) for the intended permissions and known gaps.

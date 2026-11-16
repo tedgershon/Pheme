@@ -9,6 +9,7 @@ archived history and test fixtures. Do not sort or replay them.
 | --- | --- |
 | `20261114000000` | Fresh-only baseline from the consolidated snapshot at `c20e0e5`, including avatars, equipped badges, aggregation RPCs and badge RLS. Removes the account-specific super-admin assignment. |
 | `20261114000100` | Forward repair: final notification constraints, ownership policies and RPCs; net-worth leaderboard; expired-open proposal handling; nullable `bets.side` for option bets. Supports installations with some or all later patches already applied. |
+| `20261115000000` | Operator-only exact-email signup exceptions; no users or roles are seeded. Applies domain enforcement to email changes as well as signup. |
 
 Never edit an applied version. Add a new timestamped file for future changes.
 The baseline contains initial `CREATE TABLE` statements and must **never** be
@@ -87,7 +88,10 @@ ledger entries.
 
 ## Initial super-admin
 
-Create and confirm the intended `@andrew.cmu.edu` account through Auth first.
+Create and confirm the intended account through Auth first. Ordinary signup
+requires `@andrew.cmu.edu`. For an external operator account, approve its exact
+email with `scripts/db/allow_signup_email.sql` before signup; see the
+[local setup procedure](LOCAL_DEVELOPMENT.md#operator-signup-exception-and-initial-super-admin).
 Obtain its UUID from `auth.users`, verify its identity, then run as the database
 operator:
 
@@ -95,7 +99,7 @@ operator:
 psql -X -v ON_ERROR_STOP=1 -v user_id=CONFIRMED_USER_UUID -f scripts/db/bootstrap_super_admin.sql
 ```
 
-The script requires an existing confirmed CMU user and profile. It refuses to
+The script requires an existing confirmed CMU or operator-approved user and profile. It refuses to
 promote a different account if a super-admin already exists; repeating the same
 assignment is safe. It updates `role`, letting the existing trigger synchronize
 `is_admin`, and prints the resulting identity and role. Retain the operator
@@ -138,7 +142,7 @@ npx --no-install supabase stop --workdir .migration-test --no-backup
 ```
 
 The harness uses fixed disposable project `pheme-issue36`, a generated config
-under `.migration-test/`, and separate ports (API 64321, database 64322). It
+under `.migration-test/`, and separate ports (API 55321, database 55322). It
 never reads application environment files or accepts a remote database URL.
 It resets **only that project**, leaving the normal development project alone.
 A failed run leaves the project available for inspection.
@@ -158,6 +162,9 @@ and a legacy schema with later patches already installed. Checks include:
   public badge RLS, notification ownership, mark-read/delete and event dedup.
 - explicit super-admin bootstrap, retry, unconfirmed-user refusal and refusal
   to replace an existing super-admin.
+- operator-approved external signup and confirmed bootstrap, rejection of
+  metadata-based bypasses and unapproved email changes, and client/service-role
+  denial of access to the exception list.
 
 Verified locally on 2026-11-14 with CLI 2.84.5, PostgreSQL 17.6, Docker Desktop
 and Python 3.14 on Windows. All three database scenarios passed; backend Ruff

@@ -1,5 +1,10 @@
 # Pheme Data Model
 
+Operator-approved external signup emails live in `private.signup_email_exceptions`
+(`email` primary key, `created_at`). The schema is not exposed through the API;
+anon, authenticated and service-role clients cannot modify the list. Approval
+permits signup but does not grant a role. No exceptions are seeded by migrations.
+
 This describes the repository schema, not a verified deployed database. Exact
 constraints and RPC definitions live in `supabase/migrations/`; read
 [MIGRATIONS.md](MIGRATIONS.md) for bootstrap and checked legacy upgrades.
