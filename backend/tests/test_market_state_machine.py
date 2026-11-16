@@ -236,7 +236,7 @@ def test_explicit_community_resolution_flow_tallies_after_window(monkeypatch):
     assert market is not None
     assert market["status"] == "resolved"
     assert market["resolved_outcome"] == "NO"
-    assert any(call[0] == "distribute_voter_rewards" for call in supabase.rpc_calls)
+    assert not any(call[0] == "distribute_voter_rewards" for call in supabase.rpc_calls)
 
 
 def test_closed_open_race_path_is_normalized_before_action(monkeypatch):
