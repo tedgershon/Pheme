@@ -10,6 +10,7 @@ archived history and test fixtures. Do not sort or replay them.
 | `20261114000000` | Fresh-only baseline from the consolidated snapshot at `c20e0e5`, including avatars, equipped badges, aggregation RPCs and badge RLS. Removes the account-specific super-admin assignment. |
 | `20261114000100` | Forward repair: final notification constraints, ownership policies and RPCs; net-worth leaderboard; expired-open proposal handling; nullable `bets.side` for option bets. Supports installations with some or all later patches already applied. |
 | `20261115000000` | Operator-only exact-email signup exceptions; no users or roles are seeded. Applies domain enforcement to email changes as well as signup. |
+| `20261116000400` | Private pending-review/denied market reads limited to creator/admin; option labels inherit parent visibility. No data or wallet mutations. |
 
 Never edit an applied version. Add a new timestamped file for future changes.
 The baseline contains initial `CREATE TABLE` statements and must **never** be
@@ -193,3 +194,36 @@ No application balances are rewritten by these migrations. Deploy all migrations
 before the coordinator change; old coordinators' extra reward call becomes a no-op
 for newly completed community settlements. The disposable harness includes forced
 reward failure, retries, concurrent settlements/refunds and post-refund eligibility.
+
+## Deploying proposed-market privacy (13.8)
+
+Merge and deploy the API/frontend changes together with migration
+`20261116000400_proposed_market_privacy.sql`. Deploy the API first: its JWT
+forwarding preserves creator/admin reads once the restrictive SELECT policies
+are applied. Until the migration is applied, direct Supabase reads still use
+the old public policies even though the API is protected.
+
+For the intended hosted development project, confirm the linked project in
+`supabase/.temp/project-ref` against its dashboard, then run from the root:
+
+```sh
+npx --no-install supabase migration list --linked
+npx --no-install supabase db push --linked --dry-run
+npx --no-install supabase db push --linked
+```
+
+Review every pending version in the dry run; never replay the baseline on an
+existing database. These are operator deployment steps, separate from the
+PR's disposable migration tests. No hosted reset or manual data edit is needed.
+
+For a browser smoke check, propose a market as user A, then open `/portfolio`
+as user B in a separate browser profile. B must not see A's pending or denied
+proposal. In the Network panel, proposals must come from
+`/api/portfolio/proposed-markets`, with no pending/denied public-list requests.
+A should still see their proposal and its review notes. Check that an admin
+can still see both users' proposals in `/admin/review`. Also sign out of A
+and into B in the same browser to verify cached private content disappears.
+
+The automated checks cover HTTP ownership/404 contracts, cache clearing and
+request cancellation, and real database SELECT policies for anonymous users,
+both creators, admins and super-admins on fresh and legacy-upgraded schemas.

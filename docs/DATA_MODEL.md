@@ -238,6 +238,9 @@ Tracks which badges each user has earned (highest tier per track)
 - RLS policies live in the SQL history. Public profile/market data and
   owner-scoped wallet/notification data have different rules; API authorization
   policy is in [AUTHZ_MATRIX.md](AUTHZ_MATRIX.md).
+- Pending-review and denied markets are readable only by their creator or an
+  admin/super-admin, including via direct Supabase SELECT. Market options inherit
+  the parent market SELECT policy. Other market states remain public.
 - Labels such as "internal criteria" in a form do not guarantee confidentiality.
   Market response models include source and criteria fields; review serialization
   and database policy before describing any field as admin-only.

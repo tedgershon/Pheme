@@ -244,6 +244,20 @@ Listed by router. Path prefix shown above each table. `M` = path-param market.
 | GET | `/{id}/dispute/votes` | `200` | `200` | `200` | `200` | `200` |
 | POST | `/admin/{id}/resolve` | `401` | `403` | `403` | `200` if `M.status='admin_review'` else `400` | `200` |
 
+**Market visibility:** the default list excludes `pending_review` and `denied`
+for every role. Explicit filters for either status return an empty list to
+anonymous/invalid-token callers, only the creator's records to ordinary users,
+and all matching records to admins and super-admins. Category and pagination
+apply after the ownership restriction. Detail requests for those private states
+return the same `404 MARKET_NOT_FOUND` as a missing ID unless the caller is the
+creator or an admin. Approved market states remain publicly readable.
+
+These rules also apply to direct Supabase reads through SELECT RLS. Option
+labels inherit their parent market's visibility. The backend passes validated
+user JWTs to these reads and keeps explicit API ownership checks even when its
+configured key can bypass RLS. The browser resets cached queries on sign-out
+or account changes, including private market details and admin review results.
+
 **Slated for relocation (Gap B-3):** `POST /api/markets/admin/{id}/resolve` is mounted on the markets router but is admin-only and currently has no frontend caller (`rg "markets/admin"` returns no matches outside specs). Issue #10 moves this route to **`POST /api/admin/markets/{id}/resolve`** (see §7e). The relocated endpoint is what the future `/admin/admin-review` page (Gap B-4) will call.
 
 ### 7c. `bets.py` — `/api/markets`
@@ -297,6 +311,7 @@ returns 404.
 
 | Method | Path | `anon` | `user` | `admin` | `super_admin` |
 |---|---|---|---|---|---|
+| GET | `/portfolio/proposed-markets` | `401` | `200` (own only) | `200` (own) | `200` (own) |
 | GET | `/portfolio` | `401` | `200` (own positions) | `200` (own) | `200` (own) |
 | GET | `/transactions` | `401` | `200` (own) | `200` (own) | `200` (own) |
 
@@ -325,7 +340,6 @@ There is currently no admin endpoint to view another user's portfolio or transac
 
 | Gap | Work tracked in GitHub |
 | --- | --- |
-| B-2: owner-scoped proposed markets in portfolio and public-query privacy | [#9](https://github.com/tedgershon/Pheme/issues/9) |
 | B-3: relocate the legacy admin resolution endpoint and use role dependencies | [#10](https://github.com/tedgershon/Pheme/issues/10) |
 | B-4: admin resolution queue, dashboard entry and ambiguous refund support | [#31](https://github.com/tedgershon/Pheme/issues/31), blocked by #10 |
 | Legacy admin-resolution error envelope and role dependency | [#10](https://github.com/tedgershon/Pheme/issues/10) |
@@ -339,10 +353,6 @@ role contract sweep planned in [#12](https://github.com/tedgershon/Pheme/issues/
 
 The source audit retains these specific discrepancies for the linked work:
 
-- **#9:** the public markets list accepts `status=pending_review`/`denied`, and
-  market detail has no owner/status privacy gate. Portfolio and transactions
-  themselves filter by the caller, but there is no owner-only proposed-market
-  endpoint yet.
 - **#10:** the legacy admin-resolution handler checks `is_admin`, while SQL
   checks the profile role. It still needs the shared role dependency and route
   relocation; the relocated route in section 7e is not mounted yet.
@@ -396,3 +406,9 @@ Active/refunded bettors may submit explanations during the dispute window but re
 Refunding and deleting a bet does not restore voting neutrality: dispute voting checks both current bets and historical bet-placement ledger entries. Refunded bettors may still file explanations.
 
 Community rewards require a matching atomic settlement receipt; direct calls cannot change the 4% rate or replay credits. The settlement transaction checks the expired community window, three-vote quorum and majority.
+
+## Changelog
+
+- Gap B-2 fixed via PR-13.8 (#9): owner-only proposed-market portfolio endpoint,
+  private list/detail authorization, database SELECT policies for proposals and
+  options, and browser cache reset on session identity changes.
