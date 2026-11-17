@@ -82,9 +82,14 @@ that a continuously running scheduler is deployed.
    proposed outcome. Creators cannot vote; bettors may participate in this
    track. At least three votes and a non-tied majority settle it, otherwise it
    enters `admin_review`.
-5. Escalated markets use the admin settlement RPC. Current binary schemas and
-   SQL accept YES/NO. The missing queue UI and AMBIGUOUS refund support are
-   tracked in [#31](https://github.com/tedgershon/Pheme/issues/31).
+5. Escalated markets appear in the `/admin/admin-review` queue with their
+   criteria, proposal, dispute explanation, vote tallies and deadlines. A
+   non-creator admin resolves YES or NO (binary payout) or AMBIGUOUS (every
+   stake refunded, recorded as `refund` ledger entries) through
+   `admin_resolve_market`, which locks the market and settles in one
+   transaction; repeats are rejected without new credits. Only this admin path
+   can settle an `admin_review` market. Multichoice markets can only be
+   refunded here until [#32](https://github.com/tedgershon/Pheme/issues/32).
 
 Binary winning stakes receive a proportional share of the full pool, truncated
 to two decimal places. If the winning pool is empty, SQL refunds all stakes.

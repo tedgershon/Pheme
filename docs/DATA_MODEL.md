@@ -51,7 +51,7 @@ Stores the identity, wallet state, and role of each user
 - `proposed_at` — when creator proposed resolution
 - `dispute_deadline` — deadline for filing disputes after creator proposal
 - `resolution_window_end` — community voting deadline; set on close and reset when the creator explicitly starts community resolution
-- `resolved_outcome` — final resolution (`'YES'` or `'NO'`)
+- `resolved_outcome` — final resolution (`'YES'`, `'NO'`, or admin-only `'AMBIGUOUS'`, meaning every stake was refunded)
 - `resolved_at` — when market was resolved
 - `reviewed_by` — FK to `profiles`, admin who reviewed the market proposal
 - `review_date` — when the market was reviewed
@@ -88,9 +88,8 @@ Represents one option in a multichoice market (2–10 options per market)
 
 The SQL multichoice settlement function exists, but the application resolution
 path still uses binary outcomes. Option-based settlement integration is tracked
-in [#32](https://github.com/tedgershon/Pheme/issues/32). AMBIGUOUS is not an
-accepted binary outcome in the current schema; refund support is tracked in
-[#31](https://github.com/tedgershon/Pheme/issues/31).
+in [#32](https://github.com/tedgershon/Pheme/issues/32). An escalated
+multichoice market can currently only be resolved AMBIGUOUS (full refund).
 
 ### Bet
 
@@ -157,7 +156,12 @@ Represents a dispute filed against a creator's proposed market resolution
 - `amount` — signed amount (positive = credit, negative = debit)
 - `created_at` — timestamp
 
-Transaction types: `initial_grant`, `bet_placement`, `payout`, `voter_stake`, `voter_reward`, `daily_claim`, `resolution_vote_reward`
+Transaction types: `initial_grant`, `bet_placement`, `payout`, `voter_stake`, `voter_reward`, `daily_claim`, `resolution_vote_reward`, `refund`
+
+`refund` is written only by AMBIGUOUS admin resolution: one entry per bettor
+equal to that bettor's total stake on the market. It is not a gain, so the
+payout-based weekly leaderboard ignores it. Earlier refunds (backroll, empty
+winning pool) remain `payout` entries.
 
 Purpose:
 Append-only audit log tracking wallet-affecting events
@@ -227,7 +231,7 @@ Tracks which badges each user has earned (highest tier per track)
 
 - `Market.status` captures the full lifecycle: `pending_review` → `open` → `closed` → resolution → `resolved` (or `denied`)
 - `Bet.side` captures `YES` or `NO` for binary markets; `Bet.option_id` captures the chosen option for multichoice markets
-- `Transaction.transaction_type` distinguishes wallet events: initial grant, bet placement, payout, voter stake, voter reward, daily claim, and resolution vote reward
+- `Transaction.transaction_type` distinguishes wallet events: initial grant, bet placement, payout, voter stake, voter reward, daily claim, resolution vote reward, and ambiguous-outcome refund
 - Portfolio state is derived from `Bet` and `Transaction` records
 - The `role` column on `profiles` replaces the older `is_admin` boolean for access control, with `is_admin` kept in sync via trigger for backward compatibility
 - Community votes (resolution voting) are separate from resolution votes (dispute voting) to support the dual-track resolution model

@@ -128,7 +128,7 @@ Routes from `frontend/src/app/`, plus explicitly planned pages. This is intended
 | `/auth` | `render` | `render` | `redirect→/` | `redirect→/` | `redirect→/` | Sign-in page; redirect already-signed-in users. |
 | `/admin` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Admin landing. |
 | `/admin/review` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Market review queue (`pending_review` status). |
-| `/admin/admin-review` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Admin resolution queue (`admin_review` status). **Implementation gap B-4** — page does not yet exist; see §8. |
+| `/admin/admin-review` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Admin resolution queue (`admin_review` status) with evidence, loading, empty and error states. |
 | `/admin/stats` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Cumulative stats. |
 | `/admin/users` | `redirect→/` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | Super admin only. |
 
@@ -172,7 +172,7 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | Cast Dispute Vote (YES / NO) | `hidden` | `visible` if `M.status='disputed'` and not `dispute-voter(D)` | `hidden` | `hidden` (bettors excluded for fairness) | `visible` if `M.status='disputed'` and not `dispute-voter(D)` | `visible` if `M.status='disputed'` and not `dispute-voter(D)` |
 | Cast Community Vote (YES / NO) | `hidden` | `visible` if community window active and not `community-voter(M)` | `hidden` | `visible` | `visible` | `visible` |
 | Backroll Panel | `hidden` | `hidden` | `hidden` | `hidden` | `visible` if `M.status != 'resolved'` | `visible` |
-| Admin Resolve banner (when `M.status='admin_review'`) | `hidden` | `hidden` | `hidden` | `hidden` | `visible` — informational link to `/admin/admin-review` | `visible` |
+| Admin Resolve banner (when `M.status='admin_review'`) | `hidden` | `hidden` | `hidden` | `hidden` | `visible` — informational link to `/admin/admin-review` (resolution happens only in the queue) | `visible` |
 
 ### 6b. Global navigation / shell
 
@@ -189,12 +189,12 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | Control | `user` | `admin` | `super_admin` |
 |---|---|---|---|
 | `/admin` dashboard card "Review Markets" | n/a (page redirects) | `visible` | `visible` |
-| `/admin` dashboard card "Admin Review" | n/a | `visible` (gap B-4: not yet rendered) | `visible` (gap B-4) |
+| `/admin` dashboard card "Admin Review" | n/a | `visible` | `visible` |
 | `/admin` dashboard card "Statistics" | n/a | `visible` | `visible` |
 | `/admin` dashboard card "Manage Users" | n/a | `hidden` | `visible` |
 | Approve Market button (`/admin/review`) | n/a (page redirects) | `visible` for `pending_review` markets | `visible` |
 | Deny Market button (`/admin/review`) | n/a | `visible` for `pending_review` markets | `visible` |
-| Resolve as YES / NO / AMBIGUOUS button (AMBIGUOUS requires SQL/API support in #31) (`/admin/admin-review`) | n/a | `visible` for `admin_review` markets (gap B-4: page not yet built) | `visible` (gap B-4) |
+| Resolve as YES / NO / AMBIGUOUS buttons (`/admin/admin-review`) | n/a | `visible` for `admin_review` markets; AMBIGUOUS only for multichoice; `hidden` on markets the admin created | same as `admin` |
 | Search Users input (`/admin/users`) | n/a | `hidden` (page redirects) | `visible` |
 | Promote/Demote User (`/admin/users`) | n/a | `hidden` | `visible`, but `disabled` for self |
 
@@ -203,7 +203,7 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 - `admin` → `Review Markets` + `Admin Review` + `Statistics` = **3 cards**
 - `super_admin` → those three + `Manage Users` = **4 cards**
 
-The `Admin Review` card is the only delta from today's UI (which shows 2/3); see Gap B-4.
+The dashboard renders these counts.
 
 ### 6d. Defense-in-depth requirement
 
@@ -284,9 +284,29 @@ or account changes, including private market details and admin review results.
 | POST | `/markets/{id}/backroll` | `401` / `403` | `200` if `M.status != 'resolved'` else `400` | same |
 | GET | `/markets/review` | `401` / `403` | `200` | `200` |
 | POST | `/markets/{id}/review` | `401` / `403` | `200` if `M.status='pending_review'` else `400` | same |
-| POST | `/markets/{id}/resolve` | `401` / `403` | `200` if `M.status='admin_review'` else `400` | same |
+| GET | `/markets/admin-review` | `401` / `403` | `200` | `200` |
+| POST | `/markets/{id}/resolve` | `401` / `403` | `200` if `M.status='admin_review'`; `400` for other states or YES/NO on multichoice; `403` if `creator(M)` | same |
 
-**Note on `/markets/{id}/resolve`:** This admin-only route is implemented in `admin.py` and accepts YES/NO for markets in `admin_review`. The planned admin resolution queue (#31) will call it.
+**Admin resolution queue:** `GET /markets/admin-review` first applies expired
+dispute/community transitions, then lists `admin_review` markets oldest close
+first. Each item carries the market (all criteria, source and link, creator
+proposal and deadlines), creator and disputer Andrew IDs, the dispute
+explanation, YES/NO tallies for dispute and community votes, and the number of
+distinct bettors. It does not list individual voters.
+
+**`POST /markets/{id}/resolve`:** accepts `YES`, `NO` or `AMBIGUOUS` (other
+values are `422`). One SQL transaction checks the admin role, locks the market,
+requires `admin_review`, rejects the market's creator, and settles: YES/NO pay
+binary winners through the existing settlement; AMBIGUOUS refunds every stake
+(binary or option). The response adds `refunded_total` and `refunded_users` for
+AMBIGUOUS. Repeats or concurrent submissions after settlement return
+`400 MARKET_ALREADY_RESOLVED` and credit nothing. Other codes:
+`400 MARKET_NOT_ADMIN_REVIEW`, `400 MARKET_NOT_BINARY`,
+`403 ADMIN_RESOLUTION_CREATOR_RESTRICTED`, `404 MARKET_NOT_FOUND`.
+
+The API forwards the admin's JWT; the RPC rejects a JWT whose subject differs
+from `p_admin_id`, and anonymous database clients cannot execute it. Direct
+`finalize_resolution` calls cannot settle `admin_review` markets.
 
 ### 7f. `notifications.py` — `/api/notifications`
 
@@ -335,9 +355,8 @@ There is currently no admin endpoint to view another user's portfolio or transac
 
 ## 8. Known implementation gaps
 
-| Gap | Work tracked in GitHub |
-| --- | --- |
-| B-4: admin resolution queue, dashboard entry and ambiguous refund support | [#31](https://github.com/tedgershon/Pheme/issues/31), blocked by #10 |
+Gap B-4 (admin resolution queue, dashboard entry and ambiguous refunds) was
+closed by [#31](https://github.com/tedgershon/Pheme/issues/31).
 
 The [mounted-route inventory](../backend/tests/test_authorization_inventory.py)
 checks every application method/path against its required or optional auth
@@ -363,9 +382,9 @@ plus explicit administrative capabilities. Role-preview controls never change
 the server role. The creator overlay applies to admins who created a market;
 admin status alone does not authorize creator actions on someone else's market.
 
-The planned admin queue remains a target contract. AMBIGUOUS requires new
-outcome/refund handling; current binary resolution accepts only YES/NO.
-Multichoice governance is tracked in [#32](https://github.com/tedgershon/Pheme/issues/32).
+An admin who created a market cannot resolve it in the queue; another admin
+must. Option-based (non-refund) settlement of escalated multichoice markets is
+tracked in [#32](https://github.com/tedgershon/Pheme/issues/32).
 
 The current schema exposes some profile fields publicly; do not infer that
 all user identifiers are private from the owner-scoped portfolio policy.
@@ -400,6 +419,9 @@ Community rewards require a matching atomic settlement receipt; direct calls can
 
 ## Changelog
 
+- Gap B-4 fixed via #31: `/admin/admin-review` queue and dashboard card,
+  `GET /api/admin/markets/admin-review`, AMBIGUOUS refunds, creator exclusion,
+  JWT-bound admin settlement RPC and the `finalize_resolution` admin-review guard.
 - Gap B-3 fixed via PR-13.9.
 - Gap B-2 fixed via PR-13.8 (#9): owner-only proposed-market portfolio endpoint,
   private list/detail authorization, database SELECT policies for proposals and
