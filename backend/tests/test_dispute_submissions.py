@@ -110,6 +110,57 @@ def test_public_listing_failure_uses_the_safe_envelope(api):
     }}
 
 
+# ── Caller eligibility (display only) ─────────────────────────
+
+ELIGIBILITY_ROWS = {
+    "markets": [{"id": "m1", "creator_id": "creator"}],
+    "bets": [{"market_id": "m1", "user_id": "active"}, {"market_id": "m2", "user_id": "voter"}],
+    "transactions": [
+        {"market_id": "m1", "user_id": "refunded", "transaction_type": "bet_placement"},
+        {"market_id": "m1", "user_id": "neutral", "transaction_type": "daily_claim"},
+    ],
+    "resolution_votes": [{"market_id": "m1", "voter_id": "voter", "selected_outcome": "NO"}],
+}
+
+
+@pytest.mark.parametrize("user_id,expected", [
+    ("creator", {"is_creator": True, "is_bettor": False, "vote": None, "can_vote": False}),
+    ("active", {"is_creator": False, "is_bettor": True, "vote": None, "can_vote": False}),
+    ("refunded", {"is_creator": False, "is_bettor": True, "vote": None, "can_vote": False}),
+    ("voter", {"is_creator": False, "is_bettor": False, "vote": "NO", "can_vote": False}),
+    ("neutral", {"is_creator": False, "is_bettor": False, "vote": None, "can_vote": True}),
+])
+def test_eligibility_mirrors_the_vote_rules_for_the_caller_only(monkeypatch, user_id, expected):
+    import main
+
+    database = Database(ELIGIBILITY_ROWS)
+    monkeypatch.setattr(main.app, "dependency_overrides", {
+        get_current_user: lambda: {"id": user_id, "role": "user"},
+        get_supabase_client: lambda: database,
+        get_user_token: lambda: None,
+    })
+
+    response = TestClient(main.app).get("/api/markets/m1/dispute/eligibility")
+
+    assert response.status_code == 200
+    assert response.json() == expected
+    assert database.rpc_calls == []
+
+
+def test_eligibility_for_an_unknown_market_is_404(monkeypatch):
+    import main
+
+    database = Database(ELIGIBILITY_ROWS)
+    monkeypatch.setattr(main.app, "dependency_overrides", {
+        get_current_user: lambda: {"id": "neutral", "role": "user"},
+        get_supabase_client: lambda: database,
+        get_user_token: lambda: None,
+    })
+    response = TestClient(main.app).get("/api/markets/missing/dispute/eligibility")
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "MARKET_NOT_FOUND"
+
+
 # ── Admin grouped queue ───────────────────────────────────────
 
 def _market(market_id, status, **extra):
@@ -160,6 +211,10 @@ class Query:
 
     def range(self, start, end):
         self.window = (start, end)
+        return self
+
+    def limit(self, count):
+        self.window = (0, count - 1)
         return self
 
     @staticmethod

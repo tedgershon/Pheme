@@ -36,6 +36,7 @@ AUTHENTICATED = {
     ("POST", "/api/markets/{market_id}/community-resolution"),
     ("POST", "/api/markets/{market_id}/dispute"),
     ("POST", "/api/markets/{market_id}/dispute/vote"),
+    ("GET", "/api/markets/{market_id}/dispute/eligibility"),
     ("POST", "/api/markets/{market_id}/community-vote"),
     ("POST", "/api/markets/{market_id}/bets"),
     ("POST", "/api/markets/{market_id}/bets/option"),

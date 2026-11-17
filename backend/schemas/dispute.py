@@ -56,6 +56,17 @@ class DisputeSubmissionList(BaseModel):
     items: list[PublicDisputeSubmission]
 
 
+class DisputeEligibility(BaseModel):
+    """The caller's own standing on a market's dispute, so the UI can hide or disable
+    actions they cannot take. Display only: file_dispute and cast_dispute_vote enforce
+    the same rules. `can_vote` ignores the voting deadline, which the case reports."""
+
+    is_creator: bool
+    is_bettor: bool  # active or refunded; matches cast_dispute_vote's neutrality check
+    vote: Literal["YES", "NO"] | None
+    can_vote: bool
+
+
 class CastVoteRequest(BaseModel):
     vote: Literal["YES", "NO"]
 

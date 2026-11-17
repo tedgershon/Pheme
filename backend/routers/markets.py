@@ -18,6 +18,7 @@ from market_linter import lint_market_fields
 from observability import AppError, ErrorCode
 from schemas.dispute import (
     CastVoteRequest,
+    DisputeEligibility,
     DisputeResponse,
     DisputeSubmissionList,
     DisputeSubmissionResponse,
@@ -495,6 +496,48 @@ async def list_dispute_submissions(
                 original=exc, extras={"market_id": market_id},
             ) from exc
     return result.data
+
+
+@router.get("/{market_id}/dispute/eligibility", response_model=DisputeEligibility)
+async def get_dispute_eligibility(
+    market_id: str,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    token: str | None = Depends(get_user_token),
+):
+    """Whether the caller may vote on this market's dispute. Reports only the caller's
+    own relationship to the market; the vote RPC remains the gate."""
+    user_id = current_user["id"]
+    with user_auth(supabase, token):
+        market = (
+            supabase.table("markets").select("creator_id").eq("id", market_id).limit(1).execute()
+        )
+        if not market.data:
+            raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
+        is_creator = market.data[0].get("creator_id") == user_id
+
+        # Same rule as cast_dispute_vote: a current bet, or a bet-placement ledger
+        # entry left behind by a refund. Users can read their own transactions.
+        is_bettor = bool(
+            supabase.table("bets").select("id")
+            .eq("market_id", market_id).eq("user_id", user_id).limit(1).execute().data
+        ) or bool(
+            supabase.table("transactions").select("id")
+            .eq("market_id", market_id).eq("user_id", user_id)
+            .eq("transaction_type", "bet_placement").limit(1).execute().data
+        )
+
+        votes = (
+            supabase.table("resolution_votes").select("selected_outcome")
+            .eq("market_id", market_id).eq("voter_id", user_id).limit(1).execute()
+        )
+    vote = votes.data[0]["selected_outcome"] if votes.data else None
+    return {
+        "is_creator": is_creator,
+        "is_bettor": is_bettor,
+        "vote": vote,
+        "can_vote": not (is_creator or is_bettor or vote),
+    }
 
 
 @router.post("/{market_id}/dispute/vote", response_model=VoteResponse)
