@@ -95,7 +95,7 @@ they are not all present in CI yet.
 ## 7. Commit, PR and squash-merge format
 
 Everything needed is in this section and the
-[PR template](.github/PULL_REQUEST_TEMPLATE.md); you do not need to look up
+[PR template](.github/PULL_REQUEST_TEMPLATE/pull_request_template.md); you do not need to look up
 past PRs.
 
 **Branch commits.** Write each message as a single imperative subject line in
@@ -111,8 +111,10 @@ add no suffix. Do not put the issue number in the title; GitHub appends the PR
 number on merge.
 
 **PR description.** Start from the
-[PR template](.github/PULL_REQUEST_TEMPLATE.md). GitHub pre-fills it in the web
-UI. With `gh pr create`, copy it into a body file, fill in each section, delete
+[PR template](.github/PULL_REQUEST_TEMPLATE/pull_request_template.md). It lives
+in a folder, like the issue templates, so GitHub does not pre-fill it on its
+own. In the web UI, add `?template=pull_request_template.md` to the compare
+URL. With `gh pr create`, copy it into a body file, fill in each section, delete
 the guidance comments and pass `--body-file`. Sections, in order: What, Why,
 Verification, Deployment and manual check (only when an operator action is
 needed), and Checklist. Write plain factual prose with exact commands and test
