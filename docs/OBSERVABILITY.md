@@ -28,14 +28,28 @@ Rejected inputs and Pydantic exception context are omitted. Unexpected
 exceptions are captured through `report_and_safe_message` and return a
 generic 500 `INTERNAL_ERROR` response.
 
-The envelope is a rollout in progress. The admin router and its admin-role
-checks use it, as do markets routes except for the legacy admin-resolution
-handler. Other routers and base authentication paths still include plain
-`HTTPException` paths. Remaining migrations are in
-[#5](https://github.com/tedgershon/Pheme/issues/5),
-[#6](https://github.com/tedgershon/Pheme/issues/6) and
-[#10](https://github.com/tedgershon/Pheme/issues/10).
-Do not assume every 4xx/5xx already has the same body.
+All seven smaller routers and shared authentication now use the envelope,
+alongside admin and markets. Portfolio and leaderboard need no local error
+wrapper: unexpected failures use the global safe 500 handler. The remaining
+plain `HTTPException` responses are in the legacy admin-resolution handler,
+tracked in [#10](https://github.com/tedgershon/Pheme/issues/10). Framework
+errors such as an unmatched route or unsupported HTTP method also retain
+FastAPI's default format.
+
+Missing or rejected credentials return 401 `UNAUTHORIZED`; a missing profile
+returns 400 `AUTH_PROFILE_INCOMPLETE`. Profile field/action validation uses
+400 `VALIDATION_FAILED`. Missing and non-owned notification mutations both
+return 404 `NOTIFICATION_NOT_FOUND`; owner success remains 200 with
+`{"status":"ok"}`. Expired community voting returns 409
+`RESOLUTION_WINDOW_EXPIRED`. Betting and claim RPC errors use specific codes
+only for recognized database errors; diagnostic text never becomes the message.
+
+Public community-vote and badge reads resolve optional authentication. Their
+local failure handlers capture user/request context before middleware cleanup;
+simply adding optional auth would lose that context in the global unexpected
+error handler. Anonymous and invalid-token reads remain public. Other unhandled
+errors still receive a safe global response, but user/request attribution from
+that fallback is not guaranteed after middleware cleanup.
 
 ## Frontend
 
@@ -84,10 +98,13 @@ Use UUIDs and minimal relevant context.
 From `backend/`, run:
 
 ```sh
-pytest tests/test_error_envelope.py tests/test_market_errors.py
+pytest tests/test_error_envelope.py tests/test_market_errors.py tests/test_rpc_error_handling.py tests/test_remaining_router_errors.py tests/test_authorization_inventory.py
 ```
 
-These tests exercise response safety and in-memory Sentry capture. The
+These tests exercise response safety, in-memory Sentry capture, notification
+owner/non-owner behavior, and the full mounted-route dependency inventory.
+They use isolated API fixtures, not a hosted database; they do not establish
+SQL/RLS correctness or deployed Sentry delivery. The
 development-only `POST /api/__sentry-test` requires admin authorization.
 With `SENTRY_ENVIRONMENT=production`, that route is absent and `/docs`,
 `/redoc` and `/openapi.json` are disabled.
