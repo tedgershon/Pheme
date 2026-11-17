@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { parseApiError } from "@/lib/api";
 import {
   CATEGORIES,
   MAX_MARKET_DESCRIPTION_LENGTH,
@@ -104,7 +105,7 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
       });
       onAction();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Action failed.");
+      setActionError(parseApiError(err, "Action failed.").message);
     }
   }
 
