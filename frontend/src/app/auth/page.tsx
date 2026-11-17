@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { parseApiError } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
 export default function AuthPage() {
@@ -52,7 +53,7 @@ export default function AuthPage() {
       });
       if (signInError) throw signInError;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(parseApiError(err, "Something went wrong.").message);
       setLoading(false);
     }
   }

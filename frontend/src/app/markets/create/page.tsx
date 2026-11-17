@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { parseApiError } from "@/lib/api";
 import {
   CATEGORIES,
   MAX_MARKET_CRITERIA_LENGTH,
@@ -299,7 +300,7 @@ export default function CreateMarketPage() {
       }
       setSubmitted(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create market.");
+      setError(parseApiError(err, "Failed to create market.").message);
       setSubmitting(false);
     }
   }

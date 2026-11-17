@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { parseApiError } from "@/lib/api";
 import {
   useCastCommunityVote,
   useCastDisputeVote,
@@ -114,7 +115,7 @@ function ResolutionCard({
         await communityMut.mutateAsync({ marketId: market.id, vote: side });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to cast vote.");
+      setError(parseApiError(err, "Failed to cast vote.").message);
     }
   }
 

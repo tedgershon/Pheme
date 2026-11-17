@@ -4,7 +4,11 @@ import { Camera } from "lucide-react";
 import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { ApiError, MAX_PROFILE_AVATAR_BYTES, uploadAvatar } from "@/lib/api";
+import {
+  MAX_PROFILE_AVATAR_BYTES,
+  parseApiError,
+  uploadAvatar,
+} from "@/lib/api";
 import { useUpdateProfile } from "@/lib/query/mutations/auth";
 import { useMe } from "@/lib/query/queries/auth";
 import { useSession } from "@/lib/SessionProvider";
@@ -104,21 +108,10 @@ export default function ProfilePage() {
       setMessage({ type: "success", text: "Profile updated!" });
     } catch (err) {
       console.error("Profile save error:", err);
-      if (err instanceof ApiError) {
-        try {
-          const parsed = JSON.parse(err.body) as { detail?: string };
-          setMessage({
-            type: "error",
-            text: parsed.detail || "Failed to update profile.",
-          });
-        } catch {
-          setMessage({ type: "error", text: "Failed to update profile." });
-        }
-      } else if (err instanceof Error) {
-        setMessage({ type: "error", text: err.message });
-      } else {
-        setMessage({ type: "error", text: "Failed to update profile." });
-      }
+      setMessage({
+        type: "error",
+        text: parseApiError(err, "Failed to update profile.").message,
+      });
     }
   }
 

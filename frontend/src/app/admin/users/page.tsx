@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { parseApiError } from "@/lib/api";
 import { useUpdateUserRole } from "@/lib/query/mutations/admin";
 import { searchUsersQuery } from "@/lib/query/queries/admin";
 import { useMe } from "@/lib/query/queries/auth";
@@ -44,7 +45,7 @@ export default function AdminUsersPage() {
       const updated = await updateRole.mutateAsync({ userId, role: newRole });
       setMessage(`Role updated to ${updated.role} successfully.`);
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to update role");
+      setMessage(parseApiError(err, "Failed to update role.").message);
     }
   }
 

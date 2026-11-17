@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { parseApiError } from "@/lib/api";
 import { useBackrollMarket } from "@/lib/query/mutations/admin";
 import {
   usePlaceBet,
@@ -317,7 +318,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
       setBetAmount("");
       setSelectedOptionId(null);
     } catch (err) {
-      setBetError(err instanceof Error ? err.message : "Failed to place bet.");
+      setBetError(parseApiError(err, "Failed to place bet.").message);
     }
   }
 
@@ -331,7 +332,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
       setBetSuccess(`Placed ${amount} on ${side}!`);
       setBetAmount("");
     } catch (err) {
-      setBetError(err instanceof Error ? err.message : "Failed to place bet.");
+      setBetError(parseApiError(err, "Failed to place bet.").message);
     }
   }
 
@@ -351,7 +352,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
         `Backroll complete: ${result.bets_cancelled} bet(s) cancelled, ${result.total_refunded} banana(s) refunded.`,
       );
     } catch (err) {
-      setBackrollError(err instanceof Error ? err.message : "Backroll failed.");
+      setBackrollError(parseApiError(err, "Backroll failed.").message);
     }
   }
 
@@ -361,9 +362,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
     try {
       await castCommunityMut.mutateAsync({ marketId: market.id, vote: side });
     } catch (err) {
-      setCommunityError(
-        err instanceof Error ? err.message : "Failed to cast vote.",
-      );
+      setCommunityError(parseApiError(err, "Failed to cast vote.").message);
     }
   }
 
@@ -377,9 +376,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
         `Resolution proposed as ${outcome}. Users will be able to dispute this resolution.`,
       );
     } catch (err) {
-      setBetError(
-        err instanceof Error ? err.message : "Failed to resolve market.",
-      );
+      setBetError(parseApiError(err, "Failed to resolve market.").message);
     }
   }
 
@@ -394,9 +391,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
       );
     } catch (err) {
       setBetError(
-        err instanceof Error
-          ? err.message
-          : "Failed to start community resolution.",
+        parseApiError(err, "Failed to start community resolution.").message,
       );
     }
   }
@@ -472,9 +467,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
       setDisputeExplanation("");
       setBetSuccess("Market disputed. Voting is now open.");
     } catch (err) {
-      setBetError(
-        err instanceof Error ? err.message : "Failed to dispute market.",
-      );
+      setBetError(parseApiError(err, "Failed to dispute market.").message);
     }
   }
 
@@ -490,9 +483,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
       await castDisputeMut.mutateAsync({ marketId: market.id, vote: outcome });
       setBetSuccess(`Voted ${outcome}.`);
     } catch (err) {
-      setBetError(
-        err instanceof Error ? err.message : "Failed to submit vote.",
-      );
+      setBetError(parseApiError(err, "Failed to submit vote.").message);
     }
   }
 
