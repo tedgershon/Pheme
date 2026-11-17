@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { parseApiError } from "@/lib/api";
 import { useClaimDaily } from "@/lib/query/mutations/auth";
 import { useMe } from "@/lib/query/queries/auth";
 import { marketsQuery } from "@/lib/query/queries/markets";
@@ -70,15 +71,14 @@ export default function PortfolioPage() {
     try {
       await claim.mutateAsync();
     } catch (err) {
-      if (
-        err &&
-        typeof err === "object" &&
-        "status" in err &&
-        (err as { status: number }).status === 409
-      ) {
+      const { code, message } = parseApiError(
+        err,
+        "Failed to claim. Try again later.",
+      );
+      if (code === "CLAIM_ALREADY_TODAY") {
         setClaimError("Already claimed today!");
       } else {
-        setClaimError("Failed to claim. Try again later.");
+        setClaimError(message);
       }
     }
   }

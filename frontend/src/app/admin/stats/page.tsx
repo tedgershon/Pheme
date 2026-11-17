@@ -7,6 +7,7 @@ import { BananaCoin } from "@/components/banana-coin";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { parseApiError } from "@/lib/api";
 import { adminStatsQuery } from "@/lib/query/queries/admin";
 import { useMe } from "@/lib/query/queries/auth";
 
@@ -63,7 +64,7 @@ export default function AdminStatsPage() {
           </h1>
         </section>
         <p className="text-sm text-destructive">
-          {error instanceof Error ? error.message : "Unknown error"}
+          {parseApiError(error, "Unable to load platform statistics.").message}
         </p>
       </div>
     );
