@@ -1,6 +1,6 @@
 # Agents / new contributors, start here
 
-- **Development documentation:** [docs/](docs/README.md) (AUTHZ_MATRIX, DATA_MODEL, MIGRATIONS, PROJECT_SPECS, OBSERVABILITY).
+- **Development documentation:** [docs/](docs/README.md) (AUTHZ_MATRIX, DATA_MODEL, MARKET_LIFECYCLE, MIGRATIONS, PROJECT_SPECS, OBSERVABILITY).
 - **Design plans and work queue:** [GitHub Issues](https://github.com/tedgershon/Pheme/issues), filtered by label.
 - See [CONTRIBUTING.md](CONTRIBUTING.md) for the issue lifecycle. Keep feature
   plans in remote issues and durable contracts in `docs/`. Prefix major
