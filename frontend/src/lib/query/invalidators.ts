@@ -34,6 +34,12 @@ export const invalidateAfterDispute = (qc: QueryClient, marketId: string) =>
     qc.invalidateQueries({ queryKey: queryKeys.markets.detail(marketId) }),
     qc.invalidateQueries({ queryKey: queryKeys.markets.resolutions }),
     qc.invalidateQueries({ queryKey: queryKeys.disputes.detail(marketId) }),
+    qc.invalidateQueries({
+      queryKey: queryKeys.disputes.submissions(marketId),
+    }),
+    // Admins see every concern grouped under the market's case.
+    qc.invalidateQueries({ queryKey: queryKeys.admin.disputeCases }),
+    qc.invalidateQueries({ queryKey: queryKeys.admin.reviewQueue }),
   ]);
 
 export const invalidateAfterDisputeVote = (qc: QueryClient, marketId: string) =>
@@ -81,6 +87,7 @@ export const invalidateAfterAdminResolution = (
 ) =>
   Promise.all([
     qc.invalidateQueries({ queryKey: queryKeys.admin.reviewQueue }),
+    qc.invalidateQueries({ queryKey: queryKeys.admin.disputeCases }),
     qc.invalidateQueries({ queryKey: queryKeys.admin.stats }),
     qc.invalidateQueries({ queryKey: queryKeys.markets.detail(marketId) }),
     qc.invalidateQueries({ queryKey: queryKeys.markets.all }),

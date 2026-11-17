@@ -66,6 +66,20 @@ export default function AdminPage() {
           </Card>
         </Link>
 
+        <Link href="/admin/disputes">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardHeader>
+              <CardTitle>Dispute Submissions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Read every concern filed on a disputed market, grouped by
+                market.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/admin/stats">
           <Card className="transition-shadow hover:shadow-md">
             <CardHeader>

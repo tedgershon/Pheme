@@ -212,6 +212,35 @@ export interface VoteTally {
   no: number;
 }
 
+export type BettorContext = "none" | "active" | "refunded";
+
+export interface AdminDisputeSubmission {
+  id: string;
+  explanation: string;
+  created_at: string;
+  submitter: AdminReviewPerson;
+  bettor_context: BettorContext;
+}
+
+export interface AdminDisputeCase {
+  dispute_id: string;
+  opened_at: string;
+  voting_deadline: string;
+  market: Market;
+  creator: AdminReviewPerson | null;
+  submission_count: number;
+  submissions: AdminDisputeSubmission[];
+  dispute_votes: VoteTally;
+  bettor_count: number;
+}
+
+export interface AdminDisputeCasePage {
+  items: AdminDisputeCase[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface AdminReviewItem {
   market: Market;
   creator: AdminReviewPerson | null;
@@ -222,6 +251,8 @@ export interface AdminReviewItem {
     voting_deadline: string;
     created_at: string;
     disputer: AdminReviewPerson | null;
+    submission_count: number;
+    submissions: AdminDisputeSubmission[];
   } | null;
   dispute_votes: VoteTally;
   community_votes: VoteTally;
@@ -296,6 +327,33 @@ export interface DisputeResponse {
   voting_deadline: string;
   resolved_by_admin: boolean;
   created_at: string;
+}
+
+/** A concern filed under a market's single dispute case. */
+export interface DisputeSubmissionResponse {
+  id: string;
+  dispute_id: string;
+  market_id: string;
+  submitter_id: string;
+  explanation: string;
+  voting_deadline: string;
+  /** True when this submission opened the case (market became disputed). */
+  opened_case: boolean;
+  created_at: string;
+}
+
+/** Public view: explanations are visible, submitters are anonymous. */
+export interface PublicDisputeSubmission {
+  id: string;
+  explanation: string;
+  created_at: string;
+  is_mine: boolean;
+}
+
+export interface DisputeSubmissionList {
+  total: number;
+  has_submitted: boolean;
+  items: PublicDisputeSubmission[];
 }
 
 export interface VoteResponse {

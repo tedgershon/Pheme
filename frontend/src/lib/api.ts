@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import type {
+  AdminDisputeCasePage,
   AdminResolveMarketRequest,
   AdminResolveMarketResponse,
   AdminReviewItem,
@@ -13,6 +14,8 @@ import type {
   CreateMarketRequest,
   CreateProfileRequest,
   DisputeResponse,
+  DisputeSubmissionList,
+  DisputeSubmissionResponse,
   FileDisputeRequest,
   LeaderboardEntry,
   Market,
@@ -295,7 +298,7 @@ export function startCommunityResolution(marketId: string): Promise<Market> {
 export function fileDispute(
   marketId: string,
   body: FileDisputeRequest,
-): Promise<DisputeResponse> {
+): Promise<DisputeSubmissionResponse> {
   return apiFetch(`/api/markets/${marketId}/dispute`, {
     method: "POST",
     body: JSON.stringify(body),
@@ -307,6 +310,20 @@ export function getDispute(
   opts?: FetchOpts,
 ): Promise<DisputeResponse> {
   return apiFetch(`/api/markets/${marketId}/dispute`, { signal: opts?.signal });
+}
+
+export function listDisputeSubmissions(
+  marketId: string,
+  params?: { limit?: number; offset?: number },
+  opts?: FetchOpts,
+): Promise<DisputeSubmissionList> {
+  const qs = new URLSearchParams();
+  if (params?.limit !== undefined) qs.set("limit", String(params.limit));
+  if (params?.offset !== undefined) qs.set("offset", String(params.offset));
+  const suffix = qs.size ? `?${qs}` : "";
+  return apiFetch(`/api/markets/${marketId}/dispute/submissions${suffix}`, {
+    signal: opts?.signal,
+  });
 }
 
 export function castDisputeVote(
@@ -501,6 +518,23 @@ export function reviewMarket(
 
 export function getAdminReviewQueue(): Promise<AdminReviewItem[]> {
   return apiFetch("/api/admin/markets/admin-review");
+}
+
+export interface AdminDisputeCaseParams {
+  status?: "disputed" | "admin_review";
+  limit?: number;
+  offset?: number;
+}
+
+export function getAdminDisputeCases(
+  params?: AdminDisputeCaseParams,
+): Promise<AdminDisputeCasePage> {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set("status", params.status);
+  if (params?.limit !== undefined) qs.set("limit", String(params.limit));
+  if (params?.offset !== undefined) qs.set("offset", String(params.offset));
+  const suffix = qs.size ? `?${qs}` : "";
+  return apiFetch(`/api/admin/markets/disputes${suffix}`);
 }
 
 export function adminResolveMarket(

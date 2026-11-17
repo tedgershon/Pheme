@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AdminDisputeSubmissions } from "@/components/admin-dispute-submissions";
 import { BananaCoin } from "@/components/banana-coin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -239,11 +240,12 @@ function QueueItem({
         )}
 
         {item.dispute && (
-          <Field
-            label={`Dispute by ${personName(item.dispute.disputer)} · filed ${formatDate(item.dispute.created_at)} · voting ended ${formatDate(item.dispute.voting_deadline)}`}
-          >
-            {item.dispute.explanation}
-          </Field>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">
+              {`${item.dispute.submission_count} submitted concern${item.dispute.submission_count === 1 ? "" : "s"} · case opened ${formatDate(item.dispute.created_at)} · voting ended ${formatDate(item.dispute.voting_deadline)}`}
+            </span>
+            <AdminDisputeSubmissions submissions={item.dispute.submissions} />
+          </div>
         )}
 
         <div className="space-y-2 border-t pt-3">

@@ -14,6 +14,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BananaCoin } from "@/components/banana-coin";
 import {
+  DisputeConcernForm,
+  PublicDisputeSubmissions,
+} from "@/components/dispute-concern-form";
+import {
   buildMultiOptionPriceHistory,
   getOptionColor,
   MultiProbabilityChart,
@@ -41,6 +45,7 @@ import {
   betsForMarketQuery,
   communityVotesQuery,
   disputeQuery,
+  disputeSubmissionsQuery,
   disputeVotesQuery,
   marketQuery,
 } from "@/lib/query/queries/markets";
@@ -142,6 +147,10 @@ export default function MarketDetailClient({ id }: { id: string }) {
   });
   const { data: disputeVotes = [] } = useQuery({
     ...disputeVotesQuery(id),
+    enabled: market?.status === "disputed",
+  });
+  const { data: disputeSubmissions } = useQuery({
+    ...disputeSubmissionsQuery(id),
     enabled: market?.status === "disputed",
   });
   const isCommunityResolutionMode =
@@ -257,6 +266,8 @@ export default function MarketDetailClient({ id }: { id: string }) {
   const chartData = buildPriceHistory(marketBets);
   const isOpen = isMarketOpen(market);
   const isDisputed = market.status === "disputed";
+  const isMarketCreator = user.id === market.creator_id;
+  const hasSubmittedConcern = disputeSubmissions?.has_submitted ?? false;
   const userHasBet = userBets.some((bet) => bet.market_id === market.id);
   const votingEndsAt = disputeDetails?.voting_deadline
     ? new Date(disputeDetails.voting_deadline)
@@ -462,15 +473,22 @@ export default function MarketDetailClient({ id }: { id: string }) {
     if (!market) return;
     const explanation = disputeExplanation.trim();
     if (!explanation) {
-      setBetError("Please add a short explanation for the dispute.");
+      setBetError("Please add a short explanation of your concern.");
       return;
     }
     setBetError(null);
     setBetSuccess(null);
     try {
-      await disputeMut.mutateAsync({ marketId: market.id, explanation });
+      const res = await disputeMut.mutateAsync({
+        marketId: market.id,
+        explanation,
+      });
       setDisputeExplanation("");
-      setBetSuccess("Market disputed. Voting is now open.");
+      setBetSuccess(
+        res.opened_case
+          ? "Dispute submitted. Voting is now open."
+          : "Concern submitted. It was added to this market's dispute.",
+      );
     } catch (err) {
       setBetError(parseApiError(err, "Failed to dispute market.").message);
     }
@@ -1110,24 +1128,80 @@ export default function MarketDetailClient({ id }: { id: string }) {
                           .
                         </div>
                       )}
-                      <textarea
-                        value={disputeExplanation}
-                        onChange={(e) => {
-                          setDisputeExplanation(e.target.value);
-                          setBetError(null);
-                          setBetSuccess(null);
-                        }}
-                        placeholder="Why are you disputing this outcome?"
-                        className="w-full min-h-[90px] rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      {isMarketCreator ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          You proposed this outcome, so you cannot dispute it.
+                        </p>
+                      ) : (
+                        <DisputeConcernForm
+                          value={disputeExplanation}
+                          onChange={(value) => {
+                            setDisputeExplanation(value);
+                            setBetError(null);
+                            setBetSuccess(null);
+                          }}
+                          onSubmit={handleDispute}
+                          submitting={disputing}
+                          placeholder="Why are you disputing this outcome?"
+                          submitLabel="Submit Dispute"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {isDisputed && (
+                    <div className="space-y-3 mt-4 pt-4 border-t">
+                      <p className="text-sm font-medium">Submitted Concerns</p>
+                      <PublicDisputeSubmissions
+                        items={disputeSubmissions?.items ?? []}
+                        total={disputeSubmissions?.total ?? 0}
                       />
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={handleDispute}
-                        disabled={disputing}
-                      >
-                        {disputing ? "Submitting dispute..." : "Submit Dispute"}
-                      </Button>
+                      {isMarketCreator ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          You proposed this outcome, so you cannot add a
+                          concern.
+                        </p>
+                      ) : votingClosed ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          The window for submitting concerns has closed.
+                        </p>
+                      ) : hasSubmittedConcern ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          You have already submitted a concern. It cannot be
+                          edited.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-xs text-muted-foreground">
+                            Anyone except the creator, including bettors, can
+                            add one concern until voting ends
+                            {votingEndsAt
+                              ? ` on ${votingEndsAt.toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  },
+                                )}`
+                              : ""}
+                            . Adding one does not extend voting.
+                          </p>
+                          <DisputeConcernForm
+                            value={disputeExplanation}
+                            onChange={(value) => {
+                              setDisputeExplanation(value);
+                              setBetError(null);
+                              setBetSuccess(null);
+                            }}
+                            onSubmit={handleDispute}
+                            submitting={disputing}
+                            placeholder="What concern do you want admins and voters to see?"
+                            submitLabel="Submit Concern"
+                          />
+                        </>
+                      )}
                     </div>
                   )}
 

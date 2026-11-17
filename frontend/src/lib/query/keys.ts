@@ -1,4 +1,5 @@
 import type {
+  AdminDisputeCaseParams,
   ListBetsParams,
   ListMarketsParams,
   ListTransactionsParams,
@@ -50,11 +51,16 @@ export const queryKeys = {
   admin: {
     stats: ["admin", "stats"] as const,
     reviewQueue: ["admin", "review-queue"] as const,
+    disputeCases: ["admin", "dispute-cases"] as const,
+    disputeCasePage: (p: AdminDisputeCaseParams) =>
+      ["admin", "dispute-cases", p] as const,
     users: (query: string) => ["admin", "users", query] as const,
   },
   disputes: {
     detail: (marketId: string) => ["disputes", marketId] as const,
     votes: (marketId: string) => ["disputes", marketId, "votes"] as const,
+    submissions: (marketId: string) =>
+      ["disputes", marketId, "submissions"] as const,
   },
   communityVotes: (marketId: string) => ["communityVotes", marketId] as const,
 } as const;

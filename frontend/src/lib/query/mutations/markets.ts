@@ -98,8 +98,11 @@ export function useDisputeMarket() {
           ? {
               ...m,
               status: "disputed",
-              disputed_at: res.created_at,
-              disputed_by: res.disputer_id,
+              // Later submissions join the case; they never change its metadata.
+              ...(res.opened_case && {
+                disputed_at: res.created_at,
+                disputed_by: res.submitter_id,
+              }),
               voting_ends_at: res.voting_deadline,
             }
           : m,

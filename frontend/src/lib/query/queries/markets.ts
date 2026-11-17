@@ -66,6 +66,14 @@ export const disputeQuery = (marketId: string) =>
     staleTime: STALE.VOTES,
   });
 
+export const disputeSubmissionsQuery = (marketId: string) =>
+  queryOptions({
+    queryKey: queryKeys.disputes.submissions(marketId),
+    queryFn: ({ signal }) =>
+      api.listDisputeSubmissions(marketId, {}, { signal }),
+    staleTime: STALE.VOTES,
+  });
+
 export const disputeVotesQuery = (marketId: string) =>
   queryOptions({
     queryKey: queryKeys.disputes.votes(marketId),
