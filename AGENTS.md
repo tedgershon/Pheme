@@ -27,7 +27,7 @@ parallel; anything both touch should not run concurrently.
    checklist. CI must be green; one review required before squash-merge.
 5. Commit subjects, the PR title and description, and the squash-merge message
    follow [CONTRIBUTING.md section 7](CONTRIBUTING.md#7-commit-pr-and-squash-merge-format).
-   Start from [the PR template](.github/PULL_REQUEST_TEMPLATE/pull_request_template.md);
+   Start from [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md);
    section 7 has the rules and a worked example. You do not need to look up
    past PRs.
 
