@@ -342,7 +342,6 @@ async def review_market(
             )
             .eq("id", market_id)
             .eq("status", "pending_review")
-            .select("*")
             .execute()
         )
         if not result.data:
