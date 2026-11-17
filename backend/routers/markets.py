@@ -15,7 +15,7 @@ from dependencies import (
     user_auth,
 )
 from market_linter import lint_market_fields
-from observability import AppError, ErrorCode, report_and_safe_message
+from observability import AppError, ErrorCode
 from schemas.dispute import (
     CastVoteRequest,
     DisputeResponse,
@@ -27,8 +27,6 @@ from schemas.market import (
     MarketResponse,
     ProposeResolutionRequest,
     ProposeResolutionResponse,
-    ResolveMarketRequest,
-    ResolveMarketResponse,
 )
 from services.market_state_machine import normalize_market_state, normalize_markets
 from supabase import Client
@@ -548,35 +546,3 @@ async def list_votes(
         .execute()
     )
     return result.data or []
-
-
-# ── Admin ────────────────────────────────────────────────────
-
-
-@router.post("/admin/{market_id}/resolve", response_model=ResolveMarketResponse)
-async def admin_resolve(
-    market_id: str,
-    body: ResolveMarketRequest,
-    current_user: Annotated[dict, Depends(get_current_user)],
-    supabase: Annotated[Client, Depends(get_supabase_client)],
-    token: str | None = Depends(get_user_token),
-):
-    """Admin makes the final resolution call on an admin_review market."""
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin access required.")
-
-    with user_auth(supabase, token):
-        try:
-            result = supabase.rpc("admin_resolve_market", {
-                "p_market_id": market_id,
-                "p_outcome": body.outcome,
-                "p_admin_id": current_user["id"],
-            }).execute()
-            return result.data
-        except APIError as e:
-            msg = e.message.lower() if e.code == "P0001" else ""
-            if "not found" in msg:
-                raise HTTPException(status_code=404, detail="Market not found.")
-            if "admin_review" in msg:
-                raise HTTPException(status_code=400, detail="Market is not in admin review.")
-            raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Failed to resolve market."))

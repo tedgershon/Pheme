@@ -242,7 +242,6 @@ Listed by router. Path prefix shown above each table. `M` = path-param market.
 | GET | `/{id}/dispute` | `200` / `404` | `200` / `404` | `200` / `404` | `200` / `404` | `200` / `404` |
 | POST | `/{id}/dispute/vote` | `401` | `403` if `bettor(M)` or `dispute-voter(D)` else `200` | `403` (creators excluded) | `403` if `bettor(M)` or `dispute-voter(D)` else `200` | `403` if `bettor(M)` or `dispute-voter(D)` else `200` |
 | GET | `/{id}/dispute/votes` | `200` | `200` | `200` | `200` | `200` |
-| POST | `/admin/{id}/resolve` | `401` | `403` | `403` | `200` if `M.status='admin_review'` else `400` | `200` |
 
 **Market visibility:** the default list excludes `pending_review` and `denied`
 for every role. Explicit filters for either status return an empty list to
@@ -257,8 +256,6 @@ labels inherit their parent market's visibility. The backend passes validated
 user JWTs to these reads and keeps explicit API ownership checks even when its
 configured key can bypass RLS. The browser resets cached queries on sign-out
 or account changes, including private market details and admin review results.
-
-**Slated for relocation (Gap B-3):** `POST /api/markets/admin/{id}/resolve` is mounted on the markets router but is admin-only and currently has no frontend caller (`rg "markets/admin"` returns no matches outside specs). Issue #10 moves this route to **`POST /api/admin/markets/{id}/resolve`** (see §7e). The relocated endpoint is what the future `/admin/admin-review` page (Gap B-4) will call.
 
 ### 7c. `bets.py` — `/api/markets`
 
@@ -289,7 +286,7 @@ or account changes, including private market details and admin review results.
 | POST | `/markets/{id}/review` | `401` / `403` | `200` if `M.status='pending_review'` else `400` | same |
 | POST | `/markets/{id}/resolve` | `401` / `403` | `200` if `M.status='admin_review'` else `400` | same |
 
-**Note on `/markets/{id}/resolve`:** This is the relocated home of the route currently mounted at `POST /api/markets/admin/{id}/resolve` (see §7b). The relocation is tracked as Gap B-3.
+**Note on `/markets/{id}/resolve`:** This admin-only route is implemented in `admin.py` and accepts YES/NO for markets in `admin_review`. The planned admin resolution queue (#31) will call it.
 
 ### 7f. `notifications.py` — `/api/notifications`
 
@@ -340,9 +337,7 @@ There is currently no admin endpoint to view another user's portfolio or transac
 
 | Gap | Work tracked in GitHub |
 | --- | --- |
-| B-3: relocate the legacy admin resolution endpoint and use role dependencies | [#10](https://github.com/tedgershon/Pheme/issues/10) |
 | B-4: admin resolution queue, dashboard entry and ambiguous refund support | [#31](https://github.com/tedgershon/Pheme/issues/31), blocked by #10 |
-| Legacy admin-resolution error envelope and role dependency | [#10](https://github.com/tedgershon/Pheme/issues/10) |
 
 The [mounted-route inventory](../backend/tests/test_authorization_inventory.py)
 checks every application method/path against its required or optional auth
@@ -353,9 +348,6 @@ role contract sweep planned in [#12](https://github.com/tedgershon/Pheme/issues/
 
 The source audit retains these specific discrepancies for the linked work:
 
-- **#10:** the legacy admin-resolution handler checks `is_admin`, while SQL
-  checks the profile role. It still needs the shared role dependency and route
-  relocation; the relocated route in section 7e is not mounted yet.
 - **#12:** dispute-vote duplicates currently return 409 (the table above says
   403), dispute expiry returns 400, and dispute-vote listing can return 404 when
   no dispute exists. Community-resolution start is idempotent with 200 when
@@ -371,10 +363,9 @@ plus explicit administrative capabilities. Role-preview controls never change
 the server role. The creator overlay applies to admins who created a market;
 admin status alone does not authorize creator actions on someone else's market.
 
-The planned admin queue and relocated endpoint are target contracts, not
-existing routes. AMBIGUOUS requires new outcome/refund handling; current
-binary resolution accepts only YES/NO. Multichoice governance is tracked in
-[#32](https://github.com/tedgershon/Pheme/issues/32).
+The planned admin queue remains a target contract. AMBIGUOUS requires new
+outcome/refund handling; current binary resolution accepts only YES/NO.
+Multichoice governance is tracked in [#32](https://github.com/tedgershon/Pheme/issues/32).
 
 The current schema exposes some profile fields publicly; do not infer that
 all user identifiers are private from the owner-scoped portfolio policy.
@@ -409,6 +400,7 @@ Community rewards require a matching atomic settlement receipt; direct calls can
 
 ## Changelog
 
+- Gap B-3 fixed via PR-13.9.
 - Gap B-2 fixed via PR-13.8 (#9): owner-only proposed-market portfolio endpoint,
   private list/detail authorization, database SELECT policies for proposals and
   options, and browser cache reset on session identity changes.
