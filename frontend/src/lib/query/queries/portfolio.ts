@@ -16,3 +16,10 @@ export const transactionsQuery = (params?: api.ListTransactionsParams) =>
     queryFn: ({ signal }) => api.getTransactions(params, { signal }),
     staleTime: STALE.TRANSACTIONS,
   });
+
+export const proposedMarketsQuery = () =>
+  queryOptions({
+    queryKey: queryKeys.portfolio.proposedMarkets,
+    queryFn: ({ signal }) => api.getMyProposedMarkets({ signal }),
+    staleTime: STALE.PORTFOLIO,
+  });

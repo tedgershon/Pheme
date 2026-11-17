@@ -31,6 +31,7 @@ export const queryKeys = {
   },
   portfolio: {
     all: ["portfolio"] as const,
+    proposedMarkets: ["portfolio", "proposedMarkets"] as const,
     transactions: (p?: ListTransactionsParams) =>
       ["portfolio", "transactions", p ?? {}] as const,
   },

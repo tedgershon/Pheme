@@ -14,6 +14,7 @@ import { useMe } from "@/lib/query/queries/auth";
 import { marketsQuery } from "@/lib/query/queries/markets";
 import {
   portfolioQuery,
+  proposedMarketsQuery,
   transactionsQuery,
 } from "@/lib/query/queries/portfolio";
 import type { Market } from "@/lib/types";
@@ -48,14 +49,7 @@ export default function PortfolioPage() {
   const { data: transactions = [], isLoading: txsLoading } = useQuery(
     transactionsQuery(),
   );
-  // pending/denied live in the same markets endpoint with a filter — no
-  // extra useEffect + AbortController, RQ handles both
-  const { data: pendingMarkets = [] } = useQuery(
-    marketsQuery({ status: "pending_review" }),
-  );
-  const { data: deniedMarkets = [] } = useQuery(
-    marketsQuery({ status: "denied" }),
-  );
+  const { data: proposedMarkets = [] } = useQuery(proposedMarketsQuery());
 
   const claim = useClaimDaily();
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -109,10 +103,6 @@ export default function PortfolioPage() {
     );
 
   const activeBets = userBets.reduce((sum, b) => sum + b.amount, 0);
-  const proposedMarkets = [...pendingMarkets, ...deniedMarkets].sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
   const visibleProposedMarkets = showAllProposed
     ? proposedMarkets
     : proposedMarkets.slice(0, 3);
