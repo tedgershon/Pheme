@@ -11,6 +11,7 @@ archived history and test fixtures. Do not sort or replay them.
 | `20261114000100` | Forward repair: final notification constraints, ownership policies and RPCs; net-worth leaderboard; expired-open proposal handling; nullable `bets.side` for option bets. Supports installations with some or all later patches already applied. |
 | `20261115000000` | Operator-only exact-email signup exceptions; no users or roles are seeded. Applies domain enforcement to email changes as well as signup. |
 | `20261116000400` | Private pending-review/denied market reads limited to creator/admin; option labels inherit parent visibility. No data or wallet mutations. |
+| `20261117000000` | Admin resolution (#31): `AMBIGUOUS` outcome and `refund` ledger type; JWT-bound, creator-excluding `admin_resolve_market` with atomic refunds; `finalize_resolution` refuses `admin_review` outside that path. Widens constraints only; no data changes. |
 
 Never edit an applied version. Add a new timestamped file for future changes.
 The baseline contains initial `CREATE TABLE` statements and must **never** be
@@ -227,3 +228,19 @@ and into B in the same browser to verify cached private content disappears.
 The automated checks cover HTTP ownership/404 contracts, cache clearing and
 request cancellation, and real database SELECT policies for anonymous users,
 both creators, admins and super-admins on fresh and legacy-upgraded schemas.
+
+## Deploying admin resolution (#31)
+
+Apply `20261117000000_admin_review_resolution.sql` **before** deploying the API
+that sends `AMBIGUOUS`; the old function rejects it as an invalid outcome. Use
+the same linked-project dry run and push as above. The migration renames the
+verified #38 settlement body to `private.settle_binary_market` (not executable
+by API roles) behind a new public `finalize_resolution` wrapper, so lifecycle
+callers are unchanged. `admin_resolve_market` is no longer executable by
+`anon`; the API calls it with the admin's JWT.
+
+[governance_admin_resolution.sql](../supabase/tests/governance_admin_resolution.sql)
+covers role/JWT/creator rejection, direct-finalize bypass, wrong state,
+YES payout, binary and option AMBIGUOUS refunds, and replay rejection. The
+concurrency harness submits six simultaneous AMBIGUOUS calls and requires one
+settlement and one refund per bettor.
