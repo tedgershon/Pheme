@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from postgrest.exceptions import APIError
 
 from dependencies import (
@@ -8,7 +8,7 @@ from dependencies import (
     get_current_user_optional,
     get_supabase_client,
 )
-from observability import report_and_safe_message
+from observability import AppError, ErrorCode
 from schemas.dispute import CastVoteRequest
 from services.market_state_machine import normalize_market_state, normalize_markets
 from supabase import Client
@@ -70,9 +70,9 @@ async def cast_community_vote(
     """Cast a community resolution vote during the 24h resolution window."""
     market = normalize_market_state(supabase, market_id)
     if not market:
-        raise HTTPException(404, "Market not found.")
+        raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
     if market.get("status") != "pending_resolution" or market.get("proposed_outcome") is not None:
-        raise HTTPException(400, "Market is not in community resolution.")
+        raise AppError(400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "Market is not in community resolution.")
 
     try:
         result = supabase.rpc("cast_community_vote", {
@@ -83,28 +83,63 @@ async def cast_community_vote(
         return result.data
     except APIError as e:
         msg = e.message.lower() if e.code == "P0001" else ""
+        extras = {"market_id": market_id, "vote": body.vote}
         if "not in the resolution" in msg:
-            raise HTTPException(400, "Market is not in the resolution period.")
+            raise AppError(
+                400,
+                ErrorCode.MARKET_NOT_PENDING_RESOLUTION,
+                'Market is not in the resolution period.',
+                original=e,
+                extras=extras,
+            ) from e
         if "expired" in msg:
-            raise HTTPException(400, "Resolution voting window has expired.")
+            raise AppError(
+                409,
+                ErrorCode.RESOLUTION_WINDOW_EXPIRED,
+                'Resolution voting window has expired.',
+                original=e,
+                extras=extras,
+            ) from e
         if e.code == "23505" or "unique" in msg or "duplicate" in msg:
-            raise HTTPException(409, "You have already voted on this market's resolution.")
+            raise AppError(
+                409,
+                ErrorCode.COMMUNITY_VOTE_DUPLICATE,
+                "You have already voted on this market's resolution.",
+                original=e,
+                extras=extras,
+            ) from e
         if "creator" in msg:
-            raise HTTPException(403, "Market creators cannot cast community votes on their own market.")
-        raise HTTPException(500, report_and_safe_message(e, "Failed to cast vote."))
+            raise AppError(
+                403,
+                ErrorCode.COMMUNITY_VOTE_CREATOR_RESTRICTED,
+                'Market creators cannot cast community votes on their own market.',
+                original=e,
+                extras=extras,
+            ) from e
+        raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to cast vote.", original=e, extras=extras) from e
 
 
 @router.get("/{market_id}/community-votes")
 async def list_community_votes(
     market_id: str,
     supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """List all community resolution votes for a market."""
-    result = (
-        supabase.table("community_votes")
-        .select("*")
-        .eq("market_id", market_id)
-        .order("created_at")
-        .execute()
-    )
+    try:
+        result = (
+            supabase.table("community_votes")
+            .select("*")
+            .eq("market_id", market_id)
+            .order("created_at")
+            .execute()
+        )
+    except Exception as exc:
+        raise AppError(
+            500,
+            ErrorCode.INTERNAL_ERROR,
+            'Failed to load community votes.',
+            original=exc,
+            extras={'market_id': market_id},
+        ) from exc
     return result.data or []

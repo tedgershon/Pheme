@@ -1,7 +1,7 @@
 import re
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from postgrest.exceptions import APIError
 
 from dependencies import (
@@ -10,7 +10,7 @@ from dependencies import (
     get_user_token,
     user_auth,
 )
-from observability import report_and_safe_message
+from observability import AppError, ErrorCode
 from schemas.dispute import ClaimResponse
 from schemas.user import CreateProfileRequest, UpdateProfileRequest, UserProfileResponse
 from supabase import Client
@@ -27,25 +27,22 @@ def _sanitize_display_name(raw_name: str) -> str:
     # Collapse repeated whitespace so names render consistently across UI surfaces.
     normalized = " ".join(raw_name.split())
     if not normalized:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Display name must not be empty.",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.VALIDATION_FAILED,
+            'Display name must not be empty.',
         )
     if len(normalized) > MAX_DISPLAY_NAME_LENGTH:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Display name is too long. "
-                f"Please keep it to {MAX_DISPLAY_NAME_LENGTH} characters or fewer."
-            ),
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.VALIDATION_FAILED,
+            f'Display name is too long. Please keep it to {MAX_DISPLAY_NAME_LENGTH} characters or fewer.',
         )
     if not DISPLAY_NAME_ALLOWED_RE.fullmatch(normalized):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Display name contains unsupported characters. "
-                "Use letters, numbers, spaces, periods, underscores, or hyphens."
-            ),
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.VALIDATION_FAILED,
+            'Display name contains unsupported characters. Use letters, numbers, spaces, periods, underscores, or hyphens.',
         )
     return normalized
 
@@ -87,9 +84,10 @@ async def create_or_update_profile(
     this updates it; otherwise it inserts a new row.
     """
     if not body.andrew_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="andrew_id must not be empty",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.AUTH_PROFILE_INCOMPLETE,
+            'andrew_id must not be empty',
         )
 
     with user_auth(supabase, token):
@@ -107,9 +105,10 @@ async def create_or_update_profile(
         )
 
     if not result.data:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to upsert profile",
+        raise AppError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ErrorCode.INTERNAL_ERROR,
+            'Failed to upsert profile',
         )
 
     return result.data[0]
@@ -134,9 +133,10 @@ async def update_profile(
         raw_map = body.equipped_badges or {}
         invalid_tracks = [track for track in raw_map if track not in TRACK_SET]
         if invalid_tracks:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid badge track(s): {', '.join(sorted(invalid_tracks))}",
+            raise AppError(
+                status.HTTP_400_BAD_REQUEST,
+                ErrorCode.VALIDATION_FAILED,
+                f"Invalid badge track(s): {', '.join(sorted(invalid_tracks))}",
             )
 
         equipped_badges = {}
@@ -145,9 +145,10 @@ async def update_profile(
                 continue
             badge_id = str(badge_id).strip()
             if not badge_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Badge id for track '{track}' must not be empty",
+                raise AppError(
+                    status.HTTP_400_BAD_REQUEST,
+                    ErrorCode.VALIDATION_FAILED,
+                    f"Badge id for track '{track}' must not be empty",
                 )
             equipped_badges[track] = badge_id
     elif body.equipped_badge_id is not None:
@@ -160,10 +161,7 @@ async def update_profile(
             .execute()
         )
         if not badge_lookup.data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid equipped_badge_id",
-            )
+            raise AppError(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, "Invalid equipped_badge_id")
         badge_row = badge_lookup.data[0]
         equipped_badges = {badge_row["track"]: badge_row["id"]}
     elif "equipped_badge_id" in fields_set:
@@ -181,20 +179,19 @@ async def update_profile(
             defs_by_id = {row["id"]: row for row in (badge_defs.data or [])}
 
             if len(defs_by_id) != len(set(requested_badge_ids)):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="One or more equipped badge ids are invalid",
+                raise AppError(
+                    status.HTTP_400_BAD_REQUEST,
+                    ErrorCode.VALIDATION_FAILED,
+                    'One or more equipped badge ids are invalid',
                 )
 
             for track, badge_id in equipped_badges.items():
                 badge_def = defs_by_id[badge_id]
                 if badge_def["track"] != track:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=(
-                            f"Badge {badge_id} belongs to track '{badge_def['track']}', "
-                            f"not '{track}'"
-                        ),
+                    raise AppError(
+                        status.HTTP_400_BAD_REQUEST,
+                        ErrorCode.VALIDATION_FAILED,
+                        f"Badge {badge_id} belongs to track '{badge_def['track']}', not '{track}'",
                     )
 
             earned = (
@@ -212,11 +209,10 @@ async def update_profile(
             for track, badge_id in equipped_badges.items():
                 badge_tier = int(defs_by_id[badge_id]["tier"])
                 if earned_by_track.get(track, 0) < badge_tier:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=(
-                            f"Cannot equip track '{track}' tier {badge_tier} before earning it"
-                        ),
+                    raise AppError(
+                        status.HTTP_400_BAD_REQUEST,
+                        ErrorCode.VALIDATION_FAILED,
+                        f"Cannot equip track '{track}' tier {badge_tier} before earning it",
                     )
 
         updates["equipped_badges"] = equipped_badges
@@ -233,10 +229,7 @@ async def update_profile(
         updates["avatar_url"] = None
 
     if not updates:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No fields to update",
-        )
+        raise AppError(status.HTTP_400_BAD_REQUEST, ErrorCode.VALIDATION_FAILED, "No fields to update")
 
     with user_auth(supabase, token):
         result = (
@@ -247,9 +240,10 @@ async def update_profile(
         )
 
     if not result.data:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update profile",
+        raise AppError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ErrorCode.INTERNAL_ERROR,
+            'Failed to update profile',
         )
 
     return result.data[0]
@@ -269,7 +263,22 @@ async def claim_daily_bananas(
     except APIError as e:
         msg = e.message.lower() if e.code == "P0001" else ""
         if "already claimed" in msg:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already claimed today.")
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.CLAIM_ALREADY_TODAY,
+                'Already claimed today.',
+                original=e,
+            ) from e
         if "cap" in msg or "above" in msg:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Balance is at or above the 5,000 coin daily claim cap.")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=report_and_safe_message(e, "Failed to claim."))
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.CLAIM_AT_BALANCE_CAP,
+                'Balance is at or above the 5,000 coin daily claim cap.',
+                original=e,
+            ) from e
+        raise AppError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ErrorCode.INTERNAL_ERROR,
+            'Failed to claim.',
+            original=e,
+        ) from e

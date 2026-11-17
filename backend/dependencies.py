@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from postgrest.exceptions import APIError
 
 from config import get_settings
 from observability import AppError, ErrorCode, set_user_context
@@ -21,9 +22,10 @@ def get_supabase_client() -> Client:
     if _supabase_client is None:
         s = get_settings()
         if not s.supabase_url or not s.supabase_key:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Supabase URL and key must be configured",
+            raise AppError(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                ErrorCode.INTERNAL_ERROR,
+                "Service temporarily unavailable.",
             )
         _supabase_client = create_client(s.supabase_url, s.supabase_key)
     return _supabase_client
@@ -49,26 +51,39 @@ def _resolve_user(token: str, supabase: Client) -> dict:
         user_response = supabase.auth.get_user(token)
         user = user_response.user
         if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token",
+            raise AppError(
+                status.HTTP_401_UNAUTHORIZED,
+                ErrorCode.UNAUTHORIZED,
+                "Invalid or expired token.",
             )
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCode.UNAUTHORIZED,
+            "Invalid or expired token.",
         ) from exc
 
-    profile_response = (
-        supabase.table("profiles").select("*").eq("id", user.id).single().execute()
-    )
+    try:
+        profile_response = (
+            supabase.table("profiles").select("*").eq("id", user.id).single().execute()
+        )
+    except APIError as exc:
+        # The primary-key lookup can return at most one row. PostgREST's
+        # singular-response error therefore means this profile is missing.
+        if exc.code == "PGRST116":
+            raise AppError(
+                400, ErrorCode.AUTH_PROFILE_INCOMPLETE,
+                "User profile not found. Please complete onboarding.",
+            ) from exc
+        raise
 
     if profile_response.data is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found. Please complete onboarding.",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.AUTH_PROFILE_INCOMPLETE,
+            "User profile not found. Please complete onboarding.",
         )
 
     return profile_response.data
@@ -80,9 +95,10 @@ async def get_current_user(
 ) -> dict:
     """Required auth -- returns the authenticated user's profile or 401."""
     if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCode.UNAUTHORIZED,
+            "Not authenticated.",
         )
     profile = _resolve_user(credentials.credentials, supabase)
     set_user_context(profile["id"])
