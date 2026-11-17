@@ -133,6 +133,7 @@ def verify():
             psql(read_sql(test))
     psql(read_sql("supabase/tests/application.sql"))
     psql(read_sql("supabase/tests/signup_exceptions.sql"))
+    psql(read_sql("supabase/tests/market_privacy.sql"))
     # Check every literal app RPC exists in the database, including service calls.
     rpc_names = set()
     for path in (ROOT / "backend").rglob("*.py"):

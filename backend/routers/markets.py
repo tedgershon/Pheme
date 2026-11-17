@@ -80,6 +80,15 @@ def _attach_options(markets: list[dict], supabase: Client) -> list[dict]:
     return markets
 
 
+PRIVATE_STATUSES = {"pending_review", "denied"}
+
+
+def _can_read_market(market: dict, user: dict | None) -> bool:
+    return market.get("status") not in PRIVATE_STATUSES or bool(
+        user and (market.get("creator_id") == user["id"] or user.get("role") in {"admin", "super_admin"})
+    )
+
+
 @router.get("", response_model=list[MarketResponse])
 async def list_markets(
     market_status: str | None = Query(None, alias="status"),
@@ -88,39 +97,44 @@ async def list_markets(
     offset: int = Query(0, ge=0),
     *,
     supabase: Annotated[Client, Depends(get_supabase_client)],
-    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
+    current_user: Annotated[dict | None, Depends(get_current_user_optional)],
+    token: str | None = Depends(get_user_token),
 ):
-    state_client = get_supabase_service_client() or supabase
-    if market_status in {"pending_review", "denied"}:
-        pending_for_normalization = (
-            supabase.table("markets")
-            .select("id")
-            .eq("status", "pending_review")
-            .execute()
-        )
-        pending_ids = [row["id"] for row in (pending_for_normalization.data or []) if row.get("id")]
-        if pending_ids:
-            try:
-                normalize_markets(state_client, market_ids=pending_ids)
-            except Exception:
-                logger.warning("Failed to normalize pending markets before list", exc_info=True)
+    private = market_status in PRIVATE_STATUSES
+    if private and current_user is None:
+        return []
+    owner_only = private and current_user.get("role") not in {"admin", "super_admin"}
 
-    query = supabase.table("markets").select("*")
+    # Scope before normalization and pagination, including when the server key
+    # bypasses RLS. Invalid optional auth is anonymous and must not reach RLS.
+    with user_auth(supabase, token if current_user else None):
+        if private:
+            pending = supabase.table("markets").select("id").eq("status", "pending_review")
+            if owner_only:
+                pending = pending.eq("creator_id", current_user["id"])
+            pending_ids = [row["id"] for row in (pending.execute().data or [])]
+            if pending_ids:
+                try:
+                    normalize_markets(get_supabase_service_client() or supabase, market_ids=pending_ids)
+                except Exception:
+                    logger.warning("Failed to normalize pending markets before list", exc_info=True)
 
-    if market_status:
-        query = query.eq("status", market_status)
-    else:
-        query = query.not_.in_("status", ["pending_review", "denied"])
-    if category:
-        query = query.eq("category", category)
+        query = supabase.table("markets").select("*")
+        if market_status:
+            query = query.eq("status", market_status)
+        else:
+            query = query.not_.in_("status", sorted(PRIVATE_STATUSES))
+        if owner_only:
+            query = query.eq("creator_id", current_user["id"])
+        if category:
+            query = query.eq("category", category)
+        result = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
 
-    query = query.order("created_at", desc=True).range(offset, offset + limit - 1)
-    result = query.execute()
-
-    markets = _normalize_for_response(result.data or [], supabase)
-    if market_status:
-        markets = [market for market in markets if market.get("status") == market_status]
-    return _attach_options(markets, supabase)
+        markets = _normalize_for_response(result.data or [], supabase)
+        markets = [market for market in markets if _can_read_market(market, current_user)]
+        if market_status:
+            markets = [market for market in markets if market.get("status") == market_status]
+        return _attach_options(markets, supabase)
 
 
 TRENDING_MIN_VOLUME = 100
@@ -202,17 +216,24 @@ async def get_top_markets(
 async def get_market(
     market_id: str,
     supabase: Annotated[Client, Depends(get_supabase_client)],
-    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
+    current_user: Annotated[dict | None, Depends(get_current_user_optional)],
+    token: str | None = Depends(get_user_token),
 ):
-    result = (
-        supabase.table("markets").select("*").eq("id", market_id).single().execute()
-    )
+    with user_auth(supabase, token if current_user else None):
+        try:
+            result = supabase.table("markets").select("*").eq("id", market_id).single().execute()
+        except APIError as exc:
+            if exc.code == "PGRST116":
+                raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.") from exc
+            raise
 
-    if result.data is None:
-        raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
+        if not result.data or not _can_read_market(result.data, current_user):
+            raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
 
-    markets = _normalize_for_response([result.data], supabase)
-    return _attach_options(markets, supabase)[0]
+        markets = _normalize_for_response([result.data], supabase)
+        if not _can_read_market(markets[0], current_user):
+            raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
+        return _attach_options(markets, supabase)[0]
 
 
 @router.post("", response_model=MarketResponse, status_code=status.HTTP_201_CREATED)
