@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from config import get_settings
-from observability import set_user_context
+from observability import AppError, ErrorCode, set_user_context
 from supabase import Client, create_client
 
 _security = HTTPBearer(auto_error=False)
@@ -116,7 +116,11 @@ async def require_admin(
 ) -> dict:
     """Require the user to be an admin or super_admin."""
     if current_user.get("role") not in ("admin", "super_admin"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required.")
+        raise AppError(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.ADMIN_REQUIRED,
+            "Admin access required.",
+        )
     return current_user
 
 
@@ -125,7 +129,11 @@ async def require_super_admin(
 ) -> dict:
     """Require the user to be a super_admin."""
     if current_user.get("role") != "super_admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+        raise AppError(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.SUPER_ADMIN_REQUIRED,
+            "Super admin access required.",
+        )
     return current_user
 
 

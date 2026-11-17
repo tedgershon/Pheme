@@ -28,9 +28,10 @@ Rejected inputs and Pydantic exception context are omitted. Unexpected
 exceptions are captured through `report_and_safe_message` and return a
 generic 500 `INTERNAL_ERROR` response.
 
-The envelope is a rollout in progress. Markets routes use it except for the
-legacy admin-resolution handler; other routers and authentication dependencies
-still include plain `HTTPException` paths. Remaining migrations are in
+The envelope is a rollout in progress. The admin router and its admin-role
+checks use it, as do markets routes except for the legacy admin-resolution
+handler. Other routers and base authentication paths still include plain
+`HTTPException` paths. Remaining migrations are in
 [#5](https://github.com/tedgershon/Pheme/issues/5),
 [#6](https://github.com/tedgershon/Pheme/issues/6) and
 [#10](https://github.com/tedgershon/Pheme/issues/10).

@@ -58,7 +58,7 @@ def rpc_endpoint(request, monkeypatch):
         yield SimpleNamespace(
             app=app, client=client, path=path, body=body, rpc_name=rpc_name,
             safe_message=safe_message, supabase=supabase, captured=captured, actor=actor,
-            migrated=request.param in {"propose", "dispute_vote"},
+            migrated=request.param in {"backroll", "approve", "propose", "dispute_vote"},
         )
 
 
@@ -96,6 +96,16 @@ def test_expected_database_errors_keep_client_status(rpc_endpoint, code, message
         case.captured.assert_called_once_with(case.supabase.rpc.return_value.execute.side_effect)
     else:
         case.captured.assert_not_called()
+    admin_error_codes = {
+        ("admin_backroll_market", "Market not found"): "MARKET_NOT_FOUND",
+        ("admin_backroll_market", "Cannot backroll a resolved market"): "MARKET_ALREADY_RESOLVED",
+        ("approve_market", "Market not found"): "MARKET_NOT_FOUND",
+        ("approve_market", "Market is not pending review"): "MARKET_NOT_PENDING_REVIEW",
+        ("approve_market", "Market close date has passed"): "MARKET_CLOSE_DATE_PASSED",
+    }
+    expected_admin_code = admin_error_codes.get((case.rpc_name, message))
+    if expected_admin_code:
+        assert response.json()["detail"]["code"] == expected_admin_code
     assert case.supabase.rpc.call_args_list[0].args[0] == case.rpc_name
 
 
@@ -147,7 +157,34 @@ def test_admin_operations_still_reject_regular_users(rpc_endpoint):
     case.actor.update(role="user", is_admin=False)
     response = case.client.post(case.path, json=case.body)
     assert response.status_code == 403
+    if case.path.startswith("/api/admin/"):
+        assert response.json()["detail"]["code"] == "ADMIN_REQUIRED"
     case.supabase.rpc.assert_not_called()
+
+
+def test_admin_error_envelopes_cover_super_admin_and_self_role_checks():
+    app = FastAPI()
+    app.include_router(admin.router)
+    actor = {"id": "u1", "role": "admin"}
+    app.dependency_overrides[get_current_user] = lambda: actor
+    app.dependency_overrides[get_supabase_client] = lambda: Mock()
+
+    with TestClient(app) as client:
+        response = client.get("/api/admin/users/search", params={"q": "user"})
+        assert response.status_code == 403
+        assert response.json() == {
+            "detail": {"code": "SUPER_ADMIN_REQUIRED", "message": "Super admin access required."},
+        }
+
+        actor.update(role="super_admin")
+        response = client.put("/api/admin/users/u1/role", json={"role": "admin"})
+        assert response.status_code == 400
+        assert response.json() == {
+            "detail": {
+                "code": "ADMIN_CANNOT_CHANGE_OWN_ROLE",
+                "message": "Cannot change your own role.",
+            },
+        }
 
 
 def test_successful_rpc_responses_are_preserved(rpc_endpoint):
