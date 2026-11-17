@@ -25,6 +25,9 @@ parallel; anything both touch should not run concurrently.
 3. Commit in 2 to 4 logical steps, each leaving the codebase in a valid state.
 4. Open a PR referencing the issue (`Closes #<n>`); use the PR template's
    checklist. CI must be green; one review required before squash-merge.
+5. Commit subjects, the PR title and description, and the squash-merge message
+   follow [CONTRIBUTING.md section 7](CONTRIBUTING.md#7-commit-pr-and-squash-merge-format).
+   Copy the structure of recent merged PRs; do not invent a new one.
 
 ## Rules
 
