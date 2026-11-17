@@ -1287,10 +1287,15 @@ export default function MarketDetailClient({ id }: { id: string }) {
                   const optionLabel = bet.option_id
                     ? marketOptions.find((o) => o.id === bet.option_id)?.label
                     : null;
+                  // only the viewer learns which rows are theirs
+                  const isMine = !isDemo && bet.user_id === user.id;
                   return (
                     <div
                       key={bet.id}
-                      className="flex items-center justify-between text-sm"
+                      className={cn(
+                        "flex items-center justify-between text-sm",
+                        isMine && "-mx-1.5 rounded-md bg-primary/5 px-1.5",
+                      )}
                     >
                       <div className="flex items-center gap-2">
                         {optionLabel ? (
@@ -1316,6 +1321,14 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             },
                           )}
                         </span>
+                        {isMine && (
+                          <Badge
+                            variant="outline"
+                            className="border-primary/40 text-primary"
+                          >
+                            You
+                          </Badge>
+                        )}
                       </div>
                       <span className="inline-flex items-center gap-0.5 font-medium">
                         <BananaCoin size={14} />
