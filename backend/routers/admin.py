@@ -297,7 +297,7 @@ async def review_market(
                 updates[field] = val
 
     if updates:
-        supabase.table("markets").update(updates).eq("id", market_id).execute()
+        state_client.table("markets").update(updates).eq("id", market_id).execute()
 
     if body.action == "approve":
         try:
@@ -331,10 +331,10 @@ async def review_market(
             raise AppError(400, ErrorCode.VALIDATION_FAILED, "Notes are required when denying a market.")
 
         result = (
-            supabase.table("markets")
+            state_client.table("markets")
             .update(
                 {
-                    "status": "closed",
+                    "status": "denied",
                     "reviewed_by": current_user["id"],
                     "review_date": datetime.now(tz=UTC).isoformat(),
                     "review_notes": notes,
@@ -342,12 +342,19 @@ async def review_market(
             )
             .eq("id", market_id)
             .eq("status", "pending_review")
+            .select("*")
             .execute()
         )
         if not result.data:
             raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.")
 
-    market = supabase.table("markets").select("*").eq("id", market_id).single().execute()
+    market = (
+        state_client.table("markets")
+        .select("*")
+        .eq("id", market_id)
+        .single()
+        .execute()
+    )
 
     if body.action == "approve":
         try:
