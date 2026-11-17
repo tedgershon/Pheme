@@ -1,15 +1,41 @@
 import { type CookieOptions, createServerClient } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const isWithin = (route: string) =>
+    pathname === route || pathname.startsWith(`${route}/`);
+  const isAdminRoute = isWithin("/admin");
+  const requiresUser = [
+    "/markets/create",
+    "/portfolio",
+    "/profile",
+    "/rewards",
+  ].some(isWithin);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.next({ request });
+  let supabaseResponse = NextResponse.next({ request });
+
+  function redirectTo(destination: string) {
+    const response = NextResponse.redirect(new URL(destination, request.url));
+    // Keep token refreshes and expired-session cookie deletions on redirects.
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      response.cookies.set(cookie);
+    }
+    return response;
   }
 
-  let supabaseResponse = NextResponse.next({ request });
+  function anonymousResponse() {
+    if (isAdminRoute) return redirectTo("/");
+    if (requiresUser) return redirectTo("/auth");
+    return supabaseResponse;
+  }
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return anonymousResponse();
+  }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -34,7 +60,37 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  // Validate with Auth rather than trusting the session stored in cookies.
+  let user: User | null = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (!error) user = data.user;
+  } catch {
+    // An unavailable identity service must not allow a protected page through.
+  }
+
+  if (!user) return anonymousResponse();
+
+  if (pathname === "/auth" || pathname === "/auth/") return redirectTo("/");
+
+  if (isAdminRoute) {
+    // Role preview and user-editable JWT metadata are presentation only.
+    let role: string | undefined;
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (!error) role = data?.role;
+    } catch {
+      // Missing/unreadable roles fail closed, just like non-admin roles.
+    }
+    const allowed = isWithin("/admin/users")
+      ? role === "super_admin"
+      : role === "admin" || role === "super_admin";
+    if (!allowed) return redirectTo("/");
+  }
 
   return supabaseResponse;
 }
