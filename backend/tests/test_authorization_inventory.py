@@ -50,20 +50,17 @@ ADMIN = {
     ("GET", "/api/admin/stats"), ("GET", "/api/admin/markets/review"),
     ("POST", "/api/admin/markets/{market_id}/backroll"),
     ("POST", "/api/admin/markets/{market_id}/review"),
+    ("POST", "/api/admin/markets/{market_id}/resolve"),
 }
 SUPER_ADMIN = {
     ("GET", "/api/admin/users/search"), ("PUT", "/api/admin/users/{user_id}/role"),
 }
-# Still checks is_admin in the handler and role in SQL; relocation is issue #10.
-LEGACY_ADMIN = {("POST", "/api/markets/admin/{market_id}/resolve")}
-
-
 def test_all_mounted_routes_have_reviewed_auth_dependencies():
     import main
 
     expected = {
         **dict.fromkeys(PUBLIC, get_current_user_optional),
-        **dict.fromkeys(AUTHENTICATED | LEGACY_ADMIN, get_current_user),
+        **dict.fromkeys(AUTHENTICATED, get_current_user),
         **dict.fromkeys(ADMIN, require_admin),
         **dict.fromkeys(SUPER_ADMIN, require_super_admin),
         ("GET", "/"): None,
@@ -82,7 +79,7 @@ def test_all_mounted_routes_have_reviewed_auth_dependencies():
     assert actual == expected
 
 
-@pytest.mark.parametrize("method,path", sorted(AUTHENTICATED | ADMIN | SUPER_ADMIN | LEGACY_ADMIN))
+@pytest.mark.parametrize("method,path", sorted(AUTHENTICATED | ADMIN | SUPER_ADMIN))
 def test_every_protected_route_rejects_anonymous_before_data_access(monkeypatch, method, path):
     import main
 
@@ -96,7 +93,7 @@ def test_every_protected_route_rejects_anonymous_before_data_access(monkeypatch,
     database.rpc.assert_not_called()
 
 
-@pytest.mark.parametrize("method,path", sorted(ADMIN | SUPER_ADMIN | LEGACY_ADMIN))
+@pytest.mark.parametrize("method,path", sorted(ADMIN | SUPER_ADMIN))
 def test_admin_routes_reject_regular_user_before_data_access(monkeypatch, method, path):
     import main
 
@@ -105,9 +102,14 @@ def test_admin_routes_reject_regular_user_before_data_access(monkeypatch, method
         get_supabase_client: lambda: database,
         get_current_user: lambda: {"id": "u1", "role": "user", "is_admin": False},
     })
-    kwargs = {"json": {"outcome": "YES"}} if (method, path) in LEGACY_ADMIN else {}
     with TestClient(main.app) as client:
-        response = client.request(method, path, **kwargs)
+        response = client.request(method, path)
     assert response.status_code == 403
+    expected = (
+        {"code": "SUPER_ADMIN_REQUIRED", "message": "Super admin access required."}
+        if (method, path) in SUPER_ADMIN else
+        {"code": "ADMIN_REQUIRED", "message": "Admin access required."}
+    )
+    assert response.json() == {"detail": expected}
     database.table.assert_not_called()
     database.rpc.assert_not_called()

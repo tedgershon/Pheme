@@ -27,7 +27,11 @@ from schemas.admin import (
     UpdateRoleResponse,
     UserSearchResult,
 )
-from schemas.market import ReviewMarketRequest
+from schemas.market import (
+    ResolveMarketRequest,
+    ResolveMarketResponse,
+    ReviewMarketRequest,
+)
 from services.market_state_machine import normalize_market_state, normalize_markets
 from supabase import Client
 
@@ -207,6 +211,34 @@ async def backroll_market(
         if "resolved" in msg:
             raise AppError(400, ErrorCode.MARKET_ALREADY_RESOLVED, "Cannot backroll a resolved market.", original=e) from e
         raise AppError(500, ErrorCode.INTERNAL_ERROR, "Backroll failed.", original=e) from e
+
+
+@router.post("/markets/{market_id}/resolve", response_model=ResolveMarketResponse)
+async def admin_resolve_market(
+    market_id: str,
+    body: ResolveMarketRequest,
+    current_user: Annotated[dict, Depends(require_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    token: str | None = Depends(get_user_token),
+):
+    """Admin makes the final resolution call on an admin_review market."""
+    with user_auth(supabase, token):
+        try:
+            result = supabase.rpc("admin_resolve_market", {
+                "p_market_id": market_id,
+                "p_outcome": body.outcome,
+                "p_admin_id": current_user["id"],
+            }).execute()
+            return result.data
+        except APIError as exc:
+            msg = exc.message.lower() if exc.code == "P0001" else ""
+            if "not found" in msg:
+                raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.", original=exc) from exc
+            if "admin_review" in msg:
+                raise AppError(400, ErrorCode.MARKET_NOT_ADMIN_REVIEW, "Market is not in admin review.", original=exc) from exc
+            if "only admins" in msg:
+                raise AppError(403, ErrorCode.ADMIN_REQUIRED, "Admin access required.", original=exc) from exc
+            raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to resolve market.", original=exc) from exc
 
 
 @router.get("/markets/review")

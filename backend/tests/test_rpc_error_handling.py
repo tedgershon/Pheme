@@ -22,7 +22,7 @@ RPC_CASES = {
     "claim": (auth, "/api/auth/claim-daily", None, "claim_daily_bananas", "Failed to claim."),
     "propose": (markets, "/api/markets/m1/resolve", {"outcome": "YES"}, "propose_resolution", "Failed to propose resolution."),
     "dispute_vote": (markets, "/api/markets/m1/dispute/vote", {"vote": "YES"}, "cast_dispute_vote", "Failed to cast vote."),
-    "admin_resolve": (markets, "/api/markets/admin/m1/resolve", {"outcome": "YES"}, "admin_resolve_market", "Failed to resolve market."),
+    "admin_resolve": (admin, "/api/admin/markets/m1/resolve", {"outcome": "YES"}, "admin_resolve_market", "Failed to resolve market."),
     "community_vote": (resolution, "/api/markets/m1/community-vote", {"vote": "YES"}, "cast_community_vote", "Failed to cast vote."),
 }
 
@@ -58,7 +58,7 @@ def rpc_endpoint(request, monkeypatch):
         yield SimpleNamespace(
             app=app, client=client, path=path, body=body, rpc_name=rpc_name,
             safe_message=safe_message, supabase=supabase, captured=captured, actor=actor,
-            migrated=request.param in {"backroll", "approve", "propose", "dispute_vote", "claim", "community_vote"},
+            migrated=request.param in {"backroll", "approve", "propose", "dispute_vote", "claim", "community_vote", "admin_resolve"},
         )
 
 
@@ -108,6 +108,8 @@ def test_expected_database_errors_keep_client_status(rpc_endpoint, code, message
         ("approve_market", "Market not found"): "MARKET_NOT_FOUND",
         ("approve_market", "Market is not pending review"): "MARKET_NOT_PENDING_REVIEW",
         ("approve_market", "Market close date has passed"): "MARKET_CLOSE_DATE_PASSED",
+        ("admin_resolve_market", "Market not found"): "MARKET_NOT_FOUND",
+        ("admin_resolve_market", "Market is not in admin_review status"): "MARKET_NOT_ADMIN_REVIEW",
     }
     expected_code = error_codes.get((case.rpc_name, message))
     if expected_code:
