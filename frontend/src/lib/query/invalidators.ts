@@ -43,7 +43,12 @@ export const invalidateAfterDispute = (qc: QueryClient, marketId: string) =>
   ]);
 
 export const invalidateAfterDisputeVote = (qc: QueryClient, marketId: string) =>
-  qc.invalidateQueries({ queryKey: queryKeys.disputes.votes(marketId) });
+  Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.disputes.votes(marketId) }),
+    qc.invalidateQueries({
+      queryKey: queryKeys.disputes.eligibility(marketId),
+    }),
+  ]);
 
 export const invalidateAfterCommunityVote = (
   qc: QueryClient,

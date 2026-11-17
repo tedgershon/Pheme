@@ -3,9 +3,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fileDispute,
   getAdminDisputeCases,
+  getDisputeEligibility,
   listDisputeSubmissions,
 } from "../api";
-import { invalidateAfterDispute } from "../query/invalidators";
+import {
+  invalidateAfterDispute,
+  invalidateAfterDisputeVote,
+} from "../query/invalidators";
 import { queryKeys } from "../query/keys";
 
 vi.mock("../supabase", () => ({ supabase: null }));
@@ -68,6 +72,40 @@ describe("dispute submission API", () => {
     expect(fetchMock.mock.calls[1][0]).toMatch(
       /\/api\/admin\/markets\/disputes\?status=admin_review&limit=10&offset=10$/,
     );
+  });
+});
+
+describe("dispute vote eligibility", () => {
+  it("reads the caller's standing and refreshes it after a vote", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          is_creator: false,
+          is_bettor: true,
+          vote: null,
+          can_vote: false,
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getDisputeEligibility("m1");
+
+    expect(fetchMock.mock.calls[0][0]).toMatch(
+      /\/api\/markets\/m1\/dispute\/eligibility$/,
+    );
+    expect(result.can_vote).toBe(false);
+
+    const qc = new QueryClient();
+    qc.setQueryData(queryKeys.disputes.eligibility("m1"), "cached");
+    qc.setQueryData(queryKeys.disputes.votes("m1"), "cached");
+    await invalidateAfterDisputeVote(qc, "m1");
+    expect(
+      qc.getQueryState(queryKeys.disputes.eligibility("m1"))?.isInvalidated,
+    ).toBe(true);
+    expect(
+      qc.getQueryState(queryKeys.disputes.votes("m1"))?.isInvalidated,
+    ).toBe(true);
   });
 });
 

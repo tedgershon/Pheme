@@ -169,9 +169,9 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | Place Bet (multichoice) | `hidden` | `visible` if `M.status='open'` and option selected | `hidden` | `visible` | same as `user` | same as `user` |
 | Propose Resolution (YES / NO) | `hidden` | `hidden` | `visible` if `M.status='closed'` | `hidden` | same creator restriction | same creator restriction |
 | Start Community Resolution | `hidden` | `hidden` | `visible` if `M.status='closed'` | `hidden` | same creator restriction | same creator restriction |
-| Submit Dispute / Concern | `hidden` | `visible` if proposal and dispute window active, or `M.status='disputed'`, voting not ended and not `submitter(D)` | `hidden` (explanatory note instead) | same as `user` (active and refunded bettors may submit) | same as `user` | same as `user` |
-| Cast Dispute Vote (YES / NO) | `hidden` | `visible` if `M.status='disputed'` and not `dispute-voter(D)` | `hidden` | `hidden` (bettors excluded for fairness) | `visible` if `M.status='disputed'` and not `dispute-voter(D)` | `visible` if `M.status='disputed'` and not `dispute-voter(D)` |
-| Cast Community Vote (YES / NO) | `hidden` | `visible` if community window active and not `community-voter(M)` | `hidden` | `visible` | `visible` | `visible` |
+| Submit Dispute / Concern | `hidden` (sign-in note) | `visible` if proposal and dispute window active, or `M.status='disputed'`, voting not ended and not `submitter(D)` | `hidden` (explanatory note instead) | same as `user` (active and refunded bettors may submit) | same as `user` | same as `user` |
+| Cast Dispute Vote (YES / NO) | `hidden` (tally and sign-in note only) | `visible` if `M.status='disputed'`; `disabled` once `dispute-voter(D)` or voting ended | `disabled` (tally shown, with reason) | `disabled` with reason (active and refunded bettors excluded for fairness) | same as `user` | same as `user` |
+| Cast Community Vote (YES / NO) | `hidden` (sign-in note) | `visible` if community window active and not `community-voter(M)` | `hidden` | `visible` | `visible` | `visible` |
 | Backroll Panel | `hidden` | `hidden` | `hidden` | `hidden` | `visible` if `M.status != 'resolved'` | `visible` |
 | Admin Resolve banner (when `M.status='admin_review'`) | `hidden` | `hidden` | `hidden` | `hidden` | `visible` — informational link to `/admin/admin-review` (resolution happens only in the queue) | `visible` |
 
@@ -242,6 +242,7 @@ Listed by router. Path prefix shown above each table. `M` = path-param market.
 | POST | `/{id}/dispute` | `401` | `200` if eligible else `400`/`403`/`409` | `403` (creator cannot dispute) | `200` if eligible else `400`/`403`/`409` | `200` if eligible else `400`/`403`/`409` |
 | GET | `/{id}/dispute` | `200` / `404` | `200` / `404` | `200` / `404` | `200` / `404` | `200` / `404` |
 | GET | `/{id}/dispute/submissions` | `200` | `200` | `200` | `200` | `200` |
+| GET | `/{id}/dispute/eligibility` | `401` | `200` | `200` | `200` | `200` |
 | POST | `/{id}/dispute/vote` | `401` | `403` if `bettor(M)` or `dispute-voter(D)` else `200` | `403` (creators excluded) | `403` if `bettor(M)` or `dispute-voter(D)` else `200` | `403` if `bettor(M)` or `dispute-voter(D)` else `200` |
 | GET | `/{id}/dispute/votes` | `200` | `200` | `200` | `200` | `200` |
 
@@ -318,6 +319,13 @@ is_mine}` rows, oldest first. Submitters are anonymous to everyone but admins.
 but is no longer writable by API roles. `dispute_submissions` has no table
 grants for `anon`/`authenticated` and is reachable only through `list_dispute_submissions` (public, anonymised) and
 `admin_dispute_submissions` (admins only).
+
+*Caller eligibility.* `GET /{id}/dispute/eligibility` (signed in) returns the
+caller's own `is_creator`, `is_bettor` (active or refunded, the same rule as
+`cast_dispute_vote`), `vote` and `can_vote`, so the page can disable the vote
+buttons with a reason instead of letting the server refuse a click. It reports
+nothing about other users and ignores the deadline; `cast_dispute_vote` stays
+the gate.
 
 *Admin queue.* `GET /markets/disputes?status=disputed|admin_review&limit=1-50&offset=`
 lists cases grouped by market, oldest case first, for markets still in voting

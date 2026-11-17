@@ -356,6 +356,16 @@ export interface DisputeSubmissionList {
   items: PublicDisputeSubmission[];
 }
 
+/** The signed-in caller's own standing; display only, the vote RPC is the gate. */
+export interface DisputeEligibility {
+  is_creator: boolean;
+  /** Active or refunded bettor. */
+  is_bettor: boolean;
+  vote: "YES" | "NO" | null;
+  /** Ignores the voting deadline. */
+  can_vote: boolean;
+}
+
 export interface VoteResponse {
   id: string;
   dispute_id: string;

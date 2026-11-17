@@ -44,6 +44,7 @@ import { useMe } from "@/lib/query/queries/auth";
 import {
   betsForMarketQuery,
   communityVotesQuery,
+  disputeEligibilityQuery,
   disputeQuery,
   disputeSubmissionsQuery,
   disputeVotesQuery,
@@ -160,12 +161,11 @@ export default function MarketDetailClient({ id }: { id: string }) {
     enabled: isCommunityResolutionMode && !!market?.resolution_window_end,
   });
 
-  // portfolio drives whether the current user has bet on this market
-  // (disables voting in disputes for bettors)
-  const { data: userBets = [] } = useQuery({
-    queryKey: ["_userBetsOnMarket", id, user.id],
-    queryFn: () => Promise.resolve([] as Bet[]),
-    enabled: false,
+  // the caller's own standing (creator, active/refunded bettor, existing vote)
+  // so the vote buttons are disabled with a reason; the vote RPC is the gate
+  const { data: disputeEligibility } = useQuery({
+    ...disputeEligibilityQuery(id),
+    enabled: market?.status === "disputed" && !isDemo,
   });
 
   // mutation hooks, optimistic helpers under the hood
@@ -268,11 +268,23 @@ export default function MarketDetailClient({ id }: { id: string }) {
   const isDisputed = market.status === "disputed";
   const isMarketCreator = user.id === market.creator_id;
   const hasSubmittedConcern = disputeSubmissions?.has_submitted ?? false;
-  const userHasBet = userBets.some((bet) => bet.market_id === market.id);
   const votingEndsAt = disputeDetails?.voting_deadline
     ? new Date(disputeDetails.voting_deadline)
     : null;
   const votingClosed = votingEndsAt ? votingEndsAt <= new Date() : false;
+  // stays false (buttons disabled) until eligibility loads, so nobody sees a
+  // button flash enabled and then disable
+  const canVoteInDispute =
+    !isMarketCreator && !votingClosed && !!disputeEligibility?.can_vote;
+  const disputeVoteNote = isMarketCreator
+    ? "You created this market, so you cannot vote on its dispute."
+    : disputeEligibility?.is_bettor
+      ? "You bet on this market, so you cannot vote on its dispute."
+      : disputeEligibility?.vote
+        ? `You voted ${disputeEligibility.vote}.`
+        : votingClosed
+          ? "Voting has ended."
+          : "Cast your vote on the final outcome.";
   const disputeDeadline = market.dispute_deadline
     ? new Date(market.dispute_deadline)
     : null;
@@ -498,10 +510,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
     if (!market) return;
     setBetError(null);
     setBetSuccess(null);
-    if (userHasBet) {
-      setBetError("Bettors cannot vote in disputes.");
-      return;
-    }
+    if (!canVoteInDispute) return;
     try {
       await castDisputeMut.mutateAsync({ marketId: market.id, vote: outcome });
       setBetSuccess(`Voted ${outcome}.`);
@@ -1027,7 +1036,17 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         bananas for voting correctly
                       </p>
 
-                      {isCreator ? (
+                      {isDemo ? (
+                        resolutionWindowExpired ? (
+                          <p className="text-xs italic text-muted-foreground">
+                            Resolution window has expired
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Sign in with your CMU email address to vote.
+                          </p>
+                        )
+                      ) : isCreator ? (
                         <p className="text-xs italic text-muted-foreground">
                           As the market creator, you propose a resolution via
                           the Creator Resolution section below.
@@ -1128,7 +1147,12 @@ export default function MarketDetailClient({ id }: { id: string }) {
                           .
                         </div>
                       )}
-                      {isMarketCreator ? (
+                      {isDemo ? (
+                        <p className="text-xs text-muted-foreground">
+                          Sign in with your CMU email address to dispute this
+                          outcome.
+                        </p>
+                      ) : isMarketCreator ? (
                         <p className="text-xs italic text-muted-foreground">
                           You proposed this outcome, so you cannot dispute it.
                         </p>
@@ -1156,7 +1180,14 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         items={disputeSubmissions?.items ?? []}
                         total={disputeSubmissions?.total ?? 0}
                       />
-                      {isMarketCreator ? (
+                      {isDemo ? (
+                        votingClosed ? null : (
+                          <p className="text-xs text-muted-foreground">
+                            Sign in with your CMU email address to submit a
+                            concern.
+                          </p>
+                        )
+                      ) : isMarketCreator ? (
                         <p className="text-xs italic text-muted-foreground">
                           You proposed this outcome, so you cannot add a
                           concern.
@@ -1209,30 +1240,34 @@ export default function MarketDetailClient({ id }: { id: string }) {
                     <div className="space-y-3 mt-4 pt-4 border-t">
                       <p className="text-sm font-medium">Community Vote</p>
                       <div className="text-xs text-muted-foreground">
-                        {userHasBet
-                          ? "Bettors cannot vote in disputes."
-                          : "Cast your vote on the final outcome."}
+                        {isDemo
+                          ? votingClosed
+                            ? "Voting has ended."
+                            : "Sign in with your CMU email address to vote."
+                          : disputeVoteNote}
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span>YES votes: {voteTotals.yes}</span>
                         <span>NO votes: {voteTotals.no}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          className="h-12 text-sm bg-success text-success-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-success)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-success)_70%,black)] hover:bg-success/90"
-                          onClick={() => handleVote("YES")}
-                          disabled={voting || userHasBet || votingClosed}
-                        >
-                          Vote YES
-                        </Button>
-                        <Button
-                          className="h-12 text-sm bg-danger text-danger-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] hover:bg-danger/90"
-                          onClick={() => handleVote("NO")}
-                          disabled={voting || userHasBet || votingClosed}
-                        >
-                          Vote NO
-                        </Button>
-                      </div>
+                      {!isDemo && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            className="h-12 text-sm bg-success text-success-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-success)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-success)_70%,black)] hover:bg-success/90"
+                            onClick={() => handleVote("YES")}
+                            disabled={voting || !canVoteInDispute}
+                          >
+                            Vote YES
+                          </Button>
+                          <Button
+                            className="h-12 text-sm bg-danger text-danger-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] hover:bg-danger/90"
+                            onClick={() => handleVote("NO")}
+                            disabled={voting || !canVoteInDispute}
+                          >
+                            Vote NO
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

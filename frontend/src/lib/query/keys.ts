@@ -61,6 +61,8 @@ export const queryKeys = {
     votes: (marketId: string) => ["disputes", marketId, "votes"] as const,
     submissions: (marketId: string) =>
       ["disputes", marketId, "submissions"] as const,
+    eligibility: (marketId: string) =>
+      ["disputes", marketId, "eligibility"] as const,
   },
   communityVotes: (marketId: string) => ["communityVotes", marketId] as const,
 } as const;

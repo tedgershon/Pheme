@@ -13,6 +13,7 @@ import type {
   CommunityVote,
   CreateMarketRequest,
   CreateProfileRequest,
+  DisputeEligibility,
   DisputeResponse,
   DisputeSubmissionList,
   DisputeSubmissionResponse,
@@ -322,6 +323,15 @@ export function listDisputeSubmissions(
   if (params?.offset !== undefined) qs.set("offset", String(params.offset));
   const suffix = qs.size ? `?${qs}` : "";
   return apiFetch(`/api/markets/${marketId}/dispute/submissions${suffix}`, {
+    signal: opts?.signal,
+  });
+}
+
+export function getDisputeEligibility(
+  marketId: string,
+  opts?: FetchOpts,
+): Promise<DisputeEligibility> {
+  return apiFetch(`/api/markets/${marketId}/dispute/eligibility`, {
     signal: opts?.signal,
   });
 }
