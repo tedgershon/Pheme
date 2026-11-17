@@ -177,3 +177,19 @@ authorization or timing rule. Backend unit tests cover lifecycle coordination.
 For recovery, restore the verified backup or apply a reviewed forward repair.
 Do not replay initial table creation, erase migration history, or improvise
 balance adjustments outside the transactional engine.
+
+## Governance and accounting repairs (#38)
+
+Apply versions `20261116000000`, `20261116000100`, and `20261116000200` in order.
+They enforce dispute/option-bet eligibility, preserve refunded participation via
+bet-placement ledger entries, correct option refund pools, and make new community
+settlement/rewards atomic. Betting and backroll take market locks before wallet
+locks; multi-user credits lock profiles in UUID order.
+
+The last migration adds `private.community_settlements`; clients cannot write its
+receipts. It does not infer or replay rewards for previously resolved markets.
+Any historic missed/duplicate rewards require a separate audited reconciliation.
+No application balances are rewritten by these migrations. Deploy all migrations
+before the coordinator change; old coordinators' extra reward call becomes a no-op
+for newly completed community settlements. The disposable harness includes forced
+reward failure, retries, concurrent settlements/refunds and post-refund eligibility.

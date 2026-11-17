@@ -112,6 +112,10 @@ async def place_multichoice_bet(
         ).execute()
     except Exception as exc:
         detail = str(exc)
+        if "creators cannot" in detail:
+            raise HTTPException(403, "Market creators cannot place bets on their own markets") from exc
+        if "Market has closed" in detail:
+            raise HTTPException(409, "Market has closed") from exc
         if "Insufficient balance" in detail:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

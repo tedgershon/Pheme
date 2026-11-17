@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import observability
 from dependencies import get_current_user, get_supabase_client, get_user_token
-from routers import admin, auth, markets, resolution
+from routers import admin, auth, bets, markets, resolution
 
 RPC_CASES = {
     "backroll": (admin, "/api/admin/markets/m1/backroll", {"cutoff_date": "2026-01-01T00:00:00Z"}, "admin_backroll_market", "Backroll failed."),
@@ -166,3 +166,22 @@ def test_successful_rpc_responses_are_preserved(rpc_endpoint):
     assert all(value == data[key] for key, value in response.json().items())
     assert case.supabase.rpc.call_args_list[0].args[0] == case.rpc_name
     case.captured.assert_not_called()
+
+
+@pytest.mark.parametrize("message,status", [
+    ("Market creators cannot place bets on their own markets", 403),
+    ("Market has closed", 409),
+])
+def test_option_bet_sql_eligibility_errors(message, status):
+    database = Mock()
+    database.rpc.return_value.execute.side_effect = RuntimeError(message)
+    app = FastAPI()
+    app.include_router(bets.router)
+    app.dependency_overrides = {
+        get_current_user: lambda: {"id": "u1"},
+        get_supabase_client: lambda: database,
+    }
+    with TestClient(app) as client:
+        response = client.post("/api/markets/m1/bets/option", json={"option_id": "o1", "amount": 10})
+    assert response.status_code == status
+    assert response.json()["detail"] == message

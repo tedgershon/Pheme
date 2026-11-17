@@ -89,8 +89,7 @@ that a continuously running scheduler is deployed.
 Binary winning stakes receive a proportional share of the full pool, truncated
 to two decimal places. If the winning pool is empty, SQL refunds all stakes.
 Community winners also receive a reward based on 4% of
-the pool. The current coordinator calls settlement and voter-reward RPCs
-separately; atomicity, recovery and replay safety are tracked in #38.
+the pool (rounded per winning voter to two decimals). Community settlement validates the expired window, quorum and majority in SQL, then pays bettors and winning voters in one transaction. Any reward failure rolls back the entire settlement. A private receipt makes same-outcome retries harmless and rejects unrelated reward calls; the reward percentage remains fixed at 4%.
 Settlement must not be bypassed by direct edits to outcomes or balances.
 
 Multichoice creation and betting are implemented, but the application
@@ -99,8 +98,7 @@ the multichoice settlement RPC are tracked in
 [#32](https://github.com/tedgershon/Pheme/issues/32).
 
 Admin backroll cancels bets after a cutoff and refunds affected users through
-an RPC. Multichoice pool accounting and preservation of refunded bettors'
-dispute-voting restrictions need the fixes in #38. It cannot operate on a resolved market. Resolved content is guarded
+an RPC. Refunds adjust the matching binary or option pool. The bet-placement ledger remains an auditable participation record, so refunded bettors remain excluded from dispute voting while retaining permission to file disputes. It cannot operate on a resolved market. Resolved content is guarded
 against edits. See the SQL source for the currently implemented restrictions.
 
 ## Supporting surfaces
