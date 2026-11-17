@@ -94,7 +94,9 @@ they are not all present in CI yet.
 
 ## 7. Commit, PR and squash-merge format
 
-Follow merged PRs #51–#56 as examples.
+Everything needed is in this section and the
+[PR template](.github/PULL_REQUEST_TEMPLATE.md); you do not need to look up
+past PRs.
 
 **Branch commits.** Write each message as a single imperative subject line in
 sentence case, with no trailing period, for example
@@ -108,31 +110,51 @@ parentheses: `Move admin resolution route under admin API (13.9)`. Otherwise
 add no suffix. Do not put the issue number in the title; GitHub appends the PR
 number on merge.
 
-**PR description.** Use these sections in this order, in plain factual prose:
+**PR description.** Start from the
+[PR template](.github/PULL_REQUEST_TEMPLATE.md). GitHub pre-fills it in the web
+UI. With `gh pr create`, copy it into a body file, fill in each section, delete
+the guidance comments and pass `--body-file`. Sections, in order: What, Why,
+Verification, Deployment and manual check (only when an operator action is
+needed), and Checklist. Write plain factual prose with exact commands and test
+counts. Add another section only for reference material, such as an audited
+route inventory table. Do not add emoji, summary banners or generated-by
+footers.
 
-1. `## What`: one to three short paragraphs covering the behavior change, key
-   routes, files and migrations (in backticks), and any fix found along the way.
-   Name policy choices a reviewer should confirm.
-2. `## Why`: start with `Closes #<n>.`, then name the roadmap step
-   (for example "Implements phase 3 step 2 (13.5) of #40") and give the reason
-   briefly. Say that the roadmap checkbox stays unchecked until merge.
-3. `## Verification`: one bullet per check, giving the command and result with
-   counts (for example "`pytest -q` from `backend/`: 261 passed"). Include the
-   disposable database harness when SQL changed, `git diff --check` and
-   GitHub CI status. State explicitly what was **not** verified, such as
-   manual, browser or hosted checks.
-4. `## Deployment and manual check` (only when an operator action is needed):
-   migration/deploy order, linked-project dry run, then a short smoke test.
-   Link to the relevant `docs/` section instead of repeating it.
-5. `## Checklist`: the template's four items, checked honestly. Add a short
-   parenthetical where a check is partial.
+Filled-in example (PR #56). Its title was
+`Move admin resolution route under admin API (13.9)`:
 
-Add another section only for reference material, such as an audited route
-inventory table. Do not add emoji, summary banners or generated-by footers.
+````markdown
+## What
+
+Move admin market resolution from `POST /api/markets/admin/{id}/resolve` to `POST /api/admin/markets/{id}/resolve`. Use `require_admin` and safe `AppError` responses while preserving the transactional `admin_resolve_market` RPC. Update route tests and the authorization matrix.
+
+## Why
+
+Closes #10. The old handler checked a legacy `is_admin` field and lived in the markets router. The moved route uses the shared role dependency and is ready for the future admin review queue.
+
+## Verification
+
+- `python -m pytest -q` from `backend/`: 261 passed.
+- `python -m ruff check .` from `backend/`: passed.
+- `git diff --check`: passed.
+- `rg "/api/markets/admin/" frontend/src`: no matches.
+- GitHub CI: database, backend, and frontend jobs passed.
+
+The current schema and SQL accept YES/NO outcomes. Ambiguous outcome and refund support remain in #31.
+
+## Checklist
+
+- [x] CI is green
+- [x] Tested locally (backend and/or frontend, as relevant)
+- [x] No secrets or `.env` values committed
+- [x] Docs updated if behavior changed (`README.md`, `docs/`)
+````
+
+It has no Deployment section because no operator action was needed.
 
 **Squash merge.** Use the PR title plus ` (#<pr>)` as the subject. The extended
 description is one `* <commit subject>` bullet per branch commit, in order,
-separated by blank lines:
+separated by blank lines. For the example above:
 
 ```text
 Move admin resolution route under admin API (13.9) (#56)
@@ -144,3 +166,5 @@ Move admin resolution route under admin API (13.9) (#56)
 
 GitHub's default squash text includes full commit bodies and trailers. Trim it
 to the subject bullets before merging.
+
+When the template's sections change, update the example above in the same PR.
