@@ -23,7 +23,8 @@ PUBLIC = {
     ("GET", path) for path in (
         "/api/markets", "/api/markets/hot", "/api/markets/trending", "/api/markets/top",
         "/api/markets/{market_id}", "/api/markets/{market_id}/dispute",
-        "/api/markets/{market_id}/dispute/votes", "/api/markets/{market_id}/bets",
+        "/api/markets/{market_id}/dispute/votes", "/api/markets/{market_id}/dispute/submissions",
+        "/api/markets/{market_id}/bets",
         "/api/markets/resolutions", "/api/markets/{market_id}/community-votes",
         "/api/rewards/badges/{user_id}", "/api/leaderboard", "/api/leaderboard/weekly",
     )
@@ -52,6 +53,7 @@ ADMIN = {
     ("POST", "/api/admin/markets/{market_id}/review"),
     ("POST", "/api/admin/markets/{market_id}/resolve"),
     ("GET", "/api/admin/markets/admin-review"),
+    ("GET", "/api/admin/markets/disputes"),
 }
 SUPER_ADMIN = {
     ("GET", "/api/admin/users/search"), ("PUT", "/api/admin/users/{user_id}/role"),

@@ -28,6 +28,34 @@ class DisputeResponse(BaseModel):
     created_at: datetime
 
 
+class DisputeSubmissionResponse(BaseModel):
+    """One concern filed under a market's single dispute case."""
+
+    id: str
+    dispute_id: str
+    market_id: str
+    submitter_id: str
+    explanation: str
+    voting_deadline: datetime
+    opened_case: bool
+    created_at: datetime
+
+
+class PublicDisputeSubmission(BaseModel):
+    """Explanations are public so neutral voters can weigh them; submitters are not."""
+
+    id: str
+    explanation: str
+    created_at: datetime
+    is_mine: bool
+
+
+class DisputeSubmissionList(BaseModel):
+    total: int
+    has_submitted: bool
+    items: list[PublicDisputeSubmission]
+
+
 class CastVoteRequest(BaseModel):
     vote: Literal["YES", "NO"]
 

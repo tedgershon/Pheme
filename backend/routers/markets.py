@@ -19,6 +19,8 @@ from observability import AppError, ErrorCode
 from schemas.dispute import (
     CastVoteRequest,
     DisputeResponse,
+    DisputeSubmissionList,
+    DisputeSubmissionResponse,
     FileDisputeRequest,
     VoteResponse,
 )
@@ -387,7 +389,7 @@ async def start_community_resolution(
 # ── Disputes ─────────────────────────────────────────────────
 
 
-@router.post("/{market_id}/dispute", response_model=DisputeResponse)
+@router.post("/{market_id}/dispute", response_model=DisputeSubmissionResponse)
 async def file_dispute(
     market_id: str,
     body: FileDisputeRequest,
@@ -395,7 +397,8 @@ async def file_dispute(
     supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
-    """File a dispute during the pending_resolution window."""
+    """Submit a concern. The first one opens the market's dispute case; later ones
+    join it until its voting deadline. One submission per user, never amended."""
     normalize_market_state(supabase, market_id)
     with user_auth(supabase, token):
         try:
@@ -406,20 +409,9 @@ async def file_dispute(
             }).execute()
 
             rpc_data = result.data
-            dispute_id = rpc_data.get("id") if isinstance(rpc_data, dict) else None
-            if not dispute_id:
+            if not isinstance(rpc_data, dict) or not rpc_data.get("id"):
                 raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to file dispute.")
-
-            dispute = (
-                supabase.table("disputes")
-                .select("*")
-                .eq("id", dispute_id)
-                .single()
-                .execute()
-            )
-            if not dispute.data:
-                raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to load filed dispute.")
-            return dispute.data
+            return rpc_data
         except Exception as exc:
             if isinstance(exc, HTTPException):
                 raise
@@ -427,8 +419,19 @@ async def file_dispute(
             extras = {"market_id": market_id}
             if "creator cannot" in msg:
                 raise AppError(403, ErrorCode.DISPUTE_CREATOR_RESTRICTED, "Market creator cannot file disputes.", original=exc, extras=extras) from exc
+            if "signed-in user" in msg:
+                raise AppError(403, ErrorCode.FORBIDDEN, "Disputes can only be filed as yourself.", original=exc, extras=extras) from exc
+            if "explanation must be" in msg:
+                raise AppError(422, ErrorCode.VALIDATION_FAILED, "Explanation must be 1 to 1000 characters.", original=exc, extras=extras) from exc
             if "proposal and dispute deadline" in msg:
                 raise AppError(400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "A creator proposal with a dispute deadline is required.", original=exc, extras=extras) from exc
+            if "already submitted" in msg:
+                raise AppError(
+                    409, ErrorCode.DISPUTE_ALREADY_FILED, "You have already submitted a concern for this market.",
+                    original=exc, extras=extras,
+                ) from exc
+            if "dispute not found" in msg:
+                raise AppError(404, ErrorCode.DISPUTE_NOT_FOUND, "No dispute found for this market.", original=exc, extras=extras) from exc
             if "not found" in msg:
                 raise AppError(
                     404, ErrorCode.MARKET_NOT_FOUND, "Market not found.",
@@ -446,7 +449,7 @@ async def file_dispute(
                 ) from exc
             if "unique" in msg or "duplicate" in msg:
                 raise AppError(
-                    409, ErrorCode.DISPUTE_ALREADY_FILED, "A dispute already exists for this market.",
+                    409, ErrorCode.DISPUTE_ALREADY_FILED, "You have already submitted a concern for this market.",
                     original=exc, extras=extras,
                 ) from exc
             raise AppError(
@@ -467,6 +470,30 @@ async def get_dispute(
     )
     if not result.data:
         raise AppError(404, ErrorCode.DISPUTE_NOT_FOUND, "No dispute found for this market.")
+    return result.data
+
+
+@router.get("/{market_id}/dispute/submissions", response_model=DisputeSubmissionList)
+async def list_dispute_submissions(
+    market_id: str,
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
+    token: str | None = Depends(get_user_token),
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
+    """Public concerns filed under a market's dispute, oldest first. Explanations are
+    visible to everyone; submitters are not. `is_mine` flags the caller's own row."""
+    with user_auth(supabase, token):
+        try:
+            result = supabase.rpc("list_dispute_submissions", {
+                "p_market_id": market_id, "p_limit": limit, "p_offset": offset,
+            }).execute()
+        except APIError as exc:
+            raise AppError(
+                500, ErrorCode.INTERNAL_ERROR, "Failed to load dispute submissions.",
+                original=exc, extras={"market_id": market_id},
+            ) from exc
     return result.data
 
 

@@ -81,7 +81,13 @@ def test_community_resolution_errors_preserve_status(market_api, creator, status
     ("Market creator cannot file disputes", 403, "DISPUTE_CREATOR_RESTRICTED", "Market creator cannot file disputes."),
     ("A creator proposal and dispute deadline are required", 400, "MARKET_NOT_PENDING_RESOLUTION", "A creator proposal with a dispute deadline is required."),
     ("Dispute window has expired", 400, "RESOLUTION_WINDOW_EXPIRED", "The resolution window has expired."),
-    ("duplicate key violates unique constraint", 409, "DISPUTE_ALREADY_FILED", "A dispute already exists for this market."),
+    ("duplicate key violates unique constraint", 409, "DISPUTE_ALREADY_FILED", "You have already submitted a concern for this market."),
+    ("You have already submitted a concern for this market", 409, "DISPUTE_ALREADY_FILED", "You have already submitted a concern for this market."),
+    ("Dispute submission window has expired", 400, "RESOLUTION_WINDOW_EXPIRED", "The resolution window has expired."),
+    ("Market is not in pending_resolution or disputed status", 400, "MARKET_NOT_PENDING_RESOLUTION", "Market is not in pending resolution."),
+    ("Dispute not found", 404, "DISPUTE_NOT_FOUND", "No dispute found for this market."),
+    ("Explanation must be 1 to 1000 characters", 422, "VALIDATION_FAILED", "Explanation must be 1 to 1000 characters."),
+    ("Disputes can only be filed as the signed-in user", 403, "FORBIDDEN", "Disputes can only be filed as yourself."),
     ("Unexpected database condition", 500, "INTERNAL_ERROR", "Failed to file dispute."),
 ])
 def test_file_dispute_wraps_database_errors(market_api, message, status, code, safe_message):
@@ -96,7 +102,6 @@ def test_file_dispute_wraps_database_errors(market_api, message, status, code, s
 @pytest.mark.parametrize("rpc_data,message", [
     (None, "Failed to file dispute."),
     ({}, "Failed to file dispute."),
-    ({"id": "d1"}, "Failed to load filed dispute."),
 ])
 def test_file_dispute_preserves_its_own_app_errors(market_api, rpc_data, message):
     market_api.supabase.rpc.return_value.execute.return_value = SimpleNamespace(data=rpc_data)
