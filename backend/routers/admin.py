@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from postgrest.exceptions import APIError
 
 from dependencies import (
@@ -19,7 +19,7 @@ from notification_service import (
     notify_market_denied,
     send_resolution_reminders_for_closed_markets,
 )
-from observability import report_and_safe_message
+from observability import AppError, ErrorCode
 from schemas.admin import (
     BackrollRequest,
     StatsResponse,
@@ -137,15 +137,17 @@ async def update_user_role(
 ):
     """Change a user's role (super admin only)."""
     if user_id == current_user["id"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot change your own role.",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.ADMIN_CANNOT_CHANGE_OWN_ROLE,
+            "Cannot change your own role.",
         )
 
     if body.role not in ("user", "admin"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role must be 'user' or 'admin'.",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.VALIDATION_FAILED,
+            "Role must be 'user' or 'admin'.",
         )
 
     target = (
@@ -156,9 +158,10 @@ async def update_user_role(
         .execute()
     )
     if not target.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCode.NOT_FOUND,
+            "User not found.",
         )
 
     with user_auth(supabase, token):
@@ -170,9 +173,10 @@ async def update_user_role(
         )
 
     if not result.data:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update role.",
+        raise AppError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ErrorCode.INTERNAL_ERROR,
+            "Failed to update role.",
         )
 
     return result.data[0]
@@ -197,10 +201,10 @@ async def backroll_market(
     except APIError as e:
         msg = e.message.lower() if e.code == "P0001" else ""
         if "not found" in msg:
-            raise HTTPException(status_code=404, detail="Market not found.")
+            raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.", original=e) from e
         if "resolved" in msg:
-            raise HTTPException(status_code=400, detail="Cannot backroll a resolved market.")
-        raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Backroll failed."))
+            raise AppError(400, ErrorCode.MARKET_ALREADY_RESOLVED, "Cannot backroll a resolved market.", original=e) from e
+        raise AppError(500, ErrorCode.INTERNAL_ERROR, "Backroll failed.", original=e) from e
 
 
 @router.get("/markets/review")
@@ -270,16 +274,17 @@ async def review_market(
     state_client = get_supabase_service_client() or supabase
     market = normalize_market_state(state_client, market_id)
     if not market:
-        raise HTTPException(status_code=404, detail="Market not found.")
+        raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
 
     if market.get("status") != "pending_review":
-        raise HTTPException(status_code=400, detail="Market is not pending review.")
+        raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.")
 
     close_at = _parse_dt(market.get("close_at"))
     if close_at and close_at <= datetime.now(tz=UTC):
-        raise HTTPException(
-            status_code=400,
-            detail="Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
+        raise AppError(
+            400,
+            ErrorCode.MARKET_CLOSE_DATE_PASSED,
+            "Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
         )
 
     updates = {}
@@ -304,19 +309,26 @@ async def review_market(
         except APIError as e:
             msg = e.message.lower() if e.code == "P0001" else ""
             if "not found" in msg:
-                raise HTTPException(status_code=404, detail="Market not found.")
+                raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.", original=e) from e
             if "not pending" in msg:
-                raise HTTPException(status_code=400, detail="Market is not pending review.")
+                raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.", original=e) from e
             if "close date has passed" in msg:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
-                )
-            raise HTTPException(status_code=500, detail=report_and_safe_message(e, "Failed to approve market."))
+                raise AppError(
+                    400,
+                    ErrorCode.MARKET_CLOSE_DATE_PASSED,
+                    "Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
+                    original=e,
+                ) from e
+            raise AppError(
+                500,
+                ErrorCode.INTERNAL_ERROR,
+                "Failed to approve market.",
+                original=e,
+            ) from e
     else:
         notes = (body.notes or "").strip()
         if not notes:
-            raise HTTPException(status_code=400, detail="Notes are required when denying a market.")
+            raise AppError(400, ErrorCode.VALIDATION_FAILED, "Notes are required when denying a market.")
 
         result = (
             supabase.table("markets")
@@ -333,7 +345,7 @@ async def review_market(
             .execute()
         )
         if not result.data:
-            raise HTTPException(status_code=400, detail="Market is not pending review.")
+            raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.")
 
     market = supabase.table("markets").select("*").eq("id", market_id).single().execute()
 
