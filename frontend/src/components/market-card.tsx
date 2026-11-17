@@ -38,6 +38,13 @@ function StatusDot({ market }: { market: Market }) {
       </Badge>
     );
   }
+  if (status === "admin_review") {
+    return (
+      <Badge variant="outline" className="border-amber-500 text-amber-600">
+        Admin Review
+      </Badge>
+    );
+  }
   if (status === "pending_review") {
     return (
       <Badge variant="outline" className="border-amber-500 text-amber-500">

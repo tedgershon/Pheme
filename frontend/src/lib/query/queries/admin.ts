@@ -17,6 +17,13 @@ export const marketsForReviewQuery = () =>
     staleTime: STALE.ADMIN,
   });
 
+export const adminReviewQueueQuery = () =>
+  queryOptions({
+    queryKey: queryKeys.admin.reviewQueue,
+    queryFn: () => api.getAdminReviewQueue(),
+    staleTime: STALE.ADMIN,
+  });
+
 export const searchUsersQuery = (query: string) =>
   queryOptions({
     queryKey: queryKeys.admin.users(query),

@@ -36,6 +36,7 @@ export const queryKeys = {
       ["portfolio", "transactions", p ?? {}] as const,
   },
   me: ["me"] as const,
+  leaderboardAll: ["leaderboard"] as const,
   leaderboard: (p?: { limit?: number }) => ["leaderboard", p ?? {}] as const,
   weeklyLeaderboard: (limit?: number) =>
     ["leaderboard", "weekly", limit ?? 10] as const,
@@ -48,6 +49,7 @@ export const queryKeys = {
   },
   admin: {
     stats: ["admin", "stats"] as const,
+    reviewQueue: ["admin", "review-queue"] as const,
     users: (query: string) => ["admin", "users", query] as const,
   },
   disputes: {

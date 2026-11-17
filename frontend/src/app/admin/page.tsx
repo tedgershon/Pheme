@@ -53,6 +53,19 @@ export default function AdminPage() {
           </Card>
         </Link>
 
+        <Link href="/admin/admin-review">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardHeader>
+              <CardTitle>Admin Review</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Resolve escalated disputes and tied community votes.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/admin/stats">
           <Card className="transition-shadow hover:shadow-md">
             <CardHeader>

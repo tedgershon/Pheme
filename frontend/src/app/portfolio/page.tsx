@@ -27,6 +27,8 @@ const TX_LABELS: Record<string, string> = {
   voter_stake: "Voter Stake",
   voter_reward: "Voter Reward",
   daily_claim: "Daily Claim",
+  resolution_vote_reward: "Voter Reward",
+  refund: "Refund",
 };
 
 function formatDate(dateStr: string | null | undefined): string {

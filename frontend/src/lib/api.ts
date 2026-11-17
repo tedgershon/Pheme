@@ -1,5 +1,8 @@
 import { supabase } from "./supabase";
 import type {
+  AdminResolveMarketRequest,
+  AdminResolveMarketResponse,
+  AdminReviewItem,
   AdminStats,
   BackrollRequest,
   BackrollResponse,
@@ -491,6 +494,20 @@ export function reviewMarket(
   body: ReviewMarketRequest,
 ): Promise<unknown> {
   return apiFetch(`/api/admin/markets/${marketId}/review`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function getAdminReviewQueue(): Promise<AdminReviewItem[]> {
+  return apiFetch("/api/admin/markets/admin-review");
+}
+
+export function adminResolveMarket(
+  marketId: string,
+  body: AdminResolveMarketRequest,
+): Promise<AdminResolveMarketResponse> {
+  return apiFetch(`/api/admin/markets/${marketId}/resolve`, {
     method: "POST",
     body: JSON.stringify(body),
   });
