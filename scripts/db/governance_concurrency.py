@@ -27,6 +27,30 @@ def verify(psql, read_sql):
     assert psql(f"SELECT banana_balance=1001.33 FROM profiles WHERE id='{bettor}'") == 't'
     assert psql(f"SELECT sum(amount)=0 FROM transactions WHERE market_id='{option_market}'") == 't'
     assert psql(f"SELECT pool_total=0 FROM market_options WHERE market_id='{option_market}'") == 't'
+    # Concurrent admin submissions: exactly one AMBIGUOUS settlement and one refund per bettor.
+    review_market = '91000000-0000-0000-0000-000000000003'
+    psql(f"""
+        INSERT INTO markets (id,title,description,creator_id,close_at,resolution_criteria,status)
+        VALUES ('{review_market}','Review','Fixture','90000000-0000-0000-0000-000000000001',
+                now()+interval '1 day','Fixture','open');
+        SELECT place_bet('{bettor}','{review_market}','YES',40);
+        SELECT place_bet('90000000-0000-0000-0000-000000000003','{review_market}','NO',60);
+        UPDATE markets SET status='admin_review' WHERE id='{review_market}';
+    """)
+
+    def admin_resolve(_):
+        try:
+            psql(f"SET statement_timeout='15s'; SELECT admin_resolve_market('{review_market}','AMBIGUOUS','{admin}');")
+            return True
+        except RuntimeError as error:
+            assert 'already resolved' in str(error), error
+            return False
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        assert sum(pool.map(admin_resolve, range(6))) == 1
+    assert psql(f"SELECT count(*) FROM transactions WHERE market_id='{review_market}' AND transaction_type='refund'") == '2'
+    assert psql(f"SELECT sum(amount)=0 FROM transactions WHERE market_id='{review_market}'") == 't'
+    assert psql(f"SELECT resolved_outcome FROM markets WHERE id='{review_market}'") == 'AMBIGUOUS'
     psql("""
         DELETE FROM private.community_settlements WHERE market_id::text LIKE '91000000-%';
         DELETE FROM community_votes WHERE market_id::text LIKE '91000000-%';

@@ -12,6 +12,8 @@ export type MarketStatus =
   | "resolved"
   | "denied";
 export type BetSide = "YES" | "NO";
+// AMBIGUOUS is an admin-only outcome that refunds every stake.
+export type ResolvedOutcome = BetSide | "AMBIGUOUS";
 
 export type UserRole = "user" | "admin" | "super_admin";
 export type EquippedBadgesMap = Record<string, string | null>;
@@ -82,7 +84,7 @@ export interface Market {
   proposed_outcome?: BetSide | null;
   proposed_at?: string | null;
   dispute_deadline?: string | null;
-  resolved_outcome: BetSide | null;
+  resolved_outcome: ResolvedOutcome | null;
   resolved_at: string | null;
   disputed_at?: string | null;
   disputed_by?: string | null;
@@ -116,7 +118,8 @@ export type TransactionType =
   | "voter_stake"
   | "voter_reward"
   | "daily_claim"
-  | "resolution_vote_reward";
+  | "resolution_vote_reward"
+  | "refund";
 
 export interface Transaction {
   id: string;
@@ -185,6 +188,44 @@ export interface ReviewMarketRequest {
 
 export interface ResolveMarketRequest {
   outcome: BetSide;
+}
+
+export interface AdminResolveMarketRequest {
+  outcome: ResolvedOutcome;
+}
+
+export interface AdminResolveMarketResponse {
+  market_id: string;
+  status: MarketStatus;
+  outcome: ResolvedOutcome;
+  refunded_total?: number;
+  refunded_users?: number;
+}
+
+export interface AdminReviewPerson {
+  andrew_id: string | null;
+  display_name: string | null;
+}
+
+export interface VoteTally {
+  yes: number;
+  no: number;
+}
+
+export interface AdminReviewItem {
+  market: Market;
+  creator: AdminReviewPerson | null;
+  escalation: "dispute" | "community";
+  dispute: {
+    id: string;
+    explanation: string;
+    voting_deadline: string;
+    created_at: string;
+    disputer: AdminReviewPerson | null;
+  } | null;
+  dispute_votes: VoteTally;
+  community_votes: VoteTally;
+  bettor_count: number;
 }
 
 export interface FileDisputeRequest {

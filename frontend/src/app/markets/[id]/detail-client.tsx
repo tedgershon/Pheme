@@ -269,9 +269,14 @@ export default function MarketDetailClient({ id }: { id: string }) {
     isCommunityResolutionMode && !!market.resolution_window_end;
   const isCreatorDecisionFlow =
     market.status === "pending_resolution" && !!market.proposed_outcome;
-  const bettingClosedMessage = isCommunityResolutionMode
-    ? "This market is pending review from community voters and no longer accepting bets."
-    : "This market is pending review from the market creator and no longer accepting bets.";
+  const bettingClosedMessage =
+    market.status === "admin_review"
+      ? "This market is awaiting a final decision from an admin and no longer accepting bets."
+      : market.status === "resolved"
+        ? "This market has been resolved."
+        : isCommunityResolutionMode
+          ? "This market is pending review from community voters and no longer accepting bets."
+          : "This market is pending review from the market creator and no longer accepting bets.";
   const resolutionWindowExpired = countdown.text === "Expired";
   const isCreator = user.id === market.creator_id;
   const isAdmin = user.role === "admin" || user.role === "super_admin";
@@ -639,6 +644,16 @@ export default function MarketDetailClient({ id }: { id: string }) {
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <dt className="text-muted-foreground">Status</dt>
                 <dd className="font-medium">{getStatusLabel(market.status)}</dd>
+                {market.status === "resolved" && market.resolved_outcome && (
+                  <>
+                    <dt className="text-muted-foreground">Outcome</dt>
+                    <dd className="font-medium">
+                      {market.resolved_outcome === "AMBIGUOUS"
+                        ? "Ambiguous (all stakes refunded)"
+                        : market.resolved_outcome}
+                    </dd>
+                  </>
+                )}
                 {isMultichoice && (
                   <>
                     <dt className="text-muted-foreground">Market Type</dt>
@@ -925,6 +940,16 @@ export default function MarketDetailClient({ id }: { id: string }) {
                   <p className="text-sm text-muted-foreground">
                     {bettingClosedMessage}
                   </p>
+
+                  {market.status === "admin_review" && isAdmin && (
+                    <Link
+                      href="/admin/admin-review"
+                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    >
+                      <AlertTriangle className="size-4" />
+                      Resolve in the admin review queue
+                    </Link>
+                  )}
 
                   {hasResolutionWindow && (
                     <div className="space-y-3 mt-4 pt-4 border-t">

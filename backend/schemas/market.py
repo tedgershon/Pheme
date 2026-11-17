@@ -204,7 +204,7 @@ class MarketResponse(BaseModel):
     proposed_outcome: Literal["YES", "NO"] | None = None
     proposed_at: datetime | None = None
     dispute_deadline: datetime | None = None
-    resolved_outcome: Literal["YES", "NO"] | None = None
+    resolved_outcome: Literal["YES", "NO", "AMBIGUOUS"] | None = None
     resolved_at: datetime | None = None
     disputed_at: datetime | None = None
     disputed_by: str | None = None
@@ -322,13 +322,17 @@ class ProposeResolutionResponse(BaseModel):
 
 
 class ResolveMarketRequest(BaseModel):
-    outcome: Literal["YES", "NO"]
+    """Admin adjudication of an admin_review market; AMBIGUOUS refunds every stake."""
+
+    outcome: Literal["YES", "NO", "AMBIGUOUS"]
 
 
 class ResolveMarketResponse(BaseModel):
     market_id: str
     status: str
     outcome: str
+    refunded_total: float | None = None
+    refunded_users: int | None = None
 
 
 class DisputeMarketResponse(BaseModel):

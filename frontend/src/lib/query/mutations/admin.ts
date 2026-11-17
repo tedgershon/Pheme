@@ -1,7 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/api";
-import type { BackrollRequest, ReviewMarketRequest } from "@/lib/types";
+import type {
+  BackrollRequest,
+  ResolvedOutcome,
+  ReviewMarketRequest,
+} from "@/lib/types";
 import {
+  invalidateAfterAdminResolution,
   invalidateAfterAdminReview,
   invalidateAfterBackroll,
   invalidateAfterUserRoleUpdate,
@@ -13,6 +18,17 @@ export function useReviewMarket() {
     mutationFn: (vars: { marketId: string; body: ReviewMarketRequest }) =>
       api.reviewMarket(vars.marketId, vars.body),
     onSettled: () => invalidateAfterAdminReview(qc),
+  });
+}
+
+export function useAdminResolveMarket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { marketId: string; outcome: ResolvedOutcome }) =>
+      api.adminResolveMarket(vars.marketId, { outcome: vars.outcome }),
+    // Also on failure: a concurrent admin may already have settled the market.
+    onSettled: (_d, _e, vars) =>
+      invalidateAfterAdminResolution(qc, vars.marketId),
   });
 }
 

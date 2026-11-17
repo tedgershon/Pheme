@@ -74,6 +74,21 @@ export const invalidateAfterBackroll = (qc: QueryClient, marketId: string) =>
     qc.invalidateQueries({ queryKey: queryKeys.admin.stats }),
   ]);
 
+// Settlement moves wallets, positions and rankings, not just the queue row.
+export const invalidateAfterAdminResolution = (
+  qc: QueryClient,
+  marketId: string,
+) =>
+  Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.admin.reviewQueue }),
+    qc.invalidateQueries({ queryKey: queryKeys.admin.stats }),
+    qc.invalidateQueries({ queryKey: queryKeys.markets.detail(marketId) }),
+    qc.invalidateQueries({ queryKey: queryKeys.markets.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.portfolio.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.me }),
+    qc.invalidateQueries({ queryKey: queryKeys.leaderboardAll }),
+  ]);
+
 export const invalidateAfterUserRoleUpdate = (qc: QueryClient) =>
   qc.invalidateQueries({ queryKey: ["admin", "users"] });
 

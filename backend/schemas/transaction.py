@@ -11,6 +11,8 @@ class TransactionType(str, Enum):
     VOTER_STAKE = "voter_stake"
     VOTER_REWARD = "voter_reward"
     DAILY_CLAIM = "daily_claim"
+    RESOLUTION_VOTE_REWARD = "resolution_vote_reward"
+    REFUND = "refund"
 
 
 class TransactionResponse(BaseModel):
