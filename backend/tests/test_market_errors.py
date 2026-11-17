@@ -78,6 +78,8 @@ def test_community_resolution_errors_preserve_status(market_api, creator, status
 @pytest.mark.parametrize("message,status,code,safe_message", [
     ("Market not found", 404, "MARKET_NOT_FOUND", "Market not found."),
     ("Market is not in pending_resolution status", 400, "MARKET_NOT_PENDING_RESOLUTION", "Market is not in pending resolution."),
+    ("Market creator cannot file disputes", 403, "DISPUTE_CREATOR_RESTRICTED", "Market creator cannot file disputes."),
+    ("A creator proposal and dispute deadline are required", 400, "MARKET_NOT_PENDING_RESOLUTION", "A creator proposal with a dispute deadline is required."),
     ("Dispute window has expired", 400, "RESOLUTION_WINDOW_EXPIRED", "The resolution window has expired."),
     ("duplicate key violates unique constraint", 409, "DISPUTE_ALREADY_FILED", "A dispute already exists for this market."),
     ("Unexpected database condition", 500, "INTERNAL_ERROR", "Failed to file dispute."),
