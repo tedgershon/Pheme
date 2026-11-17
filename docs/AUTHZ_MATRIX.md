@@ -58,7 +58,8 @@ These are not standalone roles. They combine with one of the roles in §2 to det
 | Overlay ID | Definition | Used in |
 |---|---|---|
 | `creator(M)` | `current_user.id == markets.creator_id` for market `M` | Resolution proposal, community-resolution start, dispute restrictions |
-| `bettor(M)` | `current_user.id` appears in `bets.user_id` for market `M` | Dispute voting (excluded for fairness); filing is allowed |
+| `bettor(M)` | `current_user.id` appears in `bets.user_id` for market `M` | Dispute voting (excluded for fairness); filing a concern is allowed |
+| `submitter(D)` | `current_user.id` appears in `dispute_submissions.submitter_id` for dispute `D` | One concern per user per case |
 | `community-voter(M)` | `current_user.id` appears in `community_votes.voter_id` for market `M` | Prevent double voting in community resolution |
 | `dispute-voter(D)` | `current_user.id` appears in `resolution_votes.voter_id` for dispute `D` | Prevent double voting in dispute |
 | `notification-owner(N)` | `notifications.user_id == current_user.id` | Mark-read, delete |
@@ -168,7 +169,7 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | Place Bet (multichoice) | `hidden` | `visible` if `M.status='open'` and option selected | `hidden` | `visible` | same as `user` | same as `user` |
 | Propose Resolution (YES / NO) | `hidden` | `hidden` | `visible` if `M.status='closed'` | `hidden` | same creator restriction | same creator restriction |
 | Start Community Resolution | `hidden` | `hidden` | `visible` if `M.status='closed'` | `hidden` | same creator restriction | same creator restriction |
-| Submit Dispute | `hidden` | `visible` if `M.status='pending_resolution'` and `M.proposed_outcome` set | `hidden` | `visible` if proposal and dispute window active | `visible` if `M.status='pending_resolution'` and `M.proposed_outcome` set | `visible` if `M.status='pending_resolution'` and `M.proposed_outcome` set |
+| Submit Dispute / Concern | `hidden` | `visible` if proposal and dispute window active, or `M.status='disputed'`, voting not ended and not `submitter(D)` | `hidden` (explanatory note instead) | same as `user` (active and refunded bettors may submit) | same as `user` | same as `user` |
 | Cast Dispute Vote (YES / NO) | `hidden` | `visible` if `M.status='disputed'` and not `dispute-voter(D)` | `hidden` | `hidden` (bettors excluded for fairness) | `visible` if `M.status='disputed'` and not `dispute-voter(D)` | `visible` if `M.status='disputed'` and not `dispute-voter(D)` |
 | Cast Community Vote (YES / NO) | `hidden` | `visible` if community window active and not `community-voter(M)` | `hidden` | `visible` | `visible` | `visible` |
 | Backroll Panel | `hidden` | `hidden` | `hidden` | `hidden` | `visible` if `M.status != 'resolved'` | `visible` |
@@ -238,8 +239,9 @@ Listed by router. Path prefix shown above each table. `M` = path-param market.
 | POST | `` | `401` | `201` / `422` | `201` / `422` | `201` / `422` | `201` / `422` |
 | POST | `/{id}/resolve` | `401` | `403` | `200` if `M.status='closed'` else `400` | `200` if creator and closed, otherwise `403` / `400` | same |
 | POST | `/{id}/community-resolution` | `401` | `403` | `200` if `M.status='closed'` else `400` | `200` if creator and closed, otherwise `403` / `400` | same |
-| POST | `/{id}/dispute` | `401` | `200` if eligible else `403`/`409` | `403` (creator cannot dispute) | `200` if eligible else `403`/`409` | `200` if eligible else `403`/`409` |
+| POST | `/{id}/dispute` | `401` | `200` if eligible else `400`/`403`/`409` | `403` (creator cannot dispute) | `200` if eligible else `400`/`403`/`409` | `200` if eligible else `400`/`403`/`409` |
 | GET | `/{id}/dispute` | `200` / `404` | `200` / `404` | `200` / `404` | `200` / `404` | `200` / `404` |
+| GET | `/{id}/dispute/submissions` | `200` | `200` | `200` | `200` | `200` |
 | POST | `/{id}/dispute/vote` | `401` | `403` if `bettor(M)` or `dispute-voter(D)` else `200` | `403` (creators excluded) | `403` if `bettor(M)` or `dispute-voter(D)` else `200` | `403` if `bettor(M)` or `dispute-voter(D)` else `200` |
 | GET | `/{id}/dispute/votes` | `200` | `200` | `200` | `200` | `200` |
 
@@ -285,6 +287,7 @@ or account changes, including private market details and admin review results.
 | GET | `/markets/review` | `401` / `403` | `200` | `200` |
 | POST | `/markets/{id}/review` | `401` / `403` | `200` if `M.status='pending_review'` else `400` | same |
 | GET | `/markets/admin-review` | `401` / `403` | `200` | `200` |
+| GET | `/markets/disputes` | `401` / `403` | `200` | `200` |
 | POST | `/markets/{id}/resolve` | `401` / `403` | `200` if `M.status='admin_review'`; `400` for other states or YES/NO on multichoice; `403` if `creator(M)` | same |
 
 **Admin resolution queue:** `GET /markets/admin-review` first applies expired
@@ -293,6 +296,38 @@ first. Each item carries the market (all criteria, source and link, creator
 proposal and deadlines), creator and disputer Andrew IDs, the dispute
 explanation, YES/NO tallies for dispute and community votes, and the number of
 distinct bettors. It does not list individual voters.
+
+**Dispute submissions (#49).** `POST /{id}/dispute` files one concern. The first
+one (market `pending_resolution` with a proposal and an open dispute window)
+opens the market's single dispute case: the market becomes `disputed` and the
+48-hour voting deadline starts. While the market is `disputed` and that
+deadline has not passed, any other non-creator can add one concern; it never
+moves a deadline or creates a second case. Responses: `403
+DISPUTE_CREATOR_RESTRICTED` (creator), `409 DISPUTE_ALREADY_FILED` (the caller
+already submitted; submissions cannot be amended), `400
+RESOLUTION_WINDOW_EXPIRED` (window closed), `400
+MARKET_NOT_PENDING_RESOLUTION` (any other state, including `admin_review`),
+`422 VALIDATION_FAILED` (explanation not 1 to 1,000 characters after
+trimming), `403 FORBIDDEN` (JWT subject differs from the submitter).
+
+*Visibility.* Explanations are public so neutral voters can weigh them:
+`GET /{id}/dispute/submissions` returns `total`, the caller's `has_submitted`
+and a page (`limit` 1-100, default 50) of `{id, explanation, created_at,
+is_mine}` rows, oldest first. Submitters are anonymous to everyone but admins.
+`disputes` stays publicly readable (it exposes the first filer's id, as before)
+but is no longer writable by API roles. `dispute_submissions` has no table
+grants for `anon`/`authenticated` and is reachable only through `list_dispute_submissions` (public, anonymised) and
+`admin_dispute_submissions` (admins only).
+
+*Admin queue.* `GET /markets/disputes?status=disputed|admin_review&limit=1-50&offset=`
+lists cases grouped by market, oldest case first, for markets still in voting
+(`disputed`) and awaiting a decision (`admin_review`); `resolved` markets are
+excluded. Each item has the market (criteria, source, proposal, deadlines),
+creator, case deadlines, YES/NO tallies, bettor count, `submission_count` and
+every submission with its submitter's Andrew ID and `bettor_context` (`none`,
+`active` or `refunded`). It is read-only; settlement stays on
+`POST /markets/{id}/resolve`, which only accepts `admin_review` markets. The
+same submissions are embedded in each `GET /markets/admin-review` item.
 
 **`POST /markets/{id}/resolve`:** accepts `YES`, `NO` or `AMBIGUOUS` (other
 values are `422`). One SQL transaction checks the admin role, locks the market,
@@ -409,9 +444,9 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
 - [Home/browse layout work](https://github.com/tedgershon/Pheme/issues/19)
 - [Input-validation work](https://github.com/tedgershon/Pheme/issues/20)
 
-Dispute filing allows active and refunded bettors, enforces creator exclusion and requires a creator proposal with an active deadline. Multichoice betting enforces creator exclusion and close_at in SQL, including for admin creators.
+Dispute filing allows active and refunded bettors, enforces creator exclusion, binds the submitter to the caller's JWT and requires a creator proposal with an active deadline (or an open case, for additional submissions). Multichoice betting enforces creator exclusion and close_at in SQL, including for admin creators.
 
-Active/refunded bettors may submit explanations during the dispute window but remain excluded from dispute voting. Grouped admin review of submissions is tracked in [#49](https://github.com/tedgershon/Pheme/issues/49); it is not implemented by the eligibility fix.
+Active/refunded bettors may submit explanations but remain excluded from dispute voting; filing never grants a vote. Submissions are grouped under the market's case for admin review (#49).
 
 Refunding and deleting a bet does not restore voting neutrality: dispute voting checks both current bets and historical bet-placement ledger entries. Refunded bettors may still file explanations.
 
@@ -419,6 +454,9 @@ Community rewards require a matching atomic settlement receipt; direct calls can
 
 ## Changelog
 
+- #49: multiple dispute submissions per market case, public anonymised
+  `GET /{id}/dispute/submissions`, admin `GET /api/admin/markets/disputes`,
+  `/admin/disputes` page, and a submitter-bound `file_dispute`.
 - Gap B-4 fixed via #31: `/admin/admin-review` queue and dashboard card,
   `GET /api/admin/markets/admin-review`, AMBIGUOUS refunds, creator exclusion,
   JWT-bound admin settlement RPC and the `finalize_resolution` admin-review guard.

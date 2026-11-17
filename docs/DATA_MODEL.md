@@ -137,7 +137,7 @@ Represents a community vote during the 24-hour resolution period after market cl
 ### Dispute
 
 - `id` — UUID, PK
-- `market_id` — FK to `markets` (unique — one dispute per market)
+- `market_id` — FK to `markets` (unique — one dispute case per market)
 - `disputer_id` — FK to `profiles`
 - `explanation` — reason for dispute
 - `voting_deadline` — deadline for dispute voting
@@ -145,7 +145,30 @@ Represents a community vote during the 24-hour resolution period after market cl
 - `created_at` — timestamp
 
 Purpose:
-Represents a dispute filed against a creator's proposed market resolution
+The single market-level case for a creator's proposed resolution. It owns the
+voting lifecycle (one 48-hour `voting_deadline`, one tally). `disputer_id` and
+`explanation` record the first submission and are kept for compatibility; every
+concern, including that one, lives in `DisputeSubmission`.
+
+### DisputeSubmission
+
+- `id` — UUID, PK
+- `dispute_id` — FK to `disputes`
+- `market_id` — FK to `markets` (denormalized for market-grouped reads)
+- `submitter_id` — FK to `profiles`
+- `explanation` — trimmed, 1 to 1,000 characters for new rows (migrated legacy
+  explanations are copied unchanged)
+- `created_at` — timestamp
+- Unique constraint: `(dispute_id, submitter_id)` — one concern per user, never amended
+
+Purpose:
+Append-only record of each concern filed under a market's dispute. Created
+only by `file_dispute`, which locks the market so concurrent submissions and
+retries serialize. Additional submissions are accepted while the market is
+`disputed` and `now() < disputes.voting_deadline`; they never change deadlines
+or status. RLS is enabled with no policies and API roles hold no table grants:
+explanations are public via `list_dispute_submissions` (submitters hidden) and
+submitter identity is admin-only via `admin_dispute_submissions`.
 
 ### Transaction
 
@@ -222,6 +245,7 @@ Tracks which badges each user has earned (highest tier per track)
 - A disputed `Market` can have many `ResolutionVote` records
 - A closed `Market` can have many `CommunityVote` records
 - A `Market` can have at most one `Dispute`
+- A `Dispute` can have many `DisputeSubmission` records (one per user)
 - A `UserProfile` can have many `Transaction` records
 - A `UserProfile` can have many `Notification` records
 - A `UserProfile` can have many `UserBadge` records (one per track)

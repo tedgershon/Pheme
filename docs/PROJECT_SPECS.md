@@ -72,8 +72,11 @@ that a continuously running scheduler is deployed.
 2. The creator can propose YES/NO, entering `pending_resolution` with a
    24-hour dispute window. An uncontested proposal is finalized after expiry.
 3. Authenticated non-creators, including active and refunded bettors, may
-   dispute a proposal with an explanation. The filing RPC excludes creators
-   and requires a non-null proposal and active dispute deadline.
+   dispute a proposal with an explanation. The filing RPC excludes creators,
+   binds the submitter to the caller's JWT and requires a non-null proposal
+   and active dispute deadline. The first submission opens one market-level
+   case; until the case's voting deadline, other non-creators can add one
+   concern each (no amendments, no deadline extension, no second case).
    Neutral dispute voters choose YES/NO; voting no longer requires a stake.
    After the 48-hour voting deadline, at least three votes and a non-tied majority settle the market;
    otherwise it enters `admin_review`.
@@ -130,4 +133,4 @@ See [DATA_MODEL.md](DATA_MODEL.md) for persistence details and
 
 Multichoice betting enforces creator exclusion (including admin creators) and the closing deadline inside the transaction.
 
-Dispute filing and dispute voting have different eligibility rules: bettors may file concerns but cannot vote on disputes. Grouped submissions and explanations for admin review are planned in [#49](https://github.com/tedgershon/Pheme/issues/49). The current implementation retains one dispute per market; the follow-up must preserve one voting lifecycle while collecting multiple submissions.
+Dispute filing and dispute voting have different eligibility rules: bettors may file concerns but cannot vote on disputes. Each market keeps one dispute case and one voting lifecycle; concerns are collected as individual submissions under it ([#49](https://github.com/tedgershon/Pheme/issues/49)). Explanations are public so neutral voters can read them, submitters are visible only to admins, and `/admin/disputes` lists every case with its submissions (read-only; settlement stays in `/admin/admin-review`).

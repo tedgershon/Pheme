@@ -12,6 +12,7 @@ archived history and test fixtures. Do not sort or replay them.
 | `20261115000000` | Operator-only exact-email signup exceptions; no users or roles are seeded. Applies domain enforcement to email changes as well as signup. |
 | `20261116000400` | Private pending-review/denied market reads limited to creator/admin; option labels inherit parent visibility. No data or wallet mutations. |
 | `20261117000000` | Admin resolution (#31): `AMBIGUOUS` outcome and `refund` ledger type; JWT-bound, creator-excluding `admin_resolve_market` with atomic refunds; `finalize_resolution` refuses `admin_review` outside that path. Widens constraints only; no data changes. |
+| `20261117000100` | Dispute submissions (#49): `dispute_submissions` table with existing explanations copied in; `file_dispute` accepts later submissions into an open case and binds the submitter to the JWT; `list_dispute_submissions` (public, anonymised) and `admin_dispute_submissions` (admin) functions. Removes client INSERT on `disputes` (cases open only through `file_dispute`). No wallet or status changes. |
 
 Never edit an applied version. Add a new timestamped file for future changes.
 The baseline contains initial `CREATE TABLE` statements and must **never** be
@@ -244,3 +245,21 @@ covers role/JWT/creator rejection, direct-finalize bypass, wrong state,
 YES payout, binary and option AMBIGUOUS refunds, and replay rejection. The
 concurrency harness submits six simultaneous AMBIGUOUS calls and requires one
 settlement and one refund per bettor.
+
+## Deploying dispute submissions (#49)
+
+Apply `20261117000100_dispute_submissions.sql` **before** deploying the API
+that reads `list_dispute_submissions`/`admin_dispute_submissions`; the migration
+is additive and the previous API keeps working against it. Use the same
+linked-project dry run and push as above. Existing `disputes` rows are copied
+into `dispute_submissions` unchanged (the 1,000-character/trim check is added
+`NOT VALID`, so legacy text cannot block the upgrade).
+
+[governance_dispute_submissions.sql](../supabase/tests/governance_dispute_submissions.sql)
+covers creator rejection, trimming and length limits, JWT-bound filing, one
+case per market, unmoved deadlines, duplicate/closed-window/escalated refusals,
+bettor filing with voting still refused, public anonymity, admin-only
+submitter data and table/function grants. The concurrency harness files eight
+overlapping submissions from four users and requires one case and four
+submissions; the legacy-upgrade scenarios require a pre-existing dispute's
+explanation to survive byte-for-byte.
