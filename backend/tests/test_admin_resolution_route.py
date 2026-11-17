@@ -48,9 +48,40 @@ def test_old_admin_resolution_path_is_gone(resolution_api):
     resolution_api.database.rpc.assert_not_called()
 
 
+def test_admin_resolution_forwards_ambiguous_refund(resolution_api):
+    api = resolution_api
+    api.database.rpc.return_value.execute.return_value = SimpleNamespace(data={
+        "market_id": "m1", "status": "resolved", "outcome": "AMBIGUOUS",
+        "refunded_total": 175, "refunded_users": 2,
+    })
+    response = api.client.post("/api/admin/markets/m1/resolve", json={"outcome": "AMBIGUOUS"})
+
+    assert response.status_code == 200
+    assert response.json()["outcome"] == "AMBIGUOUS"
+    assert response.json()["refunded_total"] == 175
+    api.database.rpc.assert_called_once_with("admin_resolve_market", {
+        "p_market_id": "m1", "p_outcome": "AMBIGUOUS", "p_admin_id": "admin-id",
+    })
+    api.database.table.assert_not_called()
+
+
+def test_admin_resolution_forwards_admin_jwt(resolution_api, monkeypatch):
+    import main
+
+    api = resolution_api
+    main.app.dependency_overrides[get_user_token] = lambda: "admin-jwt"
+    monkeypatch.setattr("dependencies.get_settings", lambda: SimpleNamespace(supabase_key="anon-key"))
+    api.client.post("/api/admin/markets/m1/resolve", json={"outcome": "NO"})
+    # SQL compares the JWT subject with p_admin_id, so the token must be applied first.
+    assert [c.args for c in api.database.postgrest.auth.call_args_list] == [("admin-jwt",), ("anon-key",)]
+
+
 @pytest.mark.parametrize("message,status,code", [
     ("Market not found", 404, "MARKET_NOT_FOUND"),
+    ("Market is already resolved", 400, "MARKET_ALREADY_RESOLVED"),
     ("Market is not in admin_review status", 400, "MARKET_NOT_ADMIN_REVIEW"),
+    ("Market creators cannot resolve their own markets", 403, "ADMIN_RESOLUTION_CREATOR_RESTRICTED"),
+    ("YES/NO admin resolution requires a binary market", 400, "MARKET_NOT_BINARY"),
     ("Only admins can resolve markets in admin review", 403, "ADMIN_REQUIRED"),
     ("private database diagnostic", 500, "INTERNAL_ERROR"),
 ])
@@ -66,8 +97,9 @@ def test_admin_resolution_errors_use_safe_envelopes(resolution_api, message, sta
     assert "private" not in response.text
 
 
-def test_admin_resolution_rejects_unsupported_outcome(resolution_api):
-    response = resolution_api.client.post("/api/admin/markets/m1/resolve", json={"outcome": "AMBIGUOUS"})
+@pytest.mark.parametrize("outcome", ["MAYBE", "ambiguous", None])
+def test_admin_resolution_rejects_unsupported_outcome(resolution_api, outcome):
+    response = resolution_api.client.post("/api/admin/markets/m1/resolve", json={"outcome": outcome})
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "VALIDATION_FAILED"
     resolution_api.database.rpc.assert_not_called()

@@ -51,6 +51,7 @@ ADMIN = {
     ("POST", "/api/admin/markets/{market_id}/backroll"),
     ("POST", "/api/admin/markets/{market_id}/review"),
     ("POST", "/api/admin/markets/{market_id}/resolve"),
+    ("GET", "/api/admin/markets/admin-review"),
 }
 SUPER_ADMIN = {
     ("GET", "/api/admin/users/search"), ("PUT", "/api/admin/users/{user_id}/role"),

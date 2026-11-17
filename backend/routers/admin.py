@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 from datetime import UTC, datetime
 from typing import Annotated
 from zoneinfo import ZoneInfo
@@ -21,6 +22,7 @@ from notification_service import (
 )
 from observability import AppError, ErrorCode
 from schemas.admin import (
+    AdminReviewItem,
     BackrollRequest,
     StatsResponse,
     UpdateRoleRequest,
@@ -213,7 +215,11 @@ async def backroll_market(
         raise AppError(500, ErrorCode.INTERNAL_ERROR, "Backroll failed.", original=e) from e
 
 
-@router.post("/markets/{market_id}/resolve", response_model=ResolveMarketResponse)
+@router.post(
+    "/markets/{market_id}/resolve",
+    response_model=ResolveMarketResponse,
+    response_model_exclude_none=True,
+)
 async def admin_resolve_market(
     market_id: str,
     body: ResolveMarketRequest,
@@ -221,7 +227,11 @@ async def admin_resolve_market(
     supabase: Annotated[Client, Depends(get_supabase_client)],
     token: str | None = Depends(get_user_token),
 ):
-    """Admin makes the final resolution call on an admin_review market."""
+    """Admin makes the final YES/NO/AMBIGUOUS call on an admin_review market.
+
+    Settlement, refunds, replay rejection and creator exclusion happen in one SQL
+    transaction; the forwarded JWT binds the RPC to this admin.
+    """
     with user_auth(supabase, token):
         try:
             result = supabase.rpc("admin_resolve_market", {
@@ -234,11 +244,118 @@ async def admin_resolve_market(
             msg = exc.message.lower() if exc.code == "P0001" else ""
             if "not found" in msg:
                 raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.", original=exc) from exc
+            if "already resolved" in msg:
+                raise AppError(400, ErrorCode.MARKET_ALREADY_RESOLVED, "Market is already resolved.", original=exc) from exc
             if "admin_review" in msg:
                 raise AppError(400, ErrorCode.MARKET_NOT_ADMIN_REVIEW, "Market is not in admin review.", original=exc) from exc
+            if "creators cannot resolve" in msg:
+                raise AppError(
+                    403,
+                    ErrorCode.ADMIN_RESOLUTION_CREATOR_RESTRICTED,
+                    "You cannot resolve a market you created.",
+                    original=exc,
+                ) from exc
+            if "binary market" in msg:
+                raise AppError(
+                    400,
+                    ErrorCode.MARKET_NOT_BINARY,
+                    "Multiple-choice markets can only be resolved as ambiguous here.",
+                    original=exc,
+                ) from exc
             if "only admins" in msg:
                 raise AppError(403, ErrorCode.ADMIN_REQUIRED, "Admin access required.", original=exc) from exc
             raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to resolve market.", original=exc) from exc
+
+
+@router.get("/markets/admin-review", response_model=list[AdminReviewItem])
+async def list_admin_review_queue(
+    _current_user: Annotated[dict, Depends(require_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    token: str | None = Depends(get_user_token),
+):
+    """Escalated markets awaiting an admin decision, oldest close date first."""
+    with user_auth(supabase, token):
+        try:
+            # Expired dispute/community windows escalate lazily; apply them before listing.
+            normalize_markets(get_supabase_service_client() or supabase)
+        except Exception:
+            logger.warning("Failed to normalize markets before admin-review listing", exc_info=True)
+
+        markets = (
+            supabase.table("markets")
+            .select("*, creator:profiles!creator_id(andrew_id, display_name)")
+            .eq("status", "admin_review")
+            .order("close_at", desc=False)
+            .execute()
+        ).data or []
+        market_ids = [market["id"] for market in markets]
+        if not market_ids:
+            return []
+
+        disputes = (
+            supabase.table("disputes")
+            .select("id, market_id, explanation, voting_deadline, created_at, "
+                    "disputer:profiles!disputer_id(andrew_id, display_name)")
+            .in_("market_id", market_ids)
+            .execute()
+        ).data or []
+        dispute_votes = (
+            supabase.table("resolution_votes")
+            .select("market_id, selected_outcome")
+            .in_("market_id", market_ids)
+            .execute()
+        ).data or []
+        community_votes = (
+            supabase.table("community_votes")
+            .select("market_id, selected_outcome")
+            .in_("market_id", market_ids)
+            .execute()
+        ).data or []
+        bets = (
+            supabase.table("bets")
+            .select("market_id, user_id")
+            .in_("market_id", market_ids)
+            .execute()
+        ).data or []
+        options = (
+            supabase.table("market_options")
+            .select("*")
+            .in_("market_id", market_ids)
+            .order("sort_order")
+            .execute()
+        ).data or []
+
+    disputes_by_market = {row["market_id"]: row for row in disputes}
+    dispute_tally = Counter((row["market_id"], row["selected_outcome"]) for row in dispute_votes)
+    community_tally = Counter((row["market_id"], row["selected_outcome"]) for row in community_votes)
+    bettors: dict[str, set[str]] = {}
+    for bet in bets:
+        bettors.setdefault(bet["market_id"], set()).add(bet["user_id"])
+    options_by_market: dict[str, list[dict]] = {}
+    for option in options:
+        options_by_market.setdefault(option["market_id"], []).append(option)
+
+    queue = []
+    for market in markets:
+        market_id = market["id"]
+        creator = market.pop("creator", None)
+        if market.get("market_type") == "multichoice":
+            market["options"] = options_by_market.get(market_id, [])
+        dispute = disputes_by_market.get(market_id)
+        queue.append({
+            "market": market,
+            "creator": creator,
+            "escalation": "dispute" if dispute else "community",
+            "dispute": dispute,
+            "dispute_votes": {
+                "yes": dispute_tally[(market_id, "YES")], "no": dispute_tally[(market_id, "NO")],
+            },
+            "community_votes": {
+                "yes": community_tally[(market_id, "YES")], "no": community_tally[(market_id, "NO")],
+            },
+            "bettor_count": len(bettors.get(market_id, ())),
+        })
+    return queue
 
 
 @router.get("/markets/review")
