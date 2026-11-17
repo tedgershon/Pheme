@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import observability
 from dependencies import get_supabase_client
 
 ROLE_IDS = {
@@ -196,3 +197,30 @@ def seed_bet(fixture_database):
     yield seed
     for row in created:
         fixture_database.rows["bets"].remove(row)
+
+
+@pytest.fixture
+def sentry_events():
+    """Exercise the real SDK without sending events to an external service."""
+    events = []
+
+    class MemoryTransport(observability.sentry_sdk.transport.Transport):
+        def capture_envelope(self, envelope):
+            event = envelope.get_event()
+            if event is not None:
+                events.append(event)
+
+    client = observability.sentry_sdk.Client(
+        dsn="https://public@example.invalid/1",
+        transport=MemoryTransport,
+        default_integrations=False,
+        auto_enabling_integrations=False,
+        before_send=observability._before_send,
+    )
+    with observability.sentry_sdk.isolation_scope() as scope:
+        scope.set_client(client)
+        try:
+            yield events
+        finally:
+            observability.clear_user_context()
+            client.close()

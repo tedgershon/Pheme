@@ -1,13 +1,15 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
+from postgrest.exceptions import APIError
 
 from dependencies import (
     get_current_user,
     get_current_user_optional,
     get_supabase_client,
 )
+from observability import AppError, ErrorCode
 from schemas.bet import (
     BetResponse,
     PlaceBetRequest,
@@ -57,31 +59,62 @@ async def place_bet(
                 "p_amount": body.amount,
             },
         ).execute()
-    except Exception as exc:
-        detail = str(exc)
+    except APIError as exc:
+        detail = exc.message if exc.code == "P0001" else ""
         if "creators cannot place bets" in detail.lower():
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You cannot bet on a market you created.",
+            raise AppError(
+                status.HTTP_403_FORBIDDEN,
+                ErrorCode.BET_CREATOR_RESTRICTED,
+                'You cannot bet on a market you created.',
+                original=exc,
+                extras={'market_id': market_id},
             ) from exc
         if "Insufficient balance" in detail:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Insufficient banana balance",
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.BET_INSUFFICIENT_BALANCE,
+                'Insufficient banana balance.',
+                original=exc,
+                extras={'market_id': market_id},
             ) from exc
-        if "Market is not open" in detail or "Market has closed" in detail:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Market is not open for betting",
+        if "Market has closed" in detail:
+            raise AppError(
+                409,
+                ErrorCode.MARKET_CLOSE_DATE_PASSED,
+                'Market has closed.',
+                original=exc,
+                extras={'market_id': market_id},
+            ) from exc
+        if "Market is not open" in detail:
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.MARKET_NOT_OPEN,
+                'Market is not open for betting.',
+                original=exc,
+                extras={'market_id': market_id},
+            ) from exc
+        if "amount must be positive" in detail.lower():
+            raise AppError(
+                400,
+                ErrorCode.BET_INVALID_AMOUNT,
+                'Bet amount must be positive.',
+                original=exc,
+                extras={'market_id': market_id},
             ) from exc
         if "not found" in detail.lower():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Market or user not found",
+            raise AppError(
+                status.HTTP_404_NOT_FOUND,
+                ErrorCode.NOT_FOUND,
+                'Market or user not found.',
+                original=exc,
+                extras={'market_id': market_id},
             ) from exc
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to place bet",
+        raise AppError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ErrorCode.INTERNAL_ERROR,
+            'Failed to place bet.',
+            original=exc,
+            extras={'market_id': market_id},
         ) from exc
 
     _check_badges_safe(supabase, current_user["id"])
@@ -110,40 +143,86 @@ async def place_multichoice_bet(
                 "p_amount": body.amount,
             },
         ).execute()
-    except Exception as exc:
-        detail = str(exc)
+    except APIError as exc:
+        detail = exc.message if exc.code == "P0001" else ""
         if "creators cannot" in detail:
-            raise HTTPException(403, "Market creators cannot place bets on their own markets") from exc
+            raise AppError(
+                403,
+                ErrorCode.BET_CREATOR_RESTRICTED,
+                'Market creators cannot place bets on their own markets.',
+                original=exc,
+                extras={'market_id': market_id},
+            ) from exc
         if "Market has closed" in detail:
-            raise HTTPException(409, "Market has closed") from exc
+            raise AppError(
+                409,
+                ErrorCode.MARKET_CLOSE_DATE_PASSED,
+                'Market has closed.',
+                original=exc,
+                extras={'market_id': market_id},
+            ) from exc
         if "Insufficient balance" in detail:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Insufficient banana balance",
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.BET_INSUFFICIENT_BALANCE,
+                'Insufficient banana balance.',
+                original=exc,
+                extras={'market_id': market_id},
             ) from exc
         if "Market is not open" in detail:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Market is not open for betting",
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCode.MARKET_NOT_OPEN,
+                'Market is not open for betting.',
+                original=exc,
+                extras={'market_id': market_id},
+            ) from exc
+        if "amount must be positive" in detail.lower():
+            raise AppError(
+                400,
+                ErrorCode.BET_INVALID_AMOUNT,
+                'Bet amount must be positive.',
+                original=exc,
+                extras={'market_id': market_id},
+            ) from exc
+        if "option not found" in detail.lower():
+            raise AppError(
+                400,
+                ErrorCode.BET_INVALID_OPTION,
+                'Invalid market option.',
+                original=exc,
+                extras={'market_id': market_id},
             ) from exc
         if "not found" in detail.lower():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Market, option, or user not found",
+            raise AppError(
+                status.HTTP_404_NOT_FOUND,
+                ErrorCode.NOT_FOUND,
+                'Market, option, or user not found.',
+                original=exc,
+                extras={'market_id': market_id},
             ) from exc
         if "not multichoice" in detail.lower():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Market is not a multichoice market",
+            raise AppError(
+                status.HTTP_400_BAD_REQUEST,
+                ErrorCode.MARKET_NOT_MULTICHOICE,
+                'Market is not a multichoice market.',
+                original=exc,
+                extras={'market_id': market_id},
             ) from exc
         if "does not belong" in detail.lower():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Option does not belong to this market",
+            raise AppError(
+                status.HTTP_400_BAD_REQUEST,
+                ErrorCode.BET_INVALID_OPTION,
+                'Option does not belong to this market.',
+                original=exc,
+                extras={'market_id': market_id},
             ) from exc
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to place bet",
+        raise AppError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ErrorCode.INTERNAL_ERROR,
+            'Failed to place bet.',
+            original=exc,
+            extras={'market_id': market_id},
         ) from exc
 
     _check_badges_safe(supabase, current_user["id"])

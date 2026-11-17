@@ -58,7 +58,7 @@ def rpc_endpoint(request, monkeypatch):
         yield SimpleNamespace(
             app=app, client=client, path=path, body=body, rpc_name=rpc_name,
             safe_message=safe_message, supabase=supabase, captured=captured, actor=actor,
-            migrated=request.param in {"backroll", "approve", "propose", "dispute_vote"},
+            migrated=request.param in {"backroll", "approve", "propose", "dispute_vote", "claim", "community_vote"},
         )
 
 
@@ -80,7 +80,7 @@ def rpc_endpoint(request, monkeypatch):
     ("admin_resolve", "P0001", "Market not found", 404),
     ("admin_resolve", "P0001", "Market is not in admin_review status", 400),
     ("community_vote", "P0001", "Market is not in the resolution period", 400),
-    ("community_vote", "P0001", "Resolution voting window has expired", 400),
+    ("community_vote", "P0001", "Resolution voting window has expired", 409),
     ("community_vote", "23505", "A database uniqueness constraint was violated", 409),
     ("community_vote", "P0001", "Market creators cannot cast community votes on their own market", 403),
 ], indirect=["rpc_endpoint"])
@@ -96,16 +96,22 @@ def test_expected_database_errors_keep_client_status(rpc_endpoint, code, message
         case.captured.assert_called_once_with(case.supabase.rpc.return_value.execute.side_effect)
     else:
         case.captured.assert_not_called()
-    admin_error_codes = {
+    error_codes = {
+        ("claim_daily_bananas", "Already claimed today"): "CLAIM_ALREADY_TODAY",
+        ("claim_daily_bananas", "Balance is at or above the daily claim cap of 5000"): "CLAIM_AT_BALANCE_CAP",
+        ("cast_community_vote", "Market is not in the resolution period"): "MARKET_NOT_PENDING_RESOLUTION",
+        ("cast_community_vote", "Resolution voting window has expired"): "RESOLUTION_WINDOW_EXPIRED",
+        ("cast_community_vote", "A database uniqueness constraint was violated"): "COMMUNITY_VOTE_DUPLICATE",
+        ("cast_community_vote", "Market creators cannot cast community votes on their own market"): "COMMUNITY_VOTE_CREATOR_RESTRICTED",
         ("admin_backroll_market", "Market not found"): "MARKET_NOT_FOUND",
         ("admin_backroll_market", "Cannot backroll a resolved market"): "MARKET_ALREADY_RESOLVED",
         ("approve_market", "Market not found"): "MARKET_NOT_FOUND",
         ("approve_market", "Market is not pending review"): "MARKET_NOT_PENDING_REVIEW",
         ("approve_market", "Market close date has passed"): "MARKET_CLOSE_DATE_PASSED",
     }
-    expected_admin_code = admin_error_codes.get((case.rpc_name, message))
-    if expected_admin_code:
-        assert response.json()["detail"]["code"] == expected_admin_code
+    expected_code = error_codes.get((case.rpc_name, message))
+    if expected_code:
+        assert response.json()["detail"]["code"] == expected_code
     assert case.supabase.rpc.call_args_list[0].args[0] == case.rpc_name
 
 
@@ -211,7 +217,7 @@ def test_successful_rpc_responses_are_preserved(rpc_endpoint):
 ])
 def test_option_bet_sql_eligibility_errors(message, status):
     database = Mock()
-    database.rpc.return_value.execute.side_effect = RuntimeError(message)
+    database.rpc.return_value.execute.side_effect = APIError({"code": "P0001", "message": message, "details": None, "hint": None})
     app = FastAPI()
     app.include_router(bets.router)
     app.dependency_overrides = {
@@ -221,4 +227,4 @@ def test_option_bet_sql_eligibility_errors(message, status):
     with TestClient(app) as client:
         response = client.post("/api/markets/m1/bets/option", json={"option_id": "o1", "amount": 10})
     assert response.status_code == status
-    assert response.json()["detail"] == message
+    assert response.json()["detail"]["message"] == message + "."

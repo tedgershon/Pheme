@@ -1,6 +1,6 @@
 # Authorization Matrix
 
-**Status:** Intended authorization policy, audited against repository source on 2026-11-14.
+**Status:** Intended authorization policy, API dependencies and overlays audited against repository source on 2026-11-16.
 **Implementation:** Not all cells are enforced yet. See the linked issues in section 8.
 Future routes are explicitly marked; HTTP codes describe the target contract.
 
@@ -239,7 +239,7 @@ Listed by router. Path prefix shown above each table. `M` = path-param market.
 | POST | `/{id}/bets/option` | `401` | `201` if conditions OK; `409` / `400` otherwise | `403` | same as `user` | same as `user` |
 | GET | `/{id}/bets` | `200` | `200` | `200` | `200` | `200` |
 
-### 7d. `resolution.py` — `/api`
+### 7d. `resolution.py` — `/api/markets`
 
 | Method | Path | `anon` | `user` | `user+creator(M)` | `user+community-voter(M)` | `admin` | `super_admin` |
 |---|---|---|---|---|---|---|---|
@@ -270,7 +270,11 @@ Listed by router. Path prefix shown above each table. `M` = path-param market.
 | GET | `/unread-count` | `401` | `200` | n/a | `200` | `200` |
 | POST | `/read` | `401` | `200` (marks own) | n/a | `200` | `200` |
 | POST | `/{id}/read` | `401` | `200` | `404` | `200` if owner else `404` | same |
-| DELETE | `/{id}` | `401` | `204` | `404` | `204` if owner else `404` | same |
+| DELETE | `/{id}` | `401` | `200` | `404` | `200` if owner else `404` | same |
+
+Owner mark-read and delete preserve the existing `200 {"status":"ok"}`
+contract. A repeated mark-read succeeds while the row exists; deleting it again
+returns 404.
 
 **Policy note:** for resources keyed to a single owner, prefer `404` over `403` so non-owners cannot probe for the existence of someone else's notification IDs.
 
@@ -310,7 +314,33 @@ There is currently no admin endpoint to view another user's portfolio or transac
 | B-2: owner-scoped proposed markets in portfolio and public-query privacy | [#9](https://github.com/tedgershon/Pheme/issues/9) |
 | B-3: relocate the legacy admin resolution endpoint and use role dependencies | [#10](https://github.com/tedgershon/Pheme/issues/10) |
 | B-4: admin resolution queue, dashboard entry and ambiguous refund support | [#31](https://github.com/tedgershon/Pheme/issues/31), blocked by #10 |
-| Consistent error envelopes, notification ownership responses and dependency audit | [#5](https://github.com/tedgershon/Pheme/issues/5), [#6](https://github.com/tedgershon/Pheme/issues/6) |
+| Legacy admin-resolution error envelope and role dependency | [#10](https://github.com/tedgershon/Pheme/issues/10) |
+
+The [mounted-route inventory](../backend/tests/test_authorization_inventory.py)
+checks every application method/path against its required or optional auth
+dependency (including the development-only Sentry endpoint). HTTP tests reject
+anonymous callers on all protected routes and ordinary users on all admin
+routes before data access. This is dependency coverage, not the full state and
+role contract sweep planned in [#12](https://github.com/tedgershon/Pheme/issues/12).
+
+The source audit retains these specific discrepancies for the linked work:
+
+- **#9:** the public markets list accepts `status=pending_review`/`denied`, and
+  market detail has no owner/status privacy gate. Portfolio and transactions
+  themselves filter by the caller, but there is no owner-only proposed-market
+  endpoint yet.
+- **#10:** the legacy admin-resolution handler checks `is_admin`, while SQL
+  checks the profile role. It still needs the shared role dependency and route
+  relocation; the relocated route in section 7e is not mounted yet.
+- **#12:** dispute-vote duplicates currently return 409 (the table above says
+  403), dispute expiry returns 400, and dispute-vote listing can return 404 when
+  no dispute exists. Community-resolution start is idempotent with 200 when
+  already in community resolution. Preserve these observations when reconciling
+  the full status/state contracts. Community-vote expiry is 409 after #6.
+
+Public community-vote and badge reads now use optional authentication for
+attribution. Badges expose earned badge records and definitions, not progress
+statistics; progress and badge-check operations use the authenticated user's ID.
 
 Admins retain normal user permissions with creator/bettor/voter restrictions,
 plus explicit administrative capabilities. Role-preview controls never change

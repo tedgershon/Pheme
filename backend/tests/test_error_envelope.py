@@ -20,33 +20,6 @@ from observability import AppError, ErrorCode
 
 
 @pytest.fixture
-def sentry_events():
-    """Exercise the real SDK without sending events to an external service."""
-    events = []
-
-    class MemoryTransport(observability.sentry_sdk.transport.Transport):
-        def capture_envelope(self, envelope):
-            event = envelope.get_event()
-            if event is not None:
-                events.append(event)
-
-    client = observability.sentry_sdk.Client(
-        dsn="https://public@example.invalid/1",
-        transport=MemoryTransport,
-        default_integrations=False,
-        auto_enabling_integrations=False,
-        before_send=observability._before_send,
-    )
-    with observability.sentry_sdk.isolation_scope() as scope:
-        scope.set_client(client)
-        try:
-            yield events
-        finally:
-            observability.clear_user_context()
-            client.close()
-
-
-@pytest.fixture
 def api(monkeypatch, sentry_events):
     # Import the real app, but keep SDK configuration and logging local to tests.
     monkeypatch.setattr(observability, "init_observability", lambda: None)

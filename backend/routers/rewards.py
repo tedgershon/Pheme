@@ -2,7 +2,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from dependencies import get_current_user, get_supabase_client
+from dependencies import (
+    get_current_user,
+    get_current_user_optional,
+    get_supabase_client,
+)
+from observability import AppError, ErrorCode
 from supabase import Client
 
 router = APIRouter(prefix="/api", tags=["rewards"])
@@ -141,14 +146,24 @@ async def get_user_rewards(
 async def get_user_badges(
     user_id: str,
     supabase: Annotated[Client, Depends(get_supabase_client)],
+    _current_user: Annotated[dict | None, Depends(get_current_user_optional)],
 ):
     """Get badges for any user (for leaderboard display)."""
-    result = (
-        supabase.table("user_badges")
-        .select("*, badge_definitions(*)")
-        .eq("user_id", user_id)
-        .execute()
-    )
+    try:
+        result = (
+            supabase.table("user_badges")
+            .select("*, badge_definitions(*)")
+            .eq("user_id", user_id)
+            .execute()
+        )
+    except Exception as exc:
+        raise AppError(
+            500,
+            ErrorCode.INTERNAL_ERROR,
+            'Failed to load badges.',
+            original=exc,
+            extras={'user_id': user_id},
+        ) from exc
     return result.data or []
 
 

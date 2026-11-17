@@ -8,6 +8,7 @@ from dependencies import (
     get_user_token,
     user_auth,
 )
+from observability import AppError, ErrorCode
 from supabase import Client
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
@@ -72,11 +73,13 @@ async def mark_single_read(
 ):
     """Mark a single notification as read."""
     with user_auth(supabase, token):
-        supabase.table("notifications") \
+        result = supabase.table("notifications") \
             .update({"is_read": True}) \
             .eq("id", notification_id) \
             .eq("user_id", current_user["id"]) \
             .execute()
+    if not result.data:
+        raise AppError(404, ErrorCode.NOTIFICATION_NOT_FOUND, "Notification not found.")
     return {"status": "ok"}
 
 
@@ -89,9 +92,11 @@ async def delete_notification(
 ):
     """Delete a notification owned by the current user."""
     with user_auth(supabase, token):
-        supabase.table("notifications") \
+        result = supabase.table("notifications") \
             .delete() \
             .eq("id", notification_id) \
             .eq("user_id", current_user["id"]) \
             .execute()
+    if not result.data:
+        raise AppError(404, ErrorCode.NOTIFICATION_NOT_FOUND, "Notification not found.")
     return {"status": "ok"}
