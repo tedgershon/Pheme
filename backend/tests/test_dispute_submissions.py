@@ -300,6 +300,9 @@ def test_admin_queue_requires_an_admin(queue_api, role, expected):
 def test_admin_queue_requires_authentication(monkeypatch):
     import main
 
-    monkeypatch.setattr(main.app, "dependency_overrides", {})
+    # Stub only the client so the real auth dependency runs without Supabase settings.
+    database = Database(ROWS)
+    monkeypatch.setattr(main.app, "dependency_overrides", {get_supabase_client: lambda: database})
     response = TestClient(main.app).get("/api/admin/markets/disputes")
     assert response.status_code == 401
+    assert database.calls == []
