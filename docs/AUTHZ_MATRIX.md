@@ -119,7 +119,7 @@ Routes from `frontend/src/app/`, plus explicitly planned pages. This is intended
 | `/` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Currently reuses market browsing; curated home is planned in issues #18–19. Betting requires auth. |
 | `/markets` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Full market browsing; keep separate from the planned curated home. |
 | `/markets/[id]` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Detail page. Bet/resolve/dispute controls per UI matrix. |
-| `/markets/create` | `redirect→/auth` | `redirect→/auth` | `render` | `render` | `render` | Anonymous/demo cannot create markets. **Implementation gap B-1** — see §8. |
+| `/markets/create` | `redirect→/auth` | `redirect→/auth` | `render` | `render` | `render` | Anonymous/demo cannot create markets; the proxy redirects before rendering. |
 | `/portfolio` | `redirect→/auth` | `redirect→/auth` | `render` | `render` | `render` | Shows current user's bets only. |
 | `/profile` | `redirect→/auth` | `redirect→/auth` | `render` | `render` | `render` | Own profile only; no `/profile/[id]` route exists. |
 | `/leaderboard` | `render` | `render` | `render` | `render` | `render` | Public ranking. |
@@ -136,6 +136,21 @@ Routes from `frontend/src/app/`, plus explicitly planned pages. This is intended
 
 - All redirects should be **server-side** (Next.js middleware or server-component check) rather than client-side `useEffect`. A client-side redirect ships the protected component code to the browser and shows a flash before redirecting.
 - `/admin/*` should redirect to `/`, not return 403, so a curious non-admin doesn't learn admin URLs exist.
+
+Page gates are enforced in [`src/proxy.ts`](../frontend/src/proxy.ts) before
+rendering: Supabase Auth `getUser()` validates identity, and admin routes read
+`profiles.role` for that identity. `/admin/users` (including descendants) requires
+`super_admin`; other admin routes accept `admin` or `super_admin`. Anonymous
+member pages redirect to `/auth`; anonymous/unauthorized admin requests redirect
+to `/`. Missing Supabase configuration is anonymous, and identity or role lookup
+failures cannot grant protected access. Signed-in `/auth` requests redirect to
+`/`; the OAuth callback remains accessible. Session-cookie updates are preserved
+on redirects. Client-side visibility/preview controls supplement these checks;
+API authorization remains independent.
+
+[Proxy tests](../frontend/src/__tests__/proxy.test.ts) cover these redirects,
+role restrictions, failure cases, cookie propagation and matcher coverage.
+Browser integration coverage remains planned in #14–17.
 
 ---
 
@@ -310,7 +325,6 @@ There is currently no admin endpoint to view another user's portfolio or transac
 
 | Gap | Work tracked in GitHub |
 | --- | --- |
-| B-1: server-side gating for market creation and protected pages | [#8](https://github.com/tedgershon/Pheme/issues/8) |
 | B-2: owner-scoped proposed markets in portfolio and public-query privacy | [#9](https://github.com/tedgershon/Pheme/issues/9) |
 | B-3: relocate the legacy admin resolution endpoint and use role dependencies | [#10](https://github.com/tedgershon/Pheme/issues/10) |
 | B-4: admin resolution queue, dashboard entry and ambiguous refund support | [#31](https://github.com/tedgershon/Pheme/issues/31), blocked by #10 |
