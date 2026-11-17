@@ -82,6 +82,13 @@ DELETE FROM community_votes
  WHERE voter_id IN (SELECT id FROM fixture_user_ids)
     OR market_id IN (SELECT id FROM fixture_market_ids);
 
+-- Dispute submissions (FKs: dispute_id, market_id, submitter_id) before their disputes
+DELETE FROM dispute_submissions
+ WHERE submitter_id IN (SELECT id FROM fixture_user_ids)
+    OR market_id IN (SELECT id FROM fixture_market_ids)
+    OR dispute_id IN (SELECT id FROM disputes
+        WHERE disputer_id IN (SELECT id FROM fixture_user_ids));
+
 -- Disputes (FKs: disputer_id, market_id)
 DELETE FROM disputes
  WHERE disputer_id IN (SELECT id FROM fixture_user_ids)

@@ -51,7 +51,32 @@ def verify(psql, read_sql):
     assert psql(f"SELECT count(*) FROM transactions WHERE market_id='{review_market}' AND transaction_type='refund'") == '2'
     assert psql(f"SELECT sum(amount)=0 FROM transactions WHERE market_id='{review_market}'") == 't'
     assert psql(f"SELECT resolved_outcome FROM markets WHERE id='{review_market}'") == 'AMBIGUOUS'
+    # Concurrent submissions and retries: one case, one submission per user.
+    dispute_market = '91000000-0000-0000-0000-000000000004'
+    filers = [f'90000000-0000-0000-0000-00000000000{i}' for i in (2, 3, 5, 6)]
+    psql(f"""
+        INSERT INTO markets (id,title,description,creator_id,close_at,resolution_criteria,status,
+                             proposed_outcome,dispute_deadline)
+        VALUES ('{dispute_market}','Dispute','Fixture','90000000-0000-0000-0000-000000000001',
+                now()+interval '1 day','Fixture','pending_resolution','YES',now()+interval '1 day');
+    """)
+
+    def submit(user):
+        try:
+            psql(f"SET statement_timeout='15s'; SELECT file_dispute('{dispute_market}','{user}','Concern');")
+            return True
+        except RuntimeError as error:
+            assert 'already submitted' in str(error), error
+            return False
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        assert sum(pool.map(submit, filers * 2)) == len(filers)
+    assert psql(f"SELECT count(*) FROM disputes WHERE market_id='{dispute_market}'") == '1'
+    assert psql(f"SELECT count(*) FROM dispute_submissions WHERE market_id='{dispute_market}'") == str(len(filers))
+    assert psql(f"SELECT status FROM markets WHERE id='{dispute_market}'") == 'disputed'
     psql("""
+        DELETE FROM dispute_submissions WHERE market_id::text LIKE '91000000-%';
+        DELETE FROM disputes WHERE market_id::text LIKE '91000000-%';
         DELETE FROM private.community_settlements WHERE market_id::text LIKE '91000000-%';
         DELETE FROM community_votes WHERE market_id::text LIKE '91000000-%';
         DELETE FROM bets WHERE market_id::text LIKE '91000000-%';
