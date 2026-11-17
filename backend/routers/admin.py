@@ -66,6 +66,7 @@ def _to_eastern(dt: datetime) -> datetime:
 async def get_stats(
     _current_user: Annotated[dict, Depends(require_admin)],
     supabase: Annotated[Client, Depends(get_supabase_client)],
+    token: str | None = Depends(get_user_token),
 ):
     """Return cumulative platform statistics (admin only)."""
     profiles = supabase.table("profiles").select("role").execute()
@@ -75,7 +76,8 @@ async def get_stats(
         users_by_role[r] = users_by_role.get(r, 0) + 1
     total_users = sum(users_by_role.values())
 
-    markets_data = supabase.table("markets").select("status").execute()
+    with user_auth(supabase, token):
+        markets_data = supabase.table("markets").select("status").execute()
     markets_by_status: dict[str, int] = {}
     for row in markets_data.data or []:
         s = row.get("status", "open")
@@ -211,56 +213,58 @@ async def backroll_market(
 async def list_markets_for_review(
     _current_user: Annotated[dict, Depends(require_admin)],
     supabase: Annotated[Client, Depends(get_supabase_client)],
+    token: str | None = Depends(get_user_token),
 ):
     """List all markets organized by review status."""
-    state_client = get_supabase_service_client() or supabase
-    pending_for_normalization = (
-        supabase.table("markets")
-        .select("id")
-        .eq("status", "pending_review")
-        .execute()
-    )
-    pending_ids = [row["id"] for row in (pending_for_normalization.data or []) if row.get("id")]
-    if pending_ids:
-        try:
-            normalize_markets(state_client, market_ids=pending_ids)
-        except Exception:
-            logger.warning("Failed to normalize pending markets before review listing", exc_info=True)
+    with user_auth(supabase, token):
+        state_client = get_supabase_service_client() or supabase
+        pending_for_normalization = (
+            supabase.table("markets")
+            .select("id")
+            .eq("status", "pending_review")
+            .execute()
+        )
+        pending_ids = [row["id"] for row in (pending_for_normalization.data or []) if row.get("id")]
+        if pending_ids:
+            try:
+                normalize_markets(state_client, market_ids=pending_ids)
+            except Exception:
+                logger.warning("Failed to normalize pending markets before review listing", exc_info=True)
 
-    review_select = "*, profiles!creator_id(andrew_id, display_name), reviewer:profiles!reviewed_by(andrew_id, display_name)"
+        review_select = "*, profiles!creator_id(andrew_id, display_name), reviewer:profiles!reviewed_by(andrew_id, display_name)"
 
-    pending = (
-        supabase.table("markets")
-        .select(review_select)
-        .eq("status", "pending_review")
-        .order("created_at", desc=False)
-        .execute()
-    )
+        pending = (
+            supabase.table("markets")
+            .select(review_select)
+            .eq("status", "pending_review")
+            .order("created_at", desc=False)
+            .execute()
+        )
 
-    approved = (
-        supabase.table("markets")
-        .select(review_select)
-        .eq("status", "open")
-        .not_.is_("reviewed_by", "null")
-        .order("review_date", desc=True)
-        .limit(50)
-        .execute()
-    )
+        approved = (
+            supabase.table("markets")
+            .select(review_select)
+            .eq("status", "open")
+            .not_.is_("reviewed_by", "null")
+            .order("review_date", desc=True)
+            .limit(50)
+            .execute()
+        )
 
-    denied = (
-        supabase.table("markets")
-        .select(review_select)
-        .eq("status", "denied")
-        .order("review_date", desc=True)
-        .limit(50)
-        .execute()
-    )
+        denied = (
+            supabase.table("markets")
+            .select(review_select)
+            .eq("status", "denied")
+            .order("review_date", desc=True)
+            .limit(50)
+            .execute()
+        )
 
-    return {
-        "pending": pending.data or [],
-        "approved": approved.data or [],
-        "denied": denied.data or [],
-    }
+        return {
+            "pending": pending.data or [],
+            "approved": approved.data or [],
+            "denied": denied.data or [],
+        }
 
 
 @router.post("/markets/{market_id}/review")
@@ -269,91 +273,93 @@ async def review_market(
     body: ReviewMarketRequest,
     current_user: Annotated[dict, Depends(require_admin)],
     supabase: Annotated[Client, Depends(get_supabase_client)],
+    token: str | None = Depends(get_user_token),
 ):
     """Admin reviews a proposed market — approve or deny."""
-    state_client = get_supabase_service_client() or supabase
-    market = normalize_market_state(state_client, market_id)
-    if not market:
-        raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
+    with user_auth(supabase, token):
+        state_client = get_supabase_service_client() or supabase
+        market = normalize_market_state(state_client, market_id)
+        if not market:
+            raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
 
-    if market.get("status") != "pending_review":
-        raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.")
-
-    close_at = _parse_dt(market.get("close_at"))
-    if close_at and close_at <= datetime.now(tz=UTC):
-        raise AppError(
-            400,
-            ErrorCode.MARKET_CLOSE_DATE_PASSED,
-            "Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
-        )
-
-    updates = {}
-    for field in ("title", "description", "resolution_criteria", "close_at", "category", "link"):
-        val = getattr(body, field, None)
-        if val is not None:
-            if field == "close_at":
-                updates[field] = _to_eastern(val).isoformat()
-            else:
-                updates[field] = val
-
-    if updates:
-        state_client.table("markets").update(updates).eq("id", market_id).execute()
-
-    if body.action == "approve":
-        try:
-            result = supabase.rpc("approve_market", {
-                "p_market_id": market_id,
-                "p_admin_id": current_user["id"],
-                "p_notes": body.notes,
-            }).execute()
-        except APIError as e:
-            msg = e.message.lower() if e.code == "P0001" else ""
-            if "not found" in msg:
-                raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.", original=e) from e
-            if "not pending" in msg:
-                raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.", original=e) from e
-            if "close date has passed" in msg:
-                raise AppError(
-                    400,
-                    ErrorCode.MARKET_CLOSE_DATE_PASSED,
-                    "Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
-                    original=e,
-                ) from e
-            raise AppError(
-                500,
-                ErrorCode.INTERNAL_ERROR,
-                "Failed to approve market.",
-                original=e,
-            ) from e
-    else:
-        notes = (body.notes or "").strip()
-        if not notes:
-            raise AppError(400, ErrorCode.VALIDATION_FAILED, "Notes are required when denying a market.")
-
-        result = (
-            state_client.table("markets")
-            .update(
-                {
-                    "status": "denied",
-                    "reviewed_by": current_user["id"],
-                    "review_date": datetime.now(tz=UTC).isoformat(),
-                    "review_notes": notes,
-                }
-            )
-            .eq("id", market_id)
-            .eq("status", "pending_review")
-            .execute()
-        )
-        if not result.data:
+        if market.get("status") != "pending_review":
             raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.")
 
-    market = (
-        state_client.table("markets")
-        .select("*")
-        .eq("id", market_id)
-        .single()
-        .execute()
-    )
+        close_at = _parse_dt(market.get("close_at"))
+        if close_at and close_at <= datetime.now(tz=UTC):
+            raise AppError(
+                400,
+                ErrorCode.MARKET_CLOSE_DATE_PASSED,
+                "Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
+            )
+
+        updates = {}
+        for field in ("title", "description", "resolution_criteria", "close_at", "category", "link"):
+            val = getattr(body, field, None)
+            if val is not None:
+                if field == "close_at":
+                    updates[field] = _to_eastern(val).isoformat()
+                else:
+                    updates[field] = val
+
+        if updates:
+            state_client.table("markets").update(updates).eq("id", market_id).execute()
+
+        if body.action == "approve":
+            try:
+                result = supabase.rpc("approve_market", {
+                    "p_market_id": market_id,
+                    "p_admin_id": current_user["id"],
+                    "p_notes": body.notes,
+                }).execute()
+            except APIError as e:
+                msg = e.message.lower() if e.code == "P0001" else ""
+                if "not found" in msg:
+                    raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.", original=e) from e
+                if "not pending" in msg:
+                    raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.", original=e) from e
+                if "close date has passed" in msg:
+                    raise AppError(
+                        400,
+                        ErrorCode.MARKET_CLOSE_DATE_PASSED,
+                        "Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
+                        original=e,
+                    ) from e
+                raise AppError(
+                    500,
+                    ErrorCode.INTERNAL_ERROR,
+                    "Failed to approve market.",
+                    original=e,
+                ) from e
+        else:
+            notes = (body.notes or "").strip()
+            if not notes:
+                raise AppError(400, ErrorCode.VALIDATION_FAILED, "Notes are required when denying a market.")
+
+            result = (
+                state_client.table("markets")
+                .update(
+                    {
+                        "status": "denied",
+                        "reviewed_by": current_user["id"],
+                        "review_date": datetime.now(tz=UTC).isoformat(),
+                        "review_notes": notes,
+                    }
+                )
+                .eq("id", market_id)
+                .eq("status", "pending_review")
+                .execute()
+            )
+            if not result.data:
+                raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.")
+
+        market = (
+            state_client.table("markets")
+            .select("*")
+            .eq("id", market_id)
+            .single()
+            .execute()
+        )
 
     if body.action == "approve":
         try:

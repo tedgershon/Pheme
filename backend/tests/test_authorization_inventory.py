@@ -42,6 +42,7 @@ AUTHENTICATED = {
     ("POST", "/api/notifications/read"), ("POST", "/api/notifications/{notification_id}/read"),
     ("DELETE", "/api/notifications/{notification_id}"),
     ("GET", "/api/portfolio"), ("GET", "/api/transactions"),
+    ("GET", "/api/portfolio/proposed-markets"),
     ("GET", "/api/rewards"), ("POST", "/api/rewards/check"),
 }
 ADMIN = {

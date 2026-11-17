@@ -411,6 +411,10 @@ export function listBetsForMarket(
 // Portfolio  –  /api/portfolio, /api/transactions
 // ---------------------------------------------------------------------------
 
+export function getMyProposedMarkets(opts?: FetchOpts): Promise<Market[]> {
+  return apiFetch("/api/portfolio/proposed-markets", { signal: opts?.signal });
+}
+
 export function getPortfolio(opts?: FetchOpts): Promise<Bet[]> {
   return apiFetch("/api/portfolio", { signal: opts?.signal });
 }

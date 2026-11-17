@@ -55,12 +55,14 @@ export const invalidateAfterProfileUpdate = (qc: QueryClient) =>
 
 export const invalidateAfterMarketCreate = (qc: QueryClient) =>
   Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.portfolio.proposedMarkets }),
     qc.invalidateQueries({ queryKey: queryKeys.markets.all }),
     qc.invalidateQueries({ queryKey: queryKeys.markets.review }),
   ]);
 
 export const invalidateAfterAdminReview = (qc: QueryClient) =>
   Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.portfolio.proposedMarkets }),
     qc.invalidateQueries({ queryKey: queryKeys.markets.review }),
     qc.invalidateQueries({ queryKey: queryKeys.markets.all }),
   ]);
@@ -86,3 +88,8 @@ export const invalidateAfterBadgeCheck = (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queryKeys.rewards }),
     qc.invalidateQueries({ queryKey: ["badges"] }),
   ]);
+
+// Market details/review results and portfolio data can contain private content.
+// Reset cancels old requests, clears data and refetches mounted observers with
+// the new session; invalidation alone would keep the previous account's data.
+export const resetAfterSessionChange = (qc: QueryClient) => qc.resetQueries();

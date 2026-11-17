@@ -9,10 +9,30 @@ from dependencies import (
     user_auth,
 )
 from schemas.bet import BetResponse
+from schemas.market import MarketResponse
 from schemas.transaction import TransactionResponse
 from supabase import Client
 
 router = APIRouter(prefix="/api", tags=["portfolio"])
+
+
+@router.get("/portfolio/proposed-markets", response_model=list[MarketResponse])
+async def get_my_proposed_markets(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    token: str | None = Depends(get_user_token),
+):
+    """The caller's pending or denied proposals, newest first, for every role."""
+    with user_auth(supabase, token):
+        result = (
+            supabase.table("markets")
+            .select("*")
+            .eq("creator_id", current_user["id"])
+            .in_("status", ["pending_review", "denied"])
+            .order("created_at", desc=True)
+            .execute()
+        )
+    return result.data or []
 
 
 @router.get("/portfolio", response_model=list[BetResponse])

@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { resetAfterSessionChange } from "./query/invalidators";
 import { queryKeys } from "./query/keys";
 import { supabase } from "./supabase";
 import type { UserProfile } from "./types";
@@ -98,16 +99,15 @@ export function SessionProvider({
       const changed = newUserId !== lastUserIdRef.current;
       lastUserIdRef.current = newUserId;
 
+      if (changed) void resetAfterSessionChange(qc);
+
       if (session) {
         setIsDemo(false);
-        // only refetch when it's actually a different user (sign-in, switch)
-        if (changed) qc.invalidateQueries({ queryKey: queryKeys.me });
         // UUID only — never andrew_id or email
         // (docs/OBSERVABILITY.md)
         Sentry.setUser({ id: session.user.id });
       } else {
         setIsDemo(true);
-        if (changed) qc.removeQueries({ queryKey: queryKeys.me });
         Sentry.setUser(null);
       }
       setIsLoading(false);
@@ -121,8 +121,10 @@ export function SessionProvider({
       await supabase.auth.signOut();
     }
     setIsDemo(true);
-    lastUserIdRef.current = null;
-    qc.removeQueries({ queryKey: queryKeys.me });
+    if (lastUserIdRef.current !== null) {
+      lastUserIdRef.current = null;
+      await resetAfterSessionChange(qc);
+    }
   }, [qc]);
 
   const value = useMemo(
