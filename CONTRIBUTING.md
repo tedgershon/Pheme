@@ -87,10 +87,19 @@ Keep `backend/requirements.txt` and `frontend/pnpm-lock.yaml` consistent with
 dependency changes. Backend requirements are installed directly; frontend CI
 uses `pnpm install --frozen-lockfile`.
 
-Matrix-driven API coverage, optional schema fuzzing and Playwright coverage are
-planned in [API testing issues](https://github.com/tedgershon/Pheme/issues/11)
-and [browser testing issues](https://github.com/tedgershon/Pheme/issues/14);
-they are not all present in CI yet.
+`pytest` includes the matrix-driven endpoint tests: every cell of
+[AUTHZ_MATRIX.md](docs/AUTHZ_MATRIX.md) section 7 is a test in
+`backend/tests/_matrix_cells.py`, and `test_route_coverage.py` fails when a
+mounted `/api` route has no cell. Add the matrix row and the cell together when
+you add or change a route. CI uploads the JUnit report (`backend-pytest-report`)
+so a failing cell is named by method, path and role. These tests use an
+in-memory database that emulates stored-function preconditions; SQL behavior
+stays in the disposable-database suite above.
+
+Optional schema fuzzing and Playwright coverage are planned in
+[#13](https://github.com/tedgershon/Pheme/issues/13) and the
+[browser testing issues](https://github.com/tedgershon/Pheme/issues/14); they are
+not in CI yet.
 
 ## 7. Commit, PR and squash-merge format
 

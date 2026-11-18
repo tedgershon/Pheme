@@ -5,6 +5,7 @@ disposable Supabase instance. Never use these fixtures as evidence of SQL safety
 """
 
 import sys
+from collections import defaultdict
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import UUID, uuid4
@@ -24,45 +25,148 @@ ROLE_IDS = {
 }
 
 
+TABLE_DEFAULTS = {"markets": {"yes_pool_total": 0, "no_pool_total": 0}}
+
+
 class TestQuery:
-    """Small table query stub for HTTP fixtures; deliberately no SQL semantics."""
+    """In-memory table query for HTTP fixtures.
+
+    Supports the filter/ordering/write calls the routers use, applied to plain
+    rows. It deliberately has no SQL semantics: no constraints, joins, defaults
+    beyond ``id``/``created_at``, triggers or RLS. Joined filters such as
+    ``markets.status`` are ignored.
+    """
 
     def __init__(self, database, name):
         self.database = database
         self.name = name
-        self.filters = {}
+        self.predicates = []
+        self.operation = "select"
         self.payload = None
         self.one = False
+        self.window = None
+        self.negate = False
+        self.want_count = False
 
-    def select(self, *_args):
+    @property
+    def not_(self):
+        self.negate = True
+        return self
+
+    def _where(self, test):
+        if self.negate:
+            self.negate, inner = False, test
+            test = lambda row: not inner(row)
+        self.predicates.append(test)
+        return self
+
+    def select(self, *_args, count=None, **_kwargs):
+        self.want_count = count is not None
         return self
 
     def eq(self, key, value):
-        self.filters[key] = value
+        if "." in key:
+            return self
+        return self._where(lambda row: row.get(key) == value)
+
+    def neq(self, key, value):
+        return self._where(lambda row: row.get(key) != value)
+
+    def in_(self, key, values):
+        if "." in key:
+            return self
+        values = list(values)
+        return self._where(lambda row: row.get(key) in values)
+
+    def gte(self, key, value):
+        return self._where(lambda row: row.get(key) is not None and row[key] >= value)
+
+    def is_(self, key, value):
+        return self._where(lambda row: (row.get(key) is None) == (value == "null"))
+
+    def ilike(self, key, pattern):
+        needle = pattern.strip("%").lower()
+        return self._where(lambda row: needle in str(row.get(key, "")).lower())
+
+    def order(self, *_args, **_kwargs):
+        return self
+
+    def range(self, start, end):
+        self.window = (start, end + 1)
+        return self
+
+    def limit(self, count):
+        self.window = (0, count)
         return self
 
     def single(self):
         self.one = True
         return self
 
+    maybe_single = single
+
     def insert(self, payload):
-        self.payload = dict(payload)
+        self.operation, self.payload = "insert", payload
         return self
+
+    def update(self, payload):
+        self.operation, self.payload = "update", dict(payload)
+        return self
+
+    def upsert(self, payload, **_kwargs):
+        self.operation, self.payload = "upsert", dict(payload)
+        return self
+
+    def delete(self):
+        self.operation = "delete"
+        return self
+
+    def _store(self, payload):
+        row = {
+            "id": str(uuid4()),
+            "created_at": "2026-01-01T00:00:00+00:00",
+            **TABLE_DEFAULTS.get(self.name, {}),
+            **payload,
+        }
+        self.database.rows[self.name].append(row)
+        return row
 
     def execute(self):
         rows = self.database.rows[self.name]
-        if self.payload is not None:
-            row = {"id": str(uuid4()), **self.payload}
-            rows.append(row)
-            return SimpleNamespace(data=[row])
-        found = [row for row in rows if all(row.get(k) == v for k, v in self.filters.items())]
-        return SimpleNamespace(data=found[0] if self.one and found else None if self.one else found)
+        matching = [row for row in rows if all(test(row) for test in self.predicates)]
+        if self.operation == "insert":
+            batch = self.payload if isinstance(self.payload, list) else [self.payload]
+            return SimpleNamespace(data=[self._store(dict(item)) for item in batch], count=None)
+        if self.operation == "upsert":
+            existing = next((row for row in rows if row.get("id") == self.payload.get("id")), None)
+            if existing is None:
+                return SimpleNamespace(data=[self._store(self.payload)], count=None)
+            existing.update(self.payload)
+            return SimpleNamespace(data=[existing], count=None)
+        if self.operation == "update":
+            for row in matching:
+                row.update(self.payload)
+            return SimpleNamespace(data=matching, count=None)
+        if self.operation == "delete":
+            for row in matching:
+                rows.remove(row)
+            return SimpleNamespace(data=matching, count=None)
+        total = len(matching)
+        if self.window:
+            matching = matching[self.window[0]:self.window[1]]
+        found = [dict(row) for row in matching]
+        data = (found[0] if found else None) if self.one else found
+        return SimpleNamespace(data=data, count=total if self.want_count else None)
 
 
 class TestDatabase:
     def __init__(self, profiles):
-        self.rows = {"profiles": list(profiles.values()), "markets": [], "bets": []}
+        self.rows = defaultdict(list, {"profiles": list(profiles.values()), "markets": [], "bets": []})
         self.auth = SimpleNamespace(get_user=self.get_user)
+        self.postgrest = SimpleNamespace(auth=lambda _token: None)
+        # name -> callable(database, params); installed per test by suites that
+        # emulate stored-function preconditions (see _matrix_rpc.py).
+        self.rpc_handlers = {}
 
     def get_user(self, token):
         role = token.removeprefix("fixture-")
@@ -71,10 +175,14 @@ class TestDatabase:
     def table(self, name):
         return TestQuery(self, name)
 
-    def rpc(self, name, _params):
-        if name != "check_claim_eligibility":
+    def rpc(self, name, params):
+        handler = self.rpc_handlers.get(name)
+        if handler is None and name != "check_claim_eligibility":
             raise AssertionError(f"Unexpected RPC in HTTP fixture: {name}")
-        return SimpleNamespace(execute=lambda: SimpleNamespace(data={"claimed_today": False, "eligible": True, "claim_amount": 1000, "above_cap": False}))
+        if handler is None:
+            def handler(_database, _params):
+                return {"claimed_today": False, "eligible": True, "claim_amount": 1000, "above_cap": False}
+        return SimpleNamespace(execute=lambda: SimpleNamespace(data=handler(self, params)))
 
 
 @pytest.fixture(scope="session")
@@ -166,6 +274,7 @@ def seed_market(fixture_database):
             "category": "General",
             "yes_pool_total": 0,
             "no_pool_total": 0,
+            "created_at": "2026-01-01T00:00:00+00:00",
             **fields,
         }
         result = fixture_database.table("markets").insert(row).execute().data[0]
