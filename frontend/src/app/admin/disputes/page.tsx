@@ -19,9 +19,9 @@ const PAGE_SIZE = 10;
 type StatusFilter = NonNullable<AdminDisputeCaseParams["status"]> | "all";
 
 const FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All cases" },
-  { value: "disputed", label: "Voting open" },
-  { value: "admin_review", label: "Awaiting admin" },
+  { value: "all", label: "All" },
+  { value: "disputed", label: "Voting" },
+  { value: "admin_review", label: "Pending Admin" },
 ];
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -43,7 +43,7 @@ function CaseCard({ item }: { item: AdminDisputeCase }) {
       <CardHeader className="space-y-2 pb-0">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={awaitingAdmin ? "destructive" : "secondary"}>
-            {awaitingAdmin ? "Awaiting admin decision" : "Voting open"}
+            {awaitingAdmin ? "Pending Admin" : "Voting"}
           </Badge>
           <Badge variant="outline">
             {item.submission_count} concern

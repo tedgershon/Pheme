@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { parseApiError } from "@/lib/api";
 import {
   CATEGORIES,
+  MARKET_STATUS_BADGES,
   MAX_MARKET_DESCRIPTION_LENGTH,
   MAX_MARKET_LINK_LENGTH,
   MAX_MARKET_RESOLUTION_LENGTH,
@@ -35,25 +36,6 @@ function formatDate(dateStr: string | null | undefined): string {
     minute: "2-digit",
   });
 }
-
-// Approved markets keep moving after approval; show where each one is now.
-const APPROVED_STATUS: Record<string, { label: string; className: string }> = {
-  open: { label: "Open", className: "bg-success-foreground text-success" },
-  closed: { label: "Closed", className: "bg-muted text-muted-foreground" },
-  pending_resolution: {
-    label: "Awaiting resolution",
-    className: "bg-warning-foreground text-warning",
-  },
-  disputed: {
-    label: "Disputed",
-    className: "bg-danger-foreground text-danger",
-  },
-  admin_review: {
-    label: "Needs final call",
-    className: "bg-warning-foreground text-warning",
-  },
-  resolved: { label: "Resolved", className: "bg-primary/10 text-primary" },
-};
 
 function getCreatorName(market: Market & Record<string, unknown>): string {
   const profiles = market.profiles as
@@ -537,17 +519,19 @@ function AdminReviewPageContent() {
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="font-medium truncate">{market.title}</span>
-                  {mode === "detail" && APPROVED_STATUS[market.status] && (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "shrink-0",
-                        APPROVED_STATUS[market.status].className,
-                      )}
-                    >
-                      {APPROVED_STATUS[market.status].label}
-                    </Badge>
-                  )}
+                  {mode === "detail" &&
+                    market.status !== "denied" &&
+                    MARKET_STATUS_BADGES[market.status] && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "shrink-0",
+                          MARKET_STATUS_BADGES[market.status].className,
+                        )}
+                      >
+                        {MARKET_STATUS_BADGES[market.status].label}
+                      </Badge>
+                    )}
                 </span>
                 <span className="text-muted-foreground">
                   {getCreatorName(m)}
@@ -601,7 +585,7 @@ function AdminReviewPageContent() {
 
       <div className="space-y-3">
         <AccordionSection
-          title="Awaiting Approval"
+          title="Pending Approval"
           count={pending.length}
           defaultOpen
         >

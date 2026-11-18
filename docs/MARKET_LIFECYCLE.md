@@ -51,14 +51,14 @@ Admin dashboard panels, in the order a market reaches them:
 
 | Status | Admin panel location | Admin action available |
 | --- | --- | --- |
-| `pending_review` | Approve New Markets, **Awaiting Approval** | Approve, edit or deny |
+| `pending_review` | Approve New Markets, **Pending Approval** | Approve, edit or deny |
 | `denied` | Approve New Markets, **Denied** (latest 50) | None |
 | `open` | Approve New Markets, **Approved** (badge: Open) | Backroll panel on the market page |
 | `closed` | Approve New Markets, **Approved** (badge: Closed) | Backroll panel on the market page; resolution reminders |
-| `pending_resolution` | Approve New Markets, **Approved** (badge: Awaiting resolution) | Backroll panel on the market page |
-| `disputed` | Monitor Disputes, **Voting open**; **Approved** (badge: Disputed) | Read concerns and tallies; vote like any neutral user; backroll |
-| `admin_review` (from a dispute) | Resolve Markets (decide here); Monitor Disputes, **Awaiting admin**; **Approved** (badge: Needs final call) | Resolve YES, NO or AMBIGUOUS |
-| `admin_review` (from community resolution) | Resolve Markets (no dispute case, so not in Monitor Disputes); **Approved** (badge: Needs final call) | Resolve YES, NO or AMBIGUOUS |
+| `pending_resolution` | Approve New Markets, **Approved** (badge: Pending Resolution) | Backroll panel on the market page |
+| `disputed` | Monitor Disputes, **Voting**; **Approved** (badge: Disputed) | Read concerns and tallies; vote like any neutral user; backroll |
+| `admin_review` (from a dispute) | Resolve Markets (decide here); Monitor Disputes, **Pending Admin**; **Approved** (badge: Pending Admin) | Resolve YES, NO or AMBIGUOUS |
+| `admin_review` (from community resolution) | Resolve Markets (no dispute case, so not in Monitor Disputes); **Approved** (badge: Pending Admin) | Resolve YES, NO or AMBIGUOUS |
 | `resolved` | Approve New Markets, **Approved** (badge: Resolved) | None (backroll refuses resolved markets) |
 
 Platform Statistics counts markets in every status.

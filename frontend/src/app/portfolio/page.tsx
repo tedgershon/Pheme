@@ -245,7 +245,7 @@ export default function PortfolioPage() {
                             variant="outline"
                             className="border-amber-500 text-amber-500"
                           >
-                            Pending Review
+                            Pending Approval
                           </Badge>
                         )}
                         {isDenied ? (
@@ -256,7 +256,7 @@ export default function PortfolioPage() {
                           )
                         ) : (
                           <p className="text-xs leading-tight text-muted-foreground">
-                            Awaiting admin review.
+                            An admin will approve or deny it.
                           </p>
                         )}
                       </div>

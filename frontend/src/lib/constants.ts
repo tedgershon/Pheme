@@ -1,3 +1,30 @@
+/** Short admin-facing labels for market statuses, shared by every admin badge. */
+export const MARKET_STATUS_BADGES: Record<
+  string,
+  { label: string; className: string }
+> = {
+  pending_review: {
+    label: "Pending Approval",
+    className: "bg-warning-foreground text-warning",
+  },
+  denied: { label: "Denied", className: "bg-muted text-muted-foreground" },
+  open: { label: "Open", className: "bg-success-foreground text-success" },
+  closed: { label: "Closed", className: "bg-muted text-muted-foreground" },
+  pending_resolution: {
+    label: "Pending Resolution",
+    className: "bg-warning-foreground text-warning",
+  },
+  disputed: {
+    label: "Disputed",
+    className: "bg-danger-foreground text-danger",
+  },
+  admin_review: {
+    label: "Pending Admin",
+    className: "bg-warning-foreground text-warning",
+  },
+  resolved: { label: "Resolved", className: "bg-primary/10 text-primary" },
+};
+
 export const CATEGORIES = [
   "General",
   "Academics",
