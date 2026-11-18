@@ -61,9 +61,11 @@ are diagnostic data; do not render them.
 
 Use `parseApiError(error, fallback)` to normalize API errors, cancellations,
 network failures and unknown exceptions. Caller migration is tracked in
-[#7](https://github.com/tedgershon/Pheme/issues/7); per-field form display is
-tracked in [#21](https://github.com/tedgershon/Pheme/issues/21). Consumers must
-map full backend field paths to their form inputs.
+[#7](https://github.com/tedgershon/Pheme/issues/7). Consumers must map full
+backend field paths to their form inputs: paths arrive as `body.<field>` (for
+example `body.title`), and Pydantic messages carry a `Value error, ` prefix.
+`frontend/src/lib/market-form.ts` (`mapFieldErrors`) normalizes both for the
+create-market form.
 
 The frontend has browser/server/edge Sentry config files, an instrumentation
 hook and `withSentryConfig`. `SessionProvider` attaches only the user UUID
