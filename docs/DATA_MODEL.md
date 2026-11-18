@@ -19,7 +19,7 @@ constraints and RPC definitions live in `supabase/migrations/`; read
 - `banana_balance` — current coin balance (excludes coins locked in active bets)
 - `role` — `'user'`, `'admin'`, or `'super_admin'` (default: `'user'`)
 - `is_admin` — boolean, auto-synced from `role` for backward compatibility
-- `avatar_url` — optional profile image URL; uploads use the public `avatars` storage bucket
+- `avatar_url` — optional profile image URL; uploads use the public `avatars` storage bucket under `<user id>/`. Removing a photo deletes that folder's files, then sets this to null so the initials fallback shows
 - `equipped_badge_id` — legacy single equipped badge FK (nullable)
 - `equipped_badges` — JSONB map of track to equipped badge ID, default `{}`
 - `created_at` — timestamp
