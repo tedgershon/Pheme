@@ -36,4 +36,6 @@ parallel; anything both touch should not run concurrently.
 See CONTRIBUTING.md section 4. The short version: resolution always goes
 through the dual-track path, balance changes always go through the
 transactional engine, and the virtual currency is never purchasable or
-cashable, in code or in copy.
+cashable, in code or in copy. Never run `supabase db reset --linked` (or a reset
+against any hosted database), and review `supabase db push --linked --dry-run`
+before every real push.

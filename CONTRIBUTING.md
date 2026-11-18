@@ -50,6 +50,14 @@ it already covers the work. Keep issue references current when docs move.
 5. Update [AUTHZ_MATRIX.md](docs/AUTHZ_MATRIX.md) when routes or permissions change.
    UI visibility does not replace server authorization. Treat the matrix as the
    intended policy; its linked issues identify known implementation gaps.
+6. Never reset the hosted Supabase project. Do not run `supabase db reset
+   --linked`, or `db reset --db-url` against any hosted database; resets are
+   for local Docker and the `pheme-issue36` harness only. Before every
+   `supabase db push --linked`, run `supabase db push --linked --dry-run` and
+   confirm the linked project ref and that only the expected new versions are
+   listed. See [HOSTED_DEVELOPMENT.md](docs/HOSTED_DEVELOPMENT.md#connect-and-migrate).
+   [.claude/settings.json](.claude/settings.json) blocks the reset for Claude
+   Code agents and requires a prompt before any push.
 
 ## 5. Local checks
 
