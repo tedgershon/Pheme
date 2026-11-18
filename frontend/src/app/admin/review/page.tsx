@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { CharacterCounter } from "@/components/character-counter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -129,6 +130,7 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
               maxLength={MAX_MARKET_TITLE_LENGTH}
               className={inputClass}
             />
+            <CharacterCounter value={title} max={MAX_MARKET_TITLE_LENGTH} />
           </div>
           <div className="space-y-1">
             <label
@@ -145,6 +147,10 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
               maxLength={MAX_MARKET_DESCRIPTION_LENGTH}
               className={`${inputClass} resize-none`}
             />
+            <CharacterCounter
+              value={description}
+              max={MAX_MARKET_DESCRIPTION_LENGTH}
+            />
           </div>
           <div className="space-y-1">
             <label
@@ -160,6 +166,10 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
               rows={2}
               maxLength={MAX_MARKET_RESOLUTION_LENGTH}
               className={`${inputClass} resize-none`}
+            />
+            <CharacterCounter
+              value={resolutionCriteria}
+              max={MAX_MARKET_RESOLUTION_LENGTH}
             />
           </div>
           <div className="space-y-1">
@@ -212,6 +222,7 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
               maxLength={MAX_MARKET_LINK_LENGTH}
               className={inputClass}
             />
+            <CharacterCounter value={link} max={MAX_MARKET_LINK_LENGTH} />
           </div>
         </div>
 
@@ -272,6 +283,10 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
             className={`${inputClass} resize-none ${notesError ? "border-danger" : ""}`}
           />
           {notesError && <p className="text-xs text-danger">{notesError}</p>}
+          <CharacterCounter
+            value={notes}
+            max={MAX_MARKET_REVIEW_NOTES_LENGTH}
+          />
         </div>
 
         {actionError && <p className="text-sm text-danger">{actionError}</p>}

@@ -44,11 +44,14 @@ export const TIME_ZONE_OPTIONS = [
   { value: "UTC", label: "UTC" },
 ];
 
-export const MAX_MARKET_TITLE_LENGTH = 160;
-export const MAX_MARKET_DESCRIPTION_LENGTH = 2000;
-export const MAX_MARKET_RESOLUTION_LENGTH = 2000;
-export const MAX_MARKET_OFFICIAL_SOURCE_LENGTH = 300;
-export const MAX_MARKET_CRITERIA_LENGTH = 1000;
-export const MAX_MARKET_LINK_LENGTH = 2048;
+// Keep in sync with backend/schemas/market.py.
+export const MAX_MARKET_TITLE_LENGTH = 120;
+export const MAX_MARKET_DESCRIPTION_LENGTH = 800;
+export const MAX_MARKET_RESOLUTION_LENGTH = 800;
+export const MAX_MARKET_OFFICIAL_SOURCE_LENGTH = 200;
+export const MAX_MARKET_CRITERIA_LENGTH = 400;
+export const MAX_MARKET_LINK_LENGTH = 500;
 export const MAX_MARKET_OPTION_LENGTH = 80;
+export const MIN_CLOSE_AT_HOURS = 1;
+export const MAX_CLOSE_AT_DAYS = 180;
 export const MAX_MARKET_REVIEW_NOTES_LENGTH = 1000;

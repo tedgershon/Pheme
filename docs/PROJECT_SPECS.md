@@ -53,12 +53,14 @@ an exclusive/non-exclusive type. Bets must have positive amounts, sufficient
 balance, a valid outcome and an open market whose close time has not passed.
 Wallet and pool updates belong in the database transaction.
 
-The current market-text limits live in `backend/schemas/market.py`: title 160,
-description/resolution criteria 2,000, official source 300, individual criteria
-1,000, link 2,048 and option label 80 characters. Creation requires a future
-close time. Tighter limits and inline field errors are planned in
-[#20](https://github.com/tedgershon/Pheme/issues/20) and
-[#21](https://github.com/tedgershon/Pheme/issues/21).
+The market-text limits live in `backend/schemas/market.py` and are mirrored
+in `frontend/src/lib/constants.ts`: title 120, description and resolution
+criteria 800, official source 200, individual criteria 400, link 500 and option
+label 80 characters. `close_at` must fall between one hour and 180 days after
+the request, on creation and when an admin edits it during review; existing
+markets are not migrated. The create-market form clamps its date picker to that
+window in the selected timezone, shows backend `VALIDATION_FAILED` messages
+under the matching inputs, and clears only the edited field's message.
 
 ## Resolution and settlement
 
