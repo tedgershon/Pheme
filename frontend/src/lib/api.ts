@@ -239,6 +239,22 @@ export async function uploadAvatar(
   return publicUrl;
 }
 
+/** Delete every stored file in the user's avatars folder. */
+export async function removeAvatar(userId: string): Promise<void> {
+  const { supabase } = await import("./supabase");
+  if (!supabase) throw new Error("Supabase not configured");
+
+  const bucket = supabase.storage.from("avatars");
+  const { data, error } = await bucket.list(userId);
+  if (error) throw error;
+
+  const paths = (data ?? []).map((file) => `${userId}/${file.name}`);
+  if (paths.length === 0) return;
+
+  const { error: removeError } = await bucket.remove(paths);
+  if (removeError) throw removeError;
+}
+
 export function claimDaily(): Promise<ClaimDailyResponse> {
   return apiFetch("/api/auth/claim-daily", { method: "POST" });
 }

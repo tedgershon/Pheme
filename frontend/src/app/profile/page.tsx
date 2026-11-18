@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   MAX_PROFILE_AVATAR_BYTES,
   parseApiError,
+  removeAvatar,
   uploadAvatar,
 } from "@/lib/api";
 import { useUpdateProfile } from "@/lib/query/mutations/auth";
@@ -25,6 +26,8 @@ export default function ProfilePage() {
     user.avatar_url,
   );
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [removingAvatar, setRemovingAvatar] = useState(false);
+  const [deletingFiles, setDeletingFiles] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -64,7 +67,17 @@ export default function ProfilePage() {
 
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
+    setRemovingAvatar(false);
     setMessage(null);
+  }
+
+  function handleRemovePhoto() {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    // Only a saved photo needs deleting; discarding an unsaved pick is enough otherwise.
+    setRemovingAvatar(user.avatar_url !== null);
+    setMessage(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleSave() {
@@ -90,6 +103,16 @@ export default function ProfilePage() {
       // the API layer, so we call uploadAvatar first then patch the profile
       if (avatarFile) {
         newAvatarUrl = await uploadAvatar(user.id, avatarFile);
+      } else if (removingAvatar) {
+        // Delete the files first: if the profile update then fails, the photo
+        // is still set and the user can retry, rather than leaving a public file.
+        setDeletingFiles(true);
+        try {
+          await removeAvatar(user.id);
+        } finally {
+          setDeletingFiles(false);
+        }
+        newAvatarUrl = null;
       }
 
       const updates: Record<string, string | null> = {};
@@ -105,6 +128,7 @@ export default function ProfilePage() {
       }
 
       setAvatarFile(null);
+      setRemovingAvatar(false);
       setMessage({ type: "success", text: "Profile updated!" });
     } catch (err) {
       console.error("Profile save error:", err);
@@ -115,7 +139,7 @@ export default function ProfilePage() {
     }
   }
 
-  const saving = updateProfile.isPending;
+  const saving = updateProfile.isPending || deletingFiles;
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -162,6 +186,21 @@ export default function ProfilePage() {
             <p className="text-xs text-muted-foreground">
               Click to upload a photo
             </p>
+            {avatarPreview && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                disabled={saving}
+                className="text-xs font-medium text-destructive hover:underline disabled:opacity-50"
+              >
+                Remove photo
+              </button>
+            )}
+            {removingAvatar && (
+              <p className="text-xs text-muted-foreground">
+                Your photo will be removed when you save.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -201,7 +240,9 @@ export default function ProfilePage() {
             onClick={handleSave}
             disabled={
               saving ||
-              (!avatarFile && displayName.trim() === user.display_name)
+              (!avatarFile &&
+                !removingAvatar &&
+                displayName.trim() === user.display_name)
             }
             className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
