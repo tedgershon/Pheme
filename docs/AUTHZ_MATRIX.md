@@ -210,7 +210,7 @@ The dashboard renders these counts.
 
 ### 6d. Defense-in-depth requirement
 
-Every permission-based hidden mutation must also be rejected by the API for that role/context. State-invalid actions may return 400/409 instead. UI hiding is not an authorization boundary. Matrix-driven API coverage is planned in [#12](https://github.com/tedgershon/Pheme/issues/12); it is not yet a CI guarantee.
+Every permission-based hidden mutation must also be rejected by the API for that role/context. State-invalid actions may return 400/409 instead. UI hiding is not an authorization boundary. Matrix-driven API coverage runs in CI: each cell of section 7 is a test (`backend/tests/_matrix_cells.py`), and a route without a cell fails `test_route_coverage.py`. Those tests check the HTTP layer; SQL enforcement is covered by the disposable-database suite.
 
 ---
 
@@ -245,8 +245,8 @@ Listed by router. Path prefix shown above each table. `M` = path-param market.
 | GET | `/{id}/dispute` | `200` / `404` | `200` / `404` | `200` / `404` | `200` / `404` | `200` / `404` |
 | GET | `/{id}/dispute/submissions` | `200` | `200` | `200` | `200` | `200` |
 | GET | `/{id}/dispute/eligibility` | `401` | `200` | `200` | `200` | `200` |
-| POST | `/{id}/dispute/vote` | `401` | `403` if `bettor(M)` or `dispute-voter(D)` else `200` | `403` (creators excluded) | `403` if `bettor(M)` or `dispute-voter(D)` else `200` | `403` if `bettor(M)` or `dispute-voter(D)` else `200` |
-| GET | `/{id}/dispute/votes` | `200` | `200` | `200` | `200` | `200` |
+| POST | `/{id}/dispute/vote` | `401` | `403` if `bettor(M)`; `409` if `dispute-voter(D)`; `404` if no dispute; else `200` | `403` (creators excluded) | same as `user` | same as `user` |
+| GET | `/{id}/dispute/votes` | `200` / `404` if no dispute | `200` / `404` | `200` / `404` | `200` / `404` | `200` / `404` |
 
 **Market visibility:** the default list excludes `pending_review` and `denied`
 for every role. Explicit filters for either status return an empty list to
@@ -407,16 +407,34 @@ The [mounted-route inventory](../backend/tests/test_authorization_inventory.py)
 checks every application method/path against its required or optional auth
 dependency (including the development-only Sentry endpoint). HTTP tests reject
 anonymous callers on all protected routes and ordinary users on all admin
-routes before data access. This is dependency coverage, not the full state and
-role contract sweep planned in [#12](https://github.com/tedgershon/Pheme/issues/12).
+routes before data access.
 
-The source audit retains these specific discrepancies for the linked work:
+The [endpoint matrix tests](../backend/tests/test_endpoint_matrix.py) run every
+cell of section 7 (role, creator/bettor/voter/owner overlay, market state)
+against the API and assert the status, stable error code and safe message; the
+[route coverage test](../backend/tests/test_route_coverage.py) fails when a
+mounted `/api` route has no cell. They emulate stored-function preconditions in
+memory, so they verify routing, gating, validation and error mapping, not SQL.
+Request-schema failures return `422 VALIDATION_FAILED`, and `/docs`, `/redoc`
+and `/openapi.json` are `404` in production (`test_docs_lockdown.py`).
 
-- **#12:** dispute-vote duplicates currently return 409 (the table above says
-  403), dispute expiry returns 400, and dispute-vote listing can return 404 when
-  no dispute exists. Community-resolution start is idempotent with 200 when
-  already in community resolution. Preserve these observations when reconciling
-  the full status/state contracts. Community-vote expiry is 409 after #6.
+Observations reconciled by the #12 sweep, which the cells assert:
+
+- A duplicate dispute vote is `409 DISPUTE_VOTE_DUPLICATE`, consistent with the
+  `409` for a duplicate community vote; the `403` previously shown here was a
+  documentation error. Dispute voting and vote listing for a market with no
+  dispute return `404 DISPUTE_NOT_FOUND`.
+- State is checked before the creator when proposing resolution: a non-creator
+  on a market that is not `closed` gets `400 MARKET_NOT_CLOSED`, and
+  `403 RESOLUTION_NOT_CREATOR` once it is `closed`. Starting community
+  resolution checks the creator first.
+- Community-resolution start is idempotent (`200`) when already in community
+  resolution. Community-vote expiry is `409` after #6.
+- Denying a market without notes is a domain `400 VALIDATION_FAILED`, not a
+  schema `422`.
+- Dispute-window and community-window expiry are not matrix cells: the API
+  escalates expired markets before reaching the stored function, so those
+  responses are covered by the error-mapping tests.
 
 Public community-vote and badge reads now use optional authentication for
 attribution. Badges expose earned badge records and definitions, not progress
@@ -442,9 +460,12 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
 3. Keep future routes marked as planned until their implementation lands.
 4. Track discrepancies and policy questions in GitHub Issues; link them here
    when they affect interpretation of the matrix.
-5. API coverage is planned in [#11–13](https://github.com/tedgershon/Pheme/issues/12);
-   browser coverage is planned in [#14–17](https://github.com/tedgershon/Pheme/issues/14).
-   Do not describe these future checks as existing enforcement.
+5. API coverage exists ([#11](https://github.com/tedgershon/Pheme/issues/11),
+   [#12](https://github.com/tedgershon/Pheme/issues/12)): add the section 7 row
+   and its cell in `backend/tests/_matrix_cells.py` together. Optional schema
+   fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) and browser
+   coverage ([#14–17](https://github.com/tedgershon/Pheme/issues/14)) are
+   planned; do not describe them as existing enforcement.
 
 ## 10. Related contracts
 
@@ -464,6 +485,9 @@ Community rewards require a matching atomic settlement receipt; direct calls can
 
 ## Changelog
 
+- #12: section 7 is executable as `MATRIX_CELLS` with a route-coverage guard.
+  The duplicate dispute-vote cell is `409` (was `403`), and dispute votes
+  without a dispute are documented as `404`.
 - Admin pages renamed by purpose: "Approve New Markets" (`/admin/review`),
   "Monitor Disputes" (`/admin/disputes`), "Resolve Markets" (`/admin/resolve`,
   formerly `/admin/admin-review`, which redirects), "Platform Statistics" and
