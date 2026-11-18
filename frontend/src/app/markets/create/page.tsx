@@ -3,6 +3,7 @@
 import { ArrowLeft, Info, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { CharacterCounter } from "@/components/character-counter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -303,6 +304,7 @@ export default function CreateMarketPage() {
                   {...invalid("title")}
                 />
                 <FieldError id="title" message={errorsByField.title} />
+                <CharacterCounter value={title} max={MAX_MARKET_TITLE_LENGTH} />
               </div>
 
               <div className="space-y-1.5">
@@ -329,6 +331,10 @@ export default function CreateMarketPage() {
                   id="description"
                   message={errorsByField.description}
                 />
+                <CharacterCounter
+                  value={description}
+                  max={MAX_MARKET_DESCRIPTION_LENGTH}
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -352,6 +358,7 @@ export default function CreateMarketPage() {
                   {...invalid("link")}
                 />
                 <FieldError id="link" message={errorsByField.link} />
+                <CharacterCounter value={link} max={MAX_MARKET_LINK_LENGTH} />
               </div>
 
               <div className="space-y-1.5">
@@ -380,6 +387,10 @@ export default function CreateMarketPage() {
                 <FieldError
                   id="resolution_criteria"
                   message={errorsByField.resolution_criteria}
+                />
+                <CharacterCounter
+                  value={resolutionCriteria}
+                  max={MAX_MARKET_RESOLUTION_LENGTH}
                 />
               </div>
             </CardContent>
@@ -465,6 +476,10 @@ export default function CreateMarketPage() {
                         id={`options.${idx}`}
                         message={errorsByField[`options.${idx}`]}
                       />
+                      <CharacterCounter
+                        value={opt}
+                        max={MAX_MARKET_OPTION_LENGTH}
+                      />
                     </div>
                   ))}
                   <FieldError id="options" message={errorsByField.options} />
@@ -522,6 +537,10 @@ export default function CreateMarketPage() {
                   id="official_source"
                   message={errorsByField.official_source}
                 />
+                <CharacterCounter
+                  value={officialSource}
+                  max={MAX_MARKET_OFFICIAL_SOURCE_LENGTH}
+                />
               </div>
 
               {marketType === "binary" && (
@@ -550,6 +569,10 @@ export default function CreateMarketPage() {
                       id="yes_criteria"
                       message={errorsByField.yes_criteria}
                     />
+                    <CharacterCounter
+                      value={yesCriteria}
+                      max={MAX_MARKET_CRITERIA_LENGTH}
+                    />
                   </div>
 
                   <div className="space-y-1.5">
@@ -575,6 +598,10 @@ export default function CreateMarketPage() {
                     <FieldError
                       id="no_criteria"
                       message={errorsByField.no_criteria}
+                    />
+                    <CharacterCounter
+                      value={noCriteria}
+                      max={MAX_MARKET_CRITERIA_LENGTH}
                     />
                   </div>
 
@@ -604,6 +631,10 @@ export default function CreateMarketPage() {
                     <FieldError
                       id="ambiguity_criteria"
                       message={errorsByField.ambiguity_criteria}
+                    />
+                    <CharacterCounter
+                      value={ambiguityCriteria}
+                      max={MAX_MARKET_CRITERIA_LENGTH}
                     />
                   </div>
                 </>
