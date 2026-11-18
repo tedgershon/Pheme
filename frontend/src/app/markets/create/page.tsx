@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Info, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -18,89 +18,28 @@ import {
   MAX_MARKET_TITLE_LENGTH,
   TIME_ZONE_OPTIONS,
 } from "@/lib/constants";
+import { zonedLocalDateTimeToUtcDate } from "@/lib/datetime";
+import {
+  closeAtPickerBounds,
+  type FieldErrors,
+  MAX_OPTIONS,
+  MIN_OPTIONS,
+  mapFieldErrors,
+  validateMarketForm,
+} from "@/lib/market-form";
 import { useCreateMarket } from "@/lib/query/mutations/markets";
 
-const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/;
-const MAX_OPTIONS = 10;
-const MIN_OPTIONS = 2;
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null;
+  return (
+    <p id={`${id}-error`} className="text-xs text-danger">
+      {message}
+    </p>
+  );
+}
 
 function getBrowserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
-}
-
-function parseDateTimeLocal(value: string) {
-  const [datePart, timePart] = value.split("T");
-  if (!datePart || !timePart) return null;
-
-  const [yearStr, monthStr, dayStr] = datePart.split("-");
-  const [hourStr, minuteStr] = timePart.split(":");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-  const hour = Number(hourStr);
-  const minute = Number(minuteStr);
-
-  if ([year, month, day, hour, minute].some(Number.isNaN)) return null;
-  return { year, month, day, hour, minute };
-}
-
-function getOffsetMinutesAt(utcDate: Date, timeZone: string): number {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZoneName: "shortOffset",
-  });
-  const offsetPart = formatter
-    .formatToParts(utcDate)
-    .find((part) => part.type === "timeZoneName")?.value;
-
-  if (!offsetPart || offsetPart === "GMT") return 0;
-
-  const match = offsetPart.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
-  if (!match) return 0;
-
-  const sign = match[1] === "-" ? -1 : 1;
-  const hours = Number(match[2]);
-  const minutes = Number(match[3] || "0");
-  return sign * (hours * 60 + minutes);
-}
-
-function zonedLocalDateTimeToUtcDate(
-  value: string,
-  timeZone: string,
-): Date | null {
-  const parsed = parseDateTimeLocal(value);
-  if (!parsed) return null;
-
-  let utcMillis = Date.UTC(
-    parsed.year,
-    parsed.month - 1,
-    parsed.day,
-    parsed.hour,
-    parsed.minute,
-    0,
-    0,
-  );
-
-  for (let i = 0; i < 3; i += 1) {
-    const offsetMinutes = getOffsetMinutesAt(new Date(utcMillis), timeZone);
-    const corrected =
-      Date.UTC(
-        parsed.year,
-        parsed.month - 1,
-        parsed.day,
-        parsed.hour,
-        parsed.minute,
-        0,
-        0,
-      ) -
-      offsetMinutes * 60_000;
-    if (corrected === utcMillis) break;
-    utcMillis = corrected;
-  }
-
-  return new Date(utcMillis);
 }
 
 export default function CreateMarketPage() {
@@ -117,7 +56,6 @@ export default function CreateMarketPage() {
   const [ambiguityCriteria, setAmbiguityCriteria] = useState("");
   const [category, setCategory] = useState("General");
   const [link, setLink] = useState("");
-  const [linkError, setLinkError] = useState<string | null>(null);
   const [marketType, setMarketType] = useState<"binary" | "multichoice">(
     "binary",
   );
@@ -125,9 +63,41 @@ export default function CreateMarketPage() {
     "exclusive" | "non_exclusive"
   >("exclusive");
   const [options, setOptions] = useState<string[]>(["", ""]);
-  const [error, setError] = useState<string | null>(null);
+  const [errorsByField, setErrorsByField] = useState<FieldErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  // Picker bounds depend on "now", which differs between server and client
+  // render, so they are only set after mount (and not recomputed per render).
+  const [mountedAt, setMountedAt] = useState<Date | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    setMountedAt(new Date());
+  }, []);
+
+  const closeAtBounds = useMemo(
+    () => (mountedAt ? closeAtPickerBounds(mountedAt, closeTimezone) : null),
+    [mountedAt, closeTimezone],
+  );
+
+  // Clear only the errors of the field being edited so other messages stay visible.
+  function clearError(...keys: string[]) {
+    setSubmitError(null);
+    setErrorsByField((prev) => {
+      if (!keys.some((key) => key in prev)) return prev;
+      const next = { ...prev };
+      for (const key of keys) delete next[key];
+      return next;
+    });
+  }
+
+  function invalid(key: string) {
+    const hasError = Boolean(errorsByField[key]);
+    return {
+      "aria-invalid": hasError || undefined,
+      "aria-describedby": hasError ? `${key}-error` : undefined,
+    };
+  }
 
   function addOption() {
     if (options.length < MAX_OPTIONS) {
@@ -145,130 +115,38 @@ export default function CreateMarketPage() {
     const next = [...options];
     next[index] = value;
     setOptions(next);
+    clearError("options", `options.${index}`);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setLinkError(null);
+    setSubmitError(null);
 
-    if (!title.trim()) {
-      setError("Title is required.");
-      return;
-    }
-    if (title.trim().length > MAX_MARKET_TITLE_LENGTH) {
-      setError(`Title must be ${MAX_MARKET_TITLE_LENGTH} characters or fewer.`);
-      return;
-    }
-    if (!description.trim()) {
-      setError("Description is required.");
-      return;
-    }
-    if (description.trim().length > MAX_MARKET_DESCRIPTION_LENGTH) {
-      setError(
-        `Description must be ${MAX_MARKET_DESCRIPTION_LENGTH} characters or fewer.`,
-      );
-      return;
-    }
-    if (!closeAt) {
-      setError("Close date is required.");
-      return;
-    }
+    const clientErrors = validateMarketForm(
+      {
+        title,
+        description,
+        closeAt,
+        closeTimezone,
+        resolutionCriteria,
+        officialSource,
+        yesCriteria,
+        noCriteria,
+        ambiguityCriteria,
+        link,
+        marketType,
+        options,
+      },
+      new Date(),
+    );
+    setErrorsByField(clientErrors);
+    if (Object.keys(clientErrors).length > 0) return;
+
     const convertedCloseAt = zonedLocalDateTimeToUtcDate(
       closeAt,
       closeTimezone,
     );
-    if (!convertedCloseAt) {
-      setError("Close date and timezone are invalid.");
-      return;
-    }
-    if (convertedCloseAt <= new Date()) {
-      setError("Close date must be in the future.");
-      return;
-    }
-    if (!resolutionCriteria.trim()) {
-      setError("Resolution criteria is required.");
-      return;
-    }
-    if (resolutionCriteria.trim().length > MAX_MARKET_RESOLUTION_LENGTH) {
-      setError(
-        `Resolution criteria must be ${MAX_MARKET_RESOLUTION_LENGTH} characters or fewer.`,
-      );
-      return;
-    }
-    if (link.trim().length > MAX_MARKET_LINK_LENGTH) {
-      setLinkError(
-        `Link must be ${MAX_MARKET_LINK_LENGTH} characters or fewer.`,
-      );
-      return;
-    }
-    if (link && !URL_REGEX.test(link)) {
-      setLinkError("Invalid URL. Must start with http:// or https://");
-      return;
-    }
-    if (!officialSource.trim()) {
-      setError("Official source is required.");
-      return;
-    }
-    if (officialSource.trim().length > MAX_MARKET_OFFICIAL_SOURCE_LENGTH) {
-      setError(
-        `Official source must be ${MAX_MARKET_OFFICIAL_SOURCE_LENGTH} characters or fewer.`,
-      );
-      return;
-    }
-
-    if (marketType === "binary") {
-      if (!yesCriteria.trim()) {
-        setError("Yes criteria is required.");
-        return;
-      }
-      if (yesCriteria.trim().length > MAX_MARKET_CRITERIA_LENGTH) {
-        setError(
-          `Yes criteria must be ${MAX_MARKET_CRITERIA_LENGTH} characters or fewer.`,
-        );
-        return;
-      }
-      if (!noCriteria.trim()) {
-        setError("No criteria is required.");
-        return;
-      }
-      if (noCriteria.trim().length > MAX_MARKET_CRITERIA_LENGTH) {
-        setError(
-          `No criteria must be ${MAX_MARKET_CRITERIA_LENGTH} characters or fewer.`,
-        );
-        return;
-      }
-      if (!ambiguityCriteria.trim()) {
-        setError("Ambiguity criteria is required.");
-        return;
-      }
-      if (ambiguityCriteria.trim().length > MAX_MARKET_CRITERIA_LENGTH) {
-        setError(
-          `Ambiguity criteria must be ${MAX_MARKET_CRITERIA_LENGTH} characters or fewer.`,
-        );
-        return;
-      }
-    }
-
-    if (marketType === "multichoice") {
-      const filledOptions = options.filter((o) => o.trim());
-      if (filledOptions.length < MIN_OPTIONS) {
-        setError(`At least ${MIN_OPTIONS} options are required.`);
-        return;
-      }
-      if (
-        filledOptions.some((o) => o.trim().length > MAX_MARKET_OPTION_LENGTH)
-      ) {
-        setError(
-          `Each option must be ${MAX_MARKET_OPTION_LENGTH} characters or fewer.`,
-        );
-        return;
-      }
-      if (new Set(filledOptions).size !== filledOptions.length) {
-        setError("Option labels must be unique.");
-        return;
-      }
-    }
+    if (!convertedCloseAt) return;
 
     setSubmitting(true);
     try {
@@ -300,13 +178,26 @@ export default function CreateMarketPage() {
       }
       setSubmitted(true);
     } catch (err) {
-      setError(parseApiError(err, "Failed to create market.").message);
+      const { code, message, fieldErrors } = parseApiError(
+        err,
+        "Failed to create market.",
+      );
+      if (code === "VALIDATION_FAILED" && fieldErrors.length > 0) {
+        const { byField, unmapped } = mapFieldErrors(fieldErrors);
+        setErrorsByField(byField);
+        setSubmitError(unmapped.length > 0 ? unmapped.join(" ") : null);
+      } else {
+        setErrorsByField({});
+        setSubmitError(message);
+      }
       setSubmitting(false);
     }
   }
 
-  const inputClass =
+  const baseInputClass =
     "w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20";
+  const inputClassFor = (key: string, extra = "") =>
+    `${baseInputClass}${extra}${errorsByField[key] ? " border-danger" : ""}`;
 
   if (submitted) {
     return (
@@ -403,10 +294,15 @@ export default function CreateMarketPage() {
                   type="text"
                   placeholder="Will CMU...?"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    clearError("title");
+                  }}
                   maxLength={MAX_MARKET_TITLE_LENGTH}
-                  className={inputClass}
+                  className={inputClassFor("title")}
+                  {...invalid("title")}
                 />
+                <FieldError id="title" message={errorsByField.title} />
               </div>
 
               <div className="space-y-1.5">
@@ -421,9 +317,17 @@ export default function CreateMarketPage() {
                   placeholder="Describe what this market is about..."
                   rows={3}
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    clearError("description");
+                  }}
                   maxLength={MAX_MARKET_DESCRIPTION_LENGTH}
-                  className={`${inputClass} resize-none`}
+                  className={inputClassFor("description", " resize-none")}
+                  {...invalid("description")}
+                />
+                <FieldError
+                  id="description"
+                  message={errorsByField.description}
                 />
               </div>
 
@@ -441,14 +345,13 @@ export default function CreateMarketPage() {
                   value={link}
                   onChange={(e) => {
                     setLink(e.target.value);
-                    setLinkError(null);
+                    clearError("link");
                   }}
                   maxLength={MAX_MARKET_LINK_LENGTH}
-                  className={`${inputClass} ${linkError ? "border-danger" : ""}`}
+                  className={inputClassFor("link")}
+                  {...invalid("link")}
                 />
-                {linkError && (
-                  <p className="text-xs text-danger">{linkError}</p>
-                )}
+                <FieldError id="link" message={errorsByField.link} />
               </div>
 
               <div className="space-y-1.5">
@@ -463,9 +366,20 @@ export default function CreateMarketPage() {
                   placeholder="How will this market be resolved?"
                   rows={2}
                   value={resolutionCriteria}
-                  onChange={(e) => setResolutionCriteria(e.target.value)}
+                  onChange={(e) => {
+                    setResolutionCriteria(e.target.value);
+                    clearError("resolution_criteria");
+                  }}
                   maxLength={MAX_MARKET_RESOLUTION_LENGTH}
-                  className={`${inputClass} resize-none`}
+                  className={inputClassFor(
+                    "resolution_criteria",
+                    " resize-none",
+                  )}
+                  {...invalid("resolution_criteria")}
+                />
+                <FieldError
+                  id="resolution_criteria"
+                  message={errorsByField.resolution_criteria}
                 />
               </div>
             </CardContent>
@@ -526,26 +440,34 @@ export default function CreateMarketPage() {
                   </div>
                   {options.map((opt, idx) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: options list is reordered by user
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder={`Option ${idx + 1}`}
-                        value={opt}
-                        onChange={(e) => updateOption(idx, e.target.value)}
-                        maxLength={MAX_MARKET_OPTION_LENGTH}
-                        className={inputClass}
+                    <div key={idx} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder={`Option ${idx + 1}`}
+                          value={opt}
+                          onChange={(e) => updateOption(idx, e.target.value)}
+                          maxLength={MAX_MARKET_OPTION_LENGTH}
+                          className={inputClassFor(`options.${idx}`)}
+                          {...invalid(`options.${idx}`)}
+                        />
+                        {options.length > MIN_OPTIONS && (
+                          <button
+                            type="button"
+                            onClick={() => removeOption(idx)}
+                            className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        )}
+                      </div>
+                      <FieldError
+                        id={`options.${idx}`}
+                        message={errorsByField[`options.${idx}`]}
                       />
-                      {options.length > MIN_OPTIONS && (
-                        <button
-                          type="button"
-                          onClick={() => removeOption(idx)}
-                          className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        >
-                          <X className="size-4" />
-                        </button>
-                      )}
                     </div>
                   ))}
+                  <FieldError id="options" message={errorsByField.options} />
                   <Button
                     type="button"
                     variant="outline"
@@ -588,9 +510,17 @@ export default function CreateMarketPage() {
                   type="text"
                   placeholder="e.g. CMU news, official website, verified report"
                   value={officialSource}
-                  onChange={(e) => setOfficialSource(e.target.value)}
+                  onChange={(e) => {
+                    setOfficialSource(e.target.value);
+                    clearError("official_source");
+                  }}
                   maxLength={MAX_MARKET_OFFICIAL_SOURCE_LENGTH}
-                  className={inputClass}
+                  className={inputClassFor("official_source")}
+                  {...invalid("official_source")}
+                />
+                <FieldError
+                  id="official_source"
+                  message={errorsByField.official_source}
                 />
               </div>
 
@@ -608,9 +538,17 @@ export default function CreateMarketPage() {
                       placeholder="What counts as YES?"
                       rows={2}
                       value={yesCriteria}
-                      onChange={(e) => setYesCriteria(e.target.value)}
+                      onChange={(e) => {
+                        setYesCriteria(e.target.value);
+                        clearError("yes_criteria");
+                      }}
                       maxLength={MAX_MARKET_CRITERIA_LENGTH}
-                      className={`${inputClass} resize-none`}
+                      className={inputClassFor("yes_criteria", " resize-none")}
+                      {...invalid("yes_criteria")}
+                    />
+                    <FieldError
+                      id="yes_criteria"
+                      message={errorsByField.yes_criteria}
                     />
                   </div>
 
@@ -626,9 +564,17 @@ export default function CreateMarketPage() {
                       placeholder="What counts as NO?"
                       rows={2}
                       value={noCriteria}
-                      onChange={(e) => setNoCriteria(e.target.value)}
+                      onChange={(e) => {
+                        setNoCriteria(e.target.value);
+                        clearError("no_criteria");
+                      }}
                       maxLength={MAX_MARKET_CRITERIA_LENGTH}
-                      className={`${inputClass} resize-none`}
+                      className={inputClassFor("no_criteria", " resize-none")}
+                      {...invalid("no_criteria")}
+                    />
+                    <FieldError
+                      id="no_criteria"
+                      message={errorsByField.no_criteria}
                     />
                   </div>
 
@@ -644,9 +590,20 @@ export default function CreateMarketPage() {
                       placeholder="How should ambiguous or partial outcomes be handled?"
                       rows={2}
                       value={ambiguityCriteria}
-                      onChange={(e) => setAmbiguityCriteria(e.target.value)}
+                      onChange={(e) => {
+                        setAmbiguityCriteria(e.target.value);
+                        clearError("ambiguity_criteria");
+                      }}
                       maxLength={MAX_MARKET_CRITERIA_LENGTH}
-                      className={`${inputClass} resize-none`}
+                      className={inputClassFor(
+                        "ambiguity_criteria",
+                        " resize-none",
+                      )}
+                      {...invalid("ambiguity_criteria")}
+                    />
+                    <FieldError
+                      id="ambiguity_criteria"
+                      message={errorsByField.ambiguity_criteria}
                     />
                   </div>
                 </>
@@ -672,9 +629,16 @@ export default function CreateMarketPage() {
                   id="closeAt"
                   type="datetime-local"
                   value={closeAt}
-                  onChange={(e) => setCloseAt(e.target.value)}
-                  className={inputClass}
+                  min={closeAtBounds?.min}
+                  max={closeAtBounds?.max}
+                  onChange={(e) => {
+                    setCloseAt(e.target.value);
+                    clearError("close_at");
+                  }}
+                  className={inputClassFor("close_at")}
+                  {...invalid("close_at")}
                 />
+                <FieldError id="close_at" message={errorsByField.close_at} />
                 <p className="text-xs text-muted-foreground">
                   Selected timezone: {closeTimezone}
                 </p>
@@ -690,8 +654,12 @@ export default function CreateMarketPage() {
                 <select
                   id="closeTimezone"
                   value={closeTimezone}
-                  onChange={(e) => setCloseTimezone(e.target.value)}
-                  className={inputClass}
+                  onChange={(e) => {
+                    setCloseTimezone(e.target.value);
+                    clearError("close_at", "close_timezone");
+                  }}
+                  className={inputClassFor("close_timezone")}
+                  {...invalid("close_timezone")}
                 >
                   {!TIME_ZONE_OPTIONS.some(
                     (tz) => tz.value === closeTimezone,
@@ -706,6 +674,10 @@ export default function CreateMarketPage() {
                     </option>
                   ))}
                 </select>
+                <FieldError
+                  id="close_timezone"
+                  message={errorsByField.close_timezone}
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -718,8 +690,12 @@ export default function CreateMarketPage() {
                 <select
                   id="category"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className={inputClass}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    clearError("category");
+                  }}
+                  className={inputClassFor("category")}
+                  {...invalid("category")}
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -727,11 +703,14 @@ export default function CreateMarketPage() {
                     </option>
                   ))}
                 </select>
+                <FieldError id="category" message={errorsByField.category} />
               </div>
             </CardContent>
           </Card>
 
-          {error && <p className="text-sm font-medium text-danger">{error}</p>}
+          {submitError && (
+            <p className="text-sm font-medium text-danger">{submitError}</p>
+          )}
 
           <Button
             type="submit"
