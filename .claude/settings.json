@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(*supabase db reset*--linked*)",
+      "Bash(*supabase db reset*--db-url*)",
+      "PowerShell(*supabase db reset*--linked*)",
+      "PowerShell(*supabase db reset*--db-url*)"
+    ],
+    "ask": [
+      "Bash(*supabase db push*)",
+      "PowerShell(*supabase db push*)"
+    ]
+  }
+}
