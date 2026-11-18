@@ -34,7 +34,7 @@ def _valid_create_payload() -> dict:
 
 def test_create_market_rejects_oversized_title():
     payload = _valid_create_payload()
-    payload["title"] = "T" * 161
+    payload["title"] = "T" * 121
 
     with pytest.raises(ValidationError):
         CreateMarketRequest(**payload)
@@ -42,7 +42,7 @@ def test_create_market_rejects_oversized_title():
 
 def test_create_market_rejects_oversized_description():
     payload = _valid_create_payload()
-    payload["description"] = "D" * 2001
+    payload["description"] = "D" * 801
 
     with pytest.raises(ValidationError):
         CreateMarketRequest(**payload)

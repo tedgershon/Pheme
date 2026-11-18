@@ -156,7 +156,7 @@ def test_market_validation_returns_field_envelope(api, sentry_events):
 
 def test_custom_validator_errors_do_not_serialize_input_or_exception_context(api):
     payload = {
-        "title": "T" * 161,
+        "title": "T" * 121,
         "description": "private submitted description",
         "close_at": (datetime.now(UTC) + timedelta(days=1)).isoformat(),
         "resolution_criteria": "Official announcement.",
@@ -168,7 +168,7 @@ def test_custom_validator_errors_do_not_serialize_input_or_exception_context(api
     assert response.status_code == 422
     assert response.json()["detail"]["errors"] == [{
         "field": "body.title",
-        "message": "Value error, Title must be 160 characters or fewer",
+        "message": "Value error, Title must be 120 characters or fewer",
         "type": "value_error",
     }]
     assert payload["title"] not in response.text
