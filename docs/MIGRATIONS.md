@@ -13,6 +13,7 @@ archived history and test fixtures. Do not sort or replay them.
 | `20261116000400` | Private pending-review/denied market reads limited to creator/admin; option labels inherit parent visibility. No data or wallet mutations. |
 | `20261117000000` | Admin resolution (#31): `AMBIGUOUS` outcome and `refund` ledger type; JWT-bound, creator-excluding `admin_resolve_market` with atomic refunds; `finalize_resolution` refuses `admin_review` outside that path. Widens constraints only; no data changes. |
 | `20261117000100` | Dispute submissions (#49): `dispute_submissions` table with existing explanations copied in; `file_dispute` accepts later submissions into an open case and binds the submitter to the JWT; `list_dispute_submissions` (public, anonymised) and `admin_dispute_submissions` (admin) functions. Removes client INSERT on `disputes` (cases open only through `file_dispute`). No wallet or status changes. |
+| `20261118000000` | Profile photo removal (#65): `Users can delete own avatar` DELETE policy on `storage.objects`, limited to the user's own `avatars/<user id>/` folder like the upload/update policies. No data changes. |
 
 Never edit an applied version. Add a new timestamped file for future changes.
 The baseline contains initial `CREATE TABLE` statements and must **never** be
