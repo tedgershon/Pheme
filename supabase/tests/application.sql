@@ -145,6 +145,18 @@ SELECT set_config('request.jwt.claim.sub', '', true);
 SET LOCAL ROLE anon;
 SELECT pg_temp.assert((SELECT count(*) = 1 FROM storage.objects WHERE bucket_id = 'avatars'), 'public avatar reads');
 RESET ROLE;
+INSERT INTO storage.objects (bucket_id, name) VALUES
+    ('avatars', '10000000-0000-0000-0000-000000000003/test.png');
+SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
+-- The Storage API sets this flag before deleting; RLS still decides which rows go.
+SELECT set_config('storage.allow_delete_query', 'true', true);
+SET LOCAL ROLE authenticated;
+WITH removed AS (DELETE FROM storage.objects WHERE bucket_id = 'avatars' RETURNING name)
+SELECT pg_temp.assert((SELECT array_agg(name) FROM removed)
+    = ARRAY['10000000-0000-0000-0000-000000000002/test.png'], 'delete own avatar only');
+RESET ROLE;
+SELECT pg_temp.assert((SELECT array_agg(name) FROM storage.objects WHERE bucket_id = 'avatars')
+    = ARRAY['10000000-0000-0000-0000-000000000003/test.png'], 'other users avatars kept');
 SET LOCAL ROLE service_role;
 SELECT pg_temp.assert((SELECT count(*) = 2 FROM notifications WHERE user_id::text LIKE '10000000-%'), 'service role reads remaining notifications');
 RESET ROLE;
