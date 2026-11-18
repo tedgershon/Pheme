@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Literal
@@ -17,6 +18,24 @@ MAX_MARKET_REVIEW_NOTES_LENGTH = 1000
 # close_at must fall within [now + MIN, now + MAX]. Existing markets are not migrated.
 MIN_CLOSE_AT_DELTA = timedelta(hours=1)
 MAX_CLOSE_AT_DELTA = timedelta(days=180)
+
+_URL_PATTERN = re.compile(r"^https?://[^\s/$.?#].[^\s]*$")
+# A leading "name:" is a scheme unless digits follow, as in a "host:8080" port.
+_SCHEME_PREFIX = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:(?!\d)")
+
+
+def _normalize_link(v: str | None) -> str | None:
+    """Trim, add https:// to scheme-less input, then enforce the http(s) format and length."""
+    if v is None or v.strip() == "":
+        return None
+    v = v.strip()
+    if not _SCHEME_PREFIX.match(v):
+        v = f"https://{v}"
+    if len(v) > MAX_MARKET_LINK_LENGTH:
+        raise ValueError(f"Link must be {MAX_MARKET_LINK_LENGTH} characters or fewer")
+    if not _URL_PATTERN.match(v):
+        raise ValueError("Invalid URL format. Must start with http:// or https://")
+    return v
 
 
 def _validate_close_at_window(v: datetime) -> datetime:
@@ -143,16 +162,7 @@ class CreateMarketRequest(BaseModel):
     @field_validator("link")
     @classmethod
     def validate_link(cls, v: str | None) -> str | None:
-        if v is None or v.strip() == "":
-            return None
-        v = v.strip()
-        if len(v) > MAX_MARKET_LINK_LENGTH:
-            raise ValueError(f"Link must be {MAX_MARKET_LINK_LENGTH} characters or fewer")
-        import re
-        url_pattern = r"^https?://[^\s/$.?#].[^\s]*$"
-        if not re.match(url_pattern, v):
-            raise ValueError("Invalid URL format. Must start with http:// or https://")
-        return v
+        return _normalize_link(v)
 
     @field_validator("options")
     @classmethod
@@ -316,16 +326,7 @@ class ReviewMarketRequest(BaseModel):
     @field_validator("link")
     @classmethod
     def validate_review_link(cls, v: str | None) -> str | None:
-        if v is None or v.strip() == "":
-            return None
-        v = v.strip()
-        if len(v) > MAX_MARKET_LINK_LENGTH:
-            raise ValueError(f"Link must be {MAX_MARKET_LINK_LENGTH} characters or fewer")
-        import re
-        url_pattern = r"^https?://[^\s/$.?#].[^\s]*$"
-        if not re.match(url_pattern, v):
-            raise ValueError("Invalid URL format. Must start with http:// or https://")
-        return v
+        return _normalize_link(v)
 
 
 class ProposeResolutionRequest(BaseModel):

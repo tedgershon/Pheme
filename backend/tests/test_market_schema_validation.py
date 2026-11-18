@@ -66,6 +66,46 @@ def test_review_market_rejects_invalid_link_and_long_notes():
         ReviewMarketRequest(action="deny", notes="N" * 1001)
 
 
+@pytest.mark.parametrize(
+    ("raw", "stored"),
+    [
+        ("cmu.edu/news", "https://cmu.edu/news"),
+        ("  www.cmu.edu/news?a=b:c  ", "https://www.cmu.edu/news?a=b:c"),
+        ("localhost:3000/markets", "https://localhost:3000/markets"),
+        ("http://cmu.edu", "http://cmu.edu"),
+        ("https://cmu.edu", "https://cmu.edu"),
+        ("   ", None),
+    ],
+)
+def test_market_link_adds_https_only_when_scheme_missing(raw, stored):
+    payload = _valid_create_payload()
+    payload["link"] = raw
+
+    assert CreateMarketRequest(**payload).link == stored
+    assert ReviewMarketRequest(action="approve", link=raw).link == stored
+
+
+@pytest.mark.parametrize("raw", ["ftp://cmu.edu", "javascript:alert(1)", "mailto:a@cmu.edu"])
+def test_market_link_rejects_other_schemes(raw):
+    payload = _valid_create_payload()
+    payload["link"] = raw
+
+    with pytest.raises(ValidationError):
+        CreateMarketRequest(**payload)
+    with pytest.raises(ValidationError):
+        ReviewMarketRequest(action="approve", link=raw)
+
+
+def test_market_link_limit_counts_added_scheme():
+    payload = _valid_create_payload()
+    payload["link"] = "example.com/" + "a" * 480  # 492 chars, 500 with https://
+    assert len(CreateMarketRequest(**payload).link) == 500
+
+    payload["link"] = "example.com/" + "a" * 481
+    with pytest.raises(ValidationError):
+        CreateMarketRequest(**payload)
+
+
 def test_create_market_rejects_oversized_resolution_criteria():
     payload = _valid_create_payload()
     payload["resolution_criteria"] = "R" * 801
