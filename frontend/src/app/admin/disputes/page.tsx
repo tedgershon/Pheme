@@ -111,15 +111,15 @@ function CaseCard({ item }: { item: AdminDisputeCase }) {
         <div className="border-t pt-3 text-sm">
           {awaitingAdmin ? (
             <Link
-              href={`/admin/admin-review#admin-review-${market.id}`}
+              href={`/admin/resolve#resolve-${market.id}`}
               className="font-medium text-primary hover:underline"
             >
-              Settle in the admin review queue
+              Make the final call in Resolve Markets
             </Link>
           ) : (
             <span className="italic text-muted-foreground">
-              Neutral voting is still open. This market reaches the admin review
-              queue only if the vote is inconclusive.
+              Neutral voting is still open. This market moves to Resolve Markets
+              only if the vote ends without a result.
             </span>
           )}
         </div>
@@ -160,11 +160,12 @@ export default function AdminDisputeCasesPage() {
       <section className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Dispute Submissions
+            Monitor Disputes
           </h1>
           <p className="text-sm text-muted-foreground">
-            Every concern filed on a disputed market, grouped under its single
-            case. Reading here does not settle anything.
+            Concerns users filed against a creator&apos;s proposed outcome, and
+            the vote on each, grouped by market. This page is view-only:
+            outcomes are decided in Resolve Markets.
           </p>
         </div>
         <Button

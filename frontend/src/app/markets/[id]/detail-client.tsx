@@ -970,11 +970,11 @@ export default function MarketDetailClient({ id }: { id: string }) {
 
                   {market.status === "admin_review" && isAdmin && (
                     <Link
-                      href="/admin/admin-review"
+                      href={`/admin/resolve#resolve-${market.id}`}
                       className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                     >
                       <AlertTriangle className="size-4" />
-                      Resolve in the admin review queue
+                      Make the final call in Resolve Markets
                     </Link>
                   )}
 

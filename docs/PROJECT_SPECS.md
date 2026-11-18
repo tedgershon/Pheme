@@ -85,7 +85,7 @@ that a continuously running scheduler is deployed.
    proposed outcome. Creators cannot vote; bettors may participate in this
    track. At least three votes and a non-tied majority settle it, otherwise it
    enters `admin_review`.
-5. Escalated markets appear in the `/admin/admin-review` queue with their
+5. Escalated markets appear in the Resolve Markets queue (`/admin/resolve`) with their
    criteria, proposal, dispute explanation, vote tallies and deadlines. A
    non-creator admin resolves YES or NO (binary payout) or AMBIGUOUS (every
    stake refunded, recorded as `refund` ledger entries) through
@@ -133,4 +133,4 @@ See [DATA_MODEL.md](DATA_MODEL.md) for persistence details and
 
 Multichoice betting enforces creator exclusion (including admin creators) and the closing deadline inside the transaction.
 
-Dispute filing and dispute voting have different eligibility rules: bettors may file concerns but cannot vote on disputes. Each market keeps one dispute case and one voting lifecycle; concerns are collected as individual submissions under it ([#49](https://github.com/tedgershon/Pheme/issues/49)). Explanations are public so neutral voters can read them, submitters are visible only to admins, and `/admin/disputes` lists every case with its submissions (read-only; settlement stays in `/admin/admin-review`).
+Dispute filing and dispute voting have different eligibility rules: bettors may file concerns but cannot vote on disputes. Each market keeps one dispute case and one voting lifecycle; concerns are collected as individual submissions under it ([#49](https://github.com/tedgershon/Pheme/issues/49)). Explanations are public so neutral voters can read them, submitters are visible only to admins, and Monitor Disputes (`/admin/disputes`) lists every case with its submissions (read-only; settlement stays in Resolve Markets, `/admin/resolve`).

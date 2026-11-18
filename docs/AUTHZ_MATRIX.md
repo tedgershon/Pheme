@@ -128,10 +128,11 @@ Routes from `frontend/src/app/`, plus explicitly planned pages. This is intended
 | `/rewards` | `redirect→/auth` | `redirect→/auth` | `render` | `render` | `render` | Per-user badge progress. |
 | `/auth` | `render` | `render` | `redirect→/` | `redirect→/` | `redirect→/` | Sign-in page; redirect already-signed-in users. |
 | `/admin` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Admin landing. |
-| `/admin/review` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Market review queue (`pending_review` status). |
-| `/admin/admin-review` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Admin resolution queue (`admin_review` status) with evidence, loading, empty and error states. |
-| `/admin/stats` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Cumulative stats. |
-| `/admin/users` | `redirect→/` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | Super admin only. |
+| `/admin/review` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Approve New Markets": `pending_review` queue, plus the latest 50 approved markets (any later status, shown as a badge) and 50 denied. |
+| `/admin/disputes` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Monitor Disputes": view-only dispute cases (`disputed`, and `admin_review` with a case) and their submissions. |
+| `/admin/resolve` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Resolve Markets": the admin resolution queue (`admin_review` status) with evidence, loading, empty and error states. The old `/admin/admin-review` URL redirects here. |
+| `/admin/stats` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Platform Statistics": cumulative stats. |
+| `/admin/users` | `redirect→/` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | "Manage User Roles": super admin only. |
 
 ### Page-matrix policy notes
 
@@ -173,7 +174,7 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | Cast Dispute Vote (YES / NO) | `hidden` (tally and sign-in note only) | `visible` if `M.status='disputed'`; `disabled` once `dispute-voter(D)` or voting ended | `disabled` (tally shown, with reason) | `disabled` with reason (active and refunded bettors excluded for fairness) | same as `user` | same as `user` |
 | Cast Community Vote (YES / NO) | `hidden` (sign-in note) | `visible` if community window active and not `community-voter(M)` | `hidden` | `visible` | `visible` | `visible` |
 | Backroll Panel | `hidden` | `hidden` | `hidden` | `hidden` | `visible` if `M.status != 'resolved'` | `visible` |
-| Admin Resolve banner (when `M.status='admin_review'`) | `hidden` | `hidden` | `hidden` | `hidden` | `visible` — informational link to `/admin/admin-review` (resolution happens only in the queue) | `visible` |
+| Admin Resolve banner (when `M.status='admin_review'`) | `hidden` | `hidden` | `hidden` | `hidden` | `visible` — informational link to `/admin/resolve` (resolution happens only in the queue) | `visible` |
 
 ### 6b. Global navigation / shell
 
@@ -189,20 +190,21 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 
 | Control | `user` | `admin` | `super_admin` |
 |---|---|---|---|
-| `/admin` dashboard card "Review Markets" | n/a (page redirects) | `visible` | `visible` |
-| `/admin` dashboard card "Admin Review" | n/a | `visible` | `visible` |
-| `/admin` dashboard card "Statistics" | n/a | `visible` | `visible` |
-| `/admin` dashboard card "Manage Users" | n/a | `hidden` | `visible` |
+| `/admin` dashboard card "Approve New Markets" | n/a (page redirects) | `visible` | `visible` |
+| `/admin` dashboard card "Monitor Disputes" | n/a | `visible` | `visible` |
+| `/admin` dashboard card "Resolve Markets" | n/a | `visible` | `visible` |
+| `/admin` dashboard card "Platform Statistics" | n/a | `visible` | `visible` |
+| `/admin` dashboard card "Manage User Roles" | n/a | `hidden` | `visible` |
 | Approve Market button (`/admin/review`) | n/a (page redirects) | `visible` for `pending_review` markets | `visible` |
 | Deny Market button (`/admin/review`) | n/a | `visible` for `pending_review` markets | `visible` |
-| Resolve as YES / NO / AMBIGUOUS buttons (`/admin/admin-review`) | n/a | `visible` for `admin_review` markets; AMBIGUOUS only for multichoice; `hidden` on markets the admin created | same as `admin` |
+| Resolve as YES / NO / AMBIGUOUS buttons (`/admin/resolve`) | n/a | `visible` for `admin_review` markets; AMBIGUOUS only for multichoice; `hidden` on markets the admin created | same as `admin` |
 | Search Users input (`/admin/users`) | n/a | `hidden` (page redirects) | `visible` |
 | Promote/Demote User (`/admin/users`) | n/a | `hidden` | `visible`, but `disabled` for self |
 
-**Dashboard card count by role** (codifies the "3 cards for admin / 4 cards for super_admin" target shape):
+**Dashboard card count by role** (codifies the "4 cards for admin / 5 cards for super_admin" target shape, ordered the way a market moves):
 
-- `admin` → `Review Markets` + `Admin Review` + `Statistics` = **3 cards**
-- `super_admin` → those three + `Manage Users` = **4 cards**
+- `admin` → `Approve New Markets` + `Monitor Disputes` + `Resolve Markets` + `Platform Statistics` = **4 cards**
+- `super_admin` → those four + `Manage User Roles` = **5 cards**
 
 The dashboard renders these counts.
 
@@ -462,6 +464,11 @@ Community rewards require a matching atomic settlement receipt; direct calls can
 
 ## Changelog
 
+- Admin pages renamed by purpose: "Approve New Markets" (`/admin/review`),
+  "Monitor Disputes" (`/admin/disputes`), "Resolve Markets" (`/admin/resolve`,
+  formerly `/admin/admin-review`, which redirects), "Platform Statistics" and
+  "Manage User Roles". The Approved list now keeps markets after they close.
+  Routes, guards and the `admin_review` status are unchanged.
 - #49: multiple dispute submissions per market case, public anonymised
   `GET /{id}/dispute/submissions`, admin `GET /api/admin/markets/disputes`,
   `/admin/disputes` page, and a submitter-bound `file_dispute`.

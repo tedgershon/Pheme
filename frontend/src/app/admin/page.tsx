@@ -35,32 +35,21 @@ export default function AdminPage() {
       <section>
         <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Manage markets, users, and view platform statistics.
+          Approve markets, follow disputes, make final calls and manage users.
         </p>
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* ordered the way a market moves: approve, watch disputes, resolve */}
         <Link href="/admin/review">
           <Card className="transition-shadow hover:shadow-md">
             <CardHeader>
-              <CardTitle>Review Markets</CardTitle>
+              <CardTitle>Approve New Markets</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Review and approve or reject user-submitted markets.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/admin/admin-review">
-          <Card className="transition-shadow hover:shadow-md">
-            <CardHeader>
-              <CardTitle>Admin Review</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Resolve escalated disputes and tied community votes.
+                Approve, edit or deny markets users have submitted. Also lists
+                every market already approved or denied.
               </p>
             </CardContent>
           </Card>
@@ -69,12 +58,26 @@ export default function AdminPage() {
         <Link href="/admin/disputes">
           <Card className="transition-shadow hover:shadow-md">
             <CardHeader>
-              <CardTitle>Dispute Submissions</CardTitle>
+              <CardTitle>Monitor Disputes</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Read every concern filed on a disputed market, grouped by
-                market.
+                View-only. Read the concerns filed against proposed outcomes and
+                follow each dispute vote.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/resolve">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardHeader>
+              <CardTitle>Resolve Markets</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Make the final YES, NO or Ambiguous call on markets whose vote
+                ended without a result.
               </p>
             </CardContent>
           </Card>
@@ -83,11 +86,12 @@ export default function AdminPage() {
         <Link href="/admin/stats">
           <Card className="transition-shadow hover:shadow-md">
             <CardHeader>
-              <CardTitle>Statistics</CardTitle>
+              <CardTitle>Platform Statistics</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                View cumulative platform statistics and analytics.
+                Totals for users, markets by status, bananas traded and active
+                bets.
               </p>
             </CardContent>
           </Card>
@@ -97,11 +101,11 @@ export default function AdminPage() {
           <Link href="/admin/users">
             <Card className="transition-shadow hover:shadow-md">
               <CardHeader>
-                <CardTitle>Manage Users</CardTitle>
+                <CardTitle>Manage User Roles</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Search users and manage role assignments.
+                  Search users by Andrew ID and change their roles.
                 </p>
               </CardContent>
             </Card>

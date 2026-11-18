@@ -54,7 +54,7 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-5">
       <section>
-        <h1 className="text-3xl font-bold tracking-tight">Manage Users</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Manage User Roles</h1>
         <p className="text-sm text-muted-foreground">
           Search users by Andrew ID and manage their roles.
         </p>

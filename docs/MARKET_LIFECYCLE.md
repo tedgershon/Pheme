@@ -26,7 +26,7 @@ flowchart TD
     PP -->|A non-creator files the first concern| DS["disputed<br/>(48h neutral vote; more concerns may join)"]
 
     DS -->|Voting ends: 3+ votes and no tie| R2([resolved: vote winner])
-    DS -->|Voting ends: under 3 votes or a tie| AR[admin_review]
+    DS -->|Voting ends: under 3 votes or a tie| AR["admin_review<br/>(shown in Resolve Markets)"]
 
     PC -->|Window ends: 3+ votes and no tie| R3([resolved: vote winner])
     PC -->|Window ends: under 3 votes or a tie| AR
@@ -41,24 +41,35 @@ has no timeout for it; admins can only send reminders
 
 ## Where each status appears for admins
 
+Admin dashboard panels, in the order a market reaches them:
+
+- **Approve New Markets** (`/admin/review`)
+- **Monitor Disputes** (`/admin/disputes`), which is view-only
+- **Resolve Markets** (`/admin/resolve`)
+- **Platform Statistics** (`/admin/stats`)
+- **Manage User Roles** (`/admin/users`), for super admins only
+
 | Status | Admin panel location | Admin action available |
 | --- | --- | --- |
-| `pending_review` | `/admin/review`, **Pending Review** | Approve or deny |
-| `denied` | `/admin/review`, **Denied** (latest 50) | None |
-| `open` | `/admin/review`, **Approved** (latest 50, only while still `open`) | Backroll panel on the market page |
-| `closed` | No queue | Backroll panel on the market page; resolution reminders |
-| `pending_resolution` | No queue | Backroll panel on the market page |
-| `disputed` | `/admin/disputes`, **Voting open** | Read concerns and tallies; vote like any neutral user; backroll |
-| `admin_review` (from a dispute) | `/admin/admin-review` (settle here) and `/admin/disputes`, **Awaiting admin** | Resolve YES, NO or AMBIGUOUS |
-| `admin_review` (from community resolution) | `/admin/admin-review` only, since there is no dispute case | Resolve YES, NO or AMBIGUOUS |
-| `resolved` | No queue | None (backroll refuses resolved markets) |
+| `pending_review` | Approve New Markets, **Awaiting Approval** | Approve, edit or deny |
+| `denied` | Approve New Markets, **Denied** (latest 50) | None |
+| `open` | Approve New Markets, **Approved** (badge: Open) | Backroll panel on the market page |
+| `closed` | Approve New Markets, **Approved** (badge: Closed) | Backroll panel on the market page; resolution reminders |
+| `pending_resolution` | Approve New Markets, **Approved** (badge: Awaiting resolution) | Backroll panel on the market page |
+| `disputed` | Monitor Disputes, **Voting open**; **Approved** (badge: Disputed) | Read concerns and tallies; vote like any neutral user; backroll |
+| `admin_review` (from a dispute) | Resolve Markets (decide here); Monitor Disputes, **Awaiting admin**; **Approved** (badge: Needs final call) | Resolve YES, NO or AMBIGUOUS |
+| `admin_review` (from community resolution) | Resolve Markets (no dispute case, so not in Monitor Disputes); **Approved** (badge: Needs final call) | Resolve YES, NO or AMBIGUOUS |
+| `resolved` | Approve New Markets, **Approved** (badge: Resolved) | None (backroll refuses resolved markets) |
 
-`/admin/stats` counts markets in every status.
+Platform Statistics counts markets in every status.
 
 Notes:
 
-- **Approved list:** a market leaves the **Approved** list as soon as it closes.
-  The list is not a full approval history.
+- **Approved list:** this is the approval history, holding the latest 50 approved
+  markets whatever has happened since. A badge shows each market's current
+  status.
+- **Status name:** the database status `admin_review` was kept when its page was
+  renamed to Resolve Markets.
 - **Backroll:** available to admins on the market page for any status except
   `resolved`. It refunds bets placed after a cutoff and, by default, moves the
   market to `closed` with the cutoff as its close time.
