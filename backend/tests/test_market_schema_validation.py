@@ -34,7 +34,7 @@ def _valid_create_payload() -> dict:
 
 def test_create_market_rejects_oversized_title():
     payload = _valid_create_payload()
-    payload["title"] = "T" * 161
+    payload["title"] = "T" * 121
 
     with pytest.raises(ValidationError):
         CreateMarketRequest(**payload)
@@ -42,7 +42,7 @@ def test_create_market_rejects_oversized_title():
 
 def test_create_market_rejects_oversized_description():
     payload = _valid_create_payload()
-    payload["description"] = "D" * 2001
+    payload["description"] = "D" * 801
 
     with pytest.raises(ValidationError):
         CreateMarketRequest(**payload)
@@ -64,3 +64,122 @@ def test_review_market_rejects_invalid_link_and_long_notes():
 
     with pytest.raises(ValidationError):
         ReviewMarketRequest(action="deny", notes="N" * 1001)
+
+
+def test_create_market_rejects_oversized_resolution_criteria():
+    payload = _valid_create_payload()
+    payload["resolution_criteria"] = "R" * 801
+
+    with pytest.raises(ValidationError):
+        CreateMarketRequest(**payload)
+
+
+def test_create_market_rejects_oversized_official_source():
+    payload = _valid_create_payload()
+    payload["official_source"] = "S" * 201
+
+    with pytest.raises(ValidationError):
+        CreateMarketRequest(**payload)
+
+
+def test_create_market_rejects_oversized_optional_criteria():
+    for field in ("yes_criteria", "no_criteria", "ambiguity_criteria"):
+        payload = _valid_create_payload()
+        payload[field] = "C" * 401
+
+        with pytest.raises(ValidationError):
+            CreateMarketRequest(**payload)
+
+
+def test_create_market_rejects_oversized_link():
+    payload = _valid_create_payload()
+    payload["link"] = "https://example.com/" + "a" * 481
+
+    with pytest.raises(ValidationError):
+        CreateMarketRequest(**payload)
+
+
+def test_create_market_accepts_limits_at_boundary():
+    payload = _valid_create_payload()
+    payload["title"] = "T" * 120
+    payload["description"] = "D" * 800
+    payload["resolution_criteria"] = "R" * 800
+    payload["official_source"] = "S" * 200
+    payload["yes_criteria"] = "C" * 400
+    payload["link"] = "https://example.com/" + "a" * 480
+
+    CreateMarketRequest(**payload)
+
+
+def test_create_market_rejects_close_at_too_soon():
+    payload = _valid_create_payload()
+    payload["close_at"] = datetime.now(tz=UTC) + timedelta(minutes=30)
+
+    with pytest.raises(ValidationError):
+        CreateMarketRequest(**payload)
+
+
+def test_create_market_rejects_close_at_too_far():
+    payload = _valid_create_payload()
+    payload["close_at"] = datetime.now(tz=UTC) + timedelta(days=200)
+
+    with pytest.raises(ValidationError):
+        CreateMarketRequest(**payload)
+
+
+def test_create_market_accepts_close_at_at_lower_bound():
+    payload = _valid_create_payload()
+    payload["close_at"] = datetime.now(tz=UTC) + timedelta(hours=2)
+
+    CreateMarketRequest(**payload)
+
+
+def test_create_market_accepts_close_at_near_upper_bound():
+    payload = _valid_create_payload()
+    payload["close_at"] = datetime.now(tz=UTC) + timedelta(days=179)
+
+    CreateMarketRequest(**payload)
+
+
+def test_create_market_close_at_window_boundaries(monkeypatch):
+    fixed_now = datetime(2026, 1, 1, tzinfo=UTC)
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now if tz is None else fixed_now.astimezone(tz)
+
+    monkeypatch.setattr("schemas.market.datetime", FixedDatetime)
+
+    for close_at in (fixed_now + timedelta(hours=1), fixed_now + timedelta(days=180)):
+        payload = _valid_create_payload()
+        payload["close_at"] = close_at
+        CreateMarketRequest(**payload)
+
+    for close_at in (
+        fixed_now + timedelta(hours=1) - timedelta(seconds=1),
+        fixed_now + timedelta(days=180) + timedelta(seconds=1),
+    ):
+        payload = _valid_create_payload()
+        payload["close_at"] = close_at
+        with pytest.raises(ValidationError):
+            CreateMarketRequest(**payload)
+
+
+def test_review_market_rejects_close_at_too_far():
+    with pytest.raises(ValidationError):
+        ReviewMarketRequest(
+            action="approve", close_at=datetime.now(tz=UTC) + timedelta(days=200)
+        )
+
+
+def test_review_market_rejects_close_at_too_soon():
+    with pytest.raises(ValidationError):
+        ReviewMarketRequest(
+            action="approve", close_at=datetime.now(tz=UTC) + timedelta(minutes=30)
+        )
+
+
+def test_review_market_accepts_close_at_in_window_or_omitted():
+    ReviewMarketRequest(action="approve", close_at=datetime.now(tz=UTC) + timedelta(days=3))
+    ReviewMarketRequest(action="approve")

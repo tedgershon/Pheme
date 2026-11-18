@@ -1,18 +1,36 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, field_validator
 
-MAX_MARKET_TITLE_LENGTH = 160
-MAX_MARKET_DESCRIPTION_LENGTH = 2000
-MAX_MARKET_RESOLUTION_LENGTH = 2000
-MAX_MARKET_OFFICIAL_SOURCE_LENGTH = 300
-MAX_MARKET_CRITERIA_LENGTH = 1000
+MAX_MARKET_TITLE_LENGTH = 120
+MAX_MARKET_DESCRIPTION_LENGTH = 800
+MAX_MARKET_RESOLUTION_LENGTH = 800
+MAX_MARKET_OFFICIAL_SOURCE_LENGTH = 200
+MAX_MARKET_CRITERIA_LENGTH = 400
 MAX_MARKET_CATEGORY_LENGTH = 50
-MAX_MARKET_LINK_LENGTH = 2048
+MAX_MARKET_LINK_LENGTH = 500
 MAX_MARKET_OPTION_LENGTH = 80
 MAX_MARKET_REVIEW_NOTES_LENGTH = 1000
+
+# close_at must fall within [now + MIN, now + MAX]. Existing markets are not migrated.
+MIN_CLOSE_AT_DELTA = timedelta(hours=1)
+MAX_CLOSE_AT_DELTA = timedelta(days=180)
+
+
+def _validate_close_at_window(v: datetime) -> datetime:
+    # Normalize to UTC so the window matches DB timestamptz regardless of server TZ.
+    if v.tzinfo is None:
+        v = v.replace(tzinfo=UTC)
+    else:
+        v = v.astimezone(UTC)
+    now = datetime.now(UTC)
+    if v < now + MIN_CLOSE_AT_DELTA:
+        raise ValueError("close_at must be at least 1 hour in the future")
+    if v > now + MAX_CLOSE_AT_DELTA:
+        raise ValueError("close_at must be no more than 6 months in the future")
+    return v
 
 
 class MarketStatus(str, Enum):
@@ -119,15 +137,8 @@ class CreateMarketRequest(BaseModel):
 
     @field_validator("close_at")
     @classmethod
-    def close_at_in_future(cls, v: datetime) -> datetime:
-        # Normalize to UTC so "future" matches DB timestamptz regardless of server TZ.
-        if v.tzinfo is None:
-            v = v.replace(tzinfo=UTC)
-        else:
-            v = v.astimezone(UTC)
-        if v <= datetime.now(UTC):
-            raise ValueError("close_at must be in the future")
-        return v
+    def close_at_in_window(cls, v: datetime) -> datetime:
+        return _validate_close_at_window(v)
 
     @field_validator("link")
     @classmethod
@@ -242,6 +253,13 @@ class ReviewMarketRequest(BaseModel):
                 f"Notes must be {MAX_MARKET_REVIEW_NOTES_LENGTH} characters or fewer"
             )
         return v
+
+    @field_validator("close_at")
+    @classmethod
+    def review_close_at_in_window(cls, v: datetime | None) -> datetime | None:
+        if v is None:
+            return None
+        return _validate_close_at_window(v)
 
     @field_validator("title")
     @classmethod
