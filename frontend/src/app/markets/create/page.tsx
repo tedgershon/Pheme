@@ -26,6 +26,7 @@ import {
   MAX_OPTIONS,
   MIN_OPTIONS,
   mapFieldErrors,
+  normalizeMarketLink,
   validateMarketForm,
 } from "@/lib/market-form";
 import { useCreateMarket } from "@/lib/query/mutations/markets";
@@ -159,7 +160,7 @@ export default function CreateMarketPage() {
         resolution_criteria: resolutionCriteria.trim(),
         category,
         official_source: officialSource.trim(),
-        link: link.trim() || undefined,
+        link: normalizeMarketLink(link) || undefined,
         market_type: marketType,
       };
 
@@ -346,13 +347,19 @@ export default function CreateMarketPage() {
                 </label>
                 <input
                   id="link"
-                  type="url"
-                  placeholder="https://example.com/relevant-article"
+                  type="text"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  placeholder="example.com/relevant-article"
                   value={link}
                   onChange={(e) => {
                     setLink(e.target.value);
                     clearError("link");
                   }}
+                  onBlur={() =>
+                    setLink((current) => normalizeMarketLink(current))
+                  }
                   maxLength={MAX_MARKET_LINK_LENGTH}
                   className={inputClassFor("link")}
                   {...invalid("link")}

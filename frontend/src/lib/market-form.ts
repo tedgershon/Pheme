@@ -15,6 +15,15 @@ export const MAX_OPTIONS = 10;
 export const MIN_OPTIONS = 2;
 
 const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/;
+// A leading "name:" is a scheme unless digits follow, as in a "host:8080" port.
+const SCHEME_PREFIX = /^[A-Za-z][A-Za-z0-9+.-]*:(?!\d)/;
+
+/** Trim a market link and add https:// when it has no scheme; mirrors the backend. */
+export function normalizeMarketLink(raw: string): string {
+  const link = raw.trim();
+  if (!link || SCHEME_PREFIX.test(link)) return link;
+  return `https://${link}`;
+}
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 
@@ -173,7 +182,7 @@ export function validateMarketForm(
     }
   }
 
-  const link = values.link.trim();
+  const link = normalizeMarketLink(values.link);
   if (link.length > MAX_MARKET_LINK_LENGTH) {
     errors.link = `Link must be ${MAX_MARKET_LINK_LENGTH} characters or fewer.`;
   } else if (link && !URL_REGEX.test(link)) {

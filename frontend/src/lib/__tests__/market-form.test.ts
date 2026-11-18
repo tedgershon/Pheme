@@ -9,6 +9,7 @@ import {
   type MarketFormValues,
   mapFieldErrors,
   normalizeFieldPath,
+  normalizeMarketLink,
   validateMarketForm,
 } from "../market-form";
 
@@ -103,6 +104,21 @@ describe("formatInstantInZone", () => {
   });
 });
 
+describe("normalizeMarketLink", () => {
+  it.each([
+    ["cmu.edu/news", "https://cmu.edu/news"],
+    ["  www.cmu.edu/news?a=b:c  ", "https://www.cmu.edu/news?a=b:c"],
+    ["localhost:3000/markets", "https://localhost:3000/markets"],
+    ["http://cmu.edu", "http://cmu.edu"],
+    ["https://cmu.edu", "https://cmu.edu"],
+    ["ftp://cmu.edu", "ftp://cmu.edu"],
+    ["javascript:alert(1)", "javascript:alert(1)"],
+    ["   ", ""],
+  ])("normalizes %j to %j", (raw, expected) => {
+    expect(normalizeMarketLink(raw)).toBe(expected);
+  });
+});
+
 describe("validateMarketForm", () => {
   it("accepts a valid binary market", () => {
     expect(validateMarketForm(values(), NOW)).toEqual({});
@@ -123,6 +139,22 @@ describe("validateMarketForm", () => {
       "title",
     ]);
     expect(errors.title).toBe("Title must be 120 characters or fewer.");
+  });
+
+  it("accepts a link without a scheme and rejects other schemes", () => {
+    expect(validateMarketForm(values({ link: "cmu.edu" }), NOW).link).toBe(
+      undefined,
+    );
+    expect(
+      validateMarketForm(values({ link: "javascript:alert(1)" }), NOW).link,
+    ).toMatch(/Must start with http/);
+    // The limit counts the added https:// (8 characters).
+    expect(
+      validateMarketForm(values({ link: `a.co/${"a".repeat(487)}` }), NOW).link,
+    ).toBeUndefined();
+    expect(
+      validateMarketForm(values({ link: `a.co/${"a".repeat(488)}` }), NOW).link,
+    ).toMatch(/500 characters/);
   });
 
   it("enforces the close date window", () => {
