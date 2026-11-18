@@ -502,10 +502,12 @@ async def list_markets_for_review(
             .execute()
         )
 
+        # Every approved market, whatever happened after approval (closed,
+        # disputed, resolved...). The page shows each one's current status.
         approved = (
             supabase.table("markets")
             .select(review_select)
-            .eq("status", "open")
+            .not_.in_("status", ["pending_review", "denied"])
             .not_.is_("reviewed_by", "null")
             .order("review_date", desc=True)
             .limit(50)

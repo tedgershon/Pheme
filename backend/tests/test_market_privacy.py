@@ -189,6 +189,20 @@ def test_admin_review_queue_retains_cross_user_access_with_jwt(privacy_api, user
     privacy_api.database.postgrest.auth.assert_any_call(user)
 
 
+def test_admin_approved_list_keeps_markets_after_they_leave_open(privacy_api):
+    rows = privacy_api.database.rows["markets"]
+    template = next(row for row in rows if row["status"] == "open")
+    for status in ["open", "closed", "disputed", "admin_review", "resolved"]:
+        rows.append({**template, "id": f"reviewed-{status}", "status": status,
+                     "reviewed_by": "admin", "review_date": "2026-02-01T00:00:00+00:00"})
+    rows.append({**template, "id": "reviewed-denied", "status": "denied", "reviewed_by": "admin"})
+
+    response = privacy_api.client.get("/api/admin/markets/review", headers=headers("admin"))
+
+    approved = {market["id"] for market in response.json()["approved"]}
+    assert approved == {f"reviewed-{s}" for s in ["open", "closed", "disputed", "admin_review", "resolved"]}
+
+
 @pytest.mark.parametrize("user", ["admin", "super"])
 def test_admin_stats_include_private_markets_with_jwt(privacy_api, user):
     response = privacy_api.client.get("/api/admin/stats", headers=headers(user))

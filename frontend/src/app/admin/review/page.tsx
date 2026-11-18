@@ -23,6 +23,7 @@ import { useReviewMarket } from "@/lib/query/mutations/admin";
 import { marketsForReviewQuery } from "@/lib/query/queries/admin";
 import { useMe } from "@/lib/query/queries/auth";
 import type { Market } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -34,6 +35,25 @@ function formatDate(dateStr: string | null | undefined): string {
     minute: "2-digit",
   });
 }
+
+// Approved markets keep moving after approval; show where each one is now.
+const APPROVED_STATUS: Record<string, { label: string; className: string }> = {
+  open: { label: "Open", className: "bg-success-foreground text-success" },
+  closed: { label: "Closed", className: "bg-muted text-muted-foreground" },
+  pending_resolution: {
+    label: "Awaiting resolution",
+    className: "bg-warning-foreground text-warning",
+  },
+  disputed: {
+    label: "Disputed",
+    className: "bg-danger-foreground text-danger",
+  },
+  admin_review: {
+    label: "Needs final call",
+    className: "bg-warning-foreground text-warning",
+  },
+  resolved: { label: "Resolved", className: "bg-primary/10 text-primary" },
+};
 
 function getCreatorName(market: Market & Record<string, unknown>): string {
   const profiles = market.profiles as
@@ -463,7 +483,9 @@ function AdminReviewPageContent() {
     return (
       <div className="space-y-5">
         <section>
-          <h1 className="text-3xl font-bold tracking-tight">Review Markets</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Approve New Markets
+          </h1>
         </section>
         <div className="flex justify-center py-12">
           <Spinner className="size-6" />
@@ -513,7 +535,20 @@ function AdminReviewPageContent() {
                 onClick={() => setExpandedId(isExpanded ? null : market.id)}
                 className="grid w-full grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 px-2 py-2.5 text-left text-sm cursor-pointer hover:bg-muted/50"
               >
-                <span className="font-medium truncate">{market.title}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="font-medium truncate">{market.title}</span>
+                  {mode === "detail" && APPROVED_STATUS[market.status] && (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "shrink-0",
+                        APPROVED_STATUS[market.status].className,
+                      )}
+                    >
+                      {APPROVED_STATUS[market.status].label}
+                    </Badge>
+                  )}
+                </span>
                 <span className="text-muted-foreground">
                   {getCreatorName(m)}
                 </span>
@@ -544,9 +579,13 @@ function AdminReviewPageContent() {
     <div className="space-y-5">
       <section className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Review Markets</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Approve New Markets
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Review, edit, and approve or deny proposed markets.
+            Approve, edit or deny markets users have submitted. Approved and
+            Denied list past decisions (latest 50 each), with each approved
+            market&apos;s current status.
           </p>
         </div>
         <Button
@@ -562,7 +601,7 @@ function AdminReviewPageContent() {
 
       <div className="space-y-3">
         <AccordionSection
-          title="Pending Review"
+          title="Awaiting Approval"
           count={pending.length}
           defaultOpen
         >
@@ -588,7 +627,7 @@ export default function AdminReviewPage() {
         <div className="space-y-5">
           <section>
             <h1 className="text-3xl font-bold tracking-tight">
-              Review Markets
+              Approve New Markets
             </h1>
           </section>
           <div className="flex justify-center py-12">
