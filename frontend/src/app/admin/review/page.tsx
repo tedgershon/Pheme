@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { parseApiError } from "@/lib/api";
 import {
   CATEGORIES,
+  MARKET_STATUS_BADGES,
   MAX_MARKET_DESCRIPTION_LENGTH,
   MAX_MARKET_LINK_LENGTH,
   MAX_MARKET_RESOLUTION_LENGTH,
@@ -23,6 +24,7 @@ import { useReviewMarket } from "@/lib/query/mutations/admin";
 import { marketsForReviewQuery } from "@/lib/query/queries/admin";
 import { useMe } from "@/lib/query/queries/auth";
 import type { Market } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -463,7 +465,9 @@ function AdminReviewPageContent() {
     return (
       <div className="space-y-5">
         <section>
-          <h1 className="text-3xl font-bold tracking-tight">Review Markets</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Approve New Markets
+          </h1>
         </section>
         <div className="flex justify-center py-12">
           <Spinner className="size-6" />
@@ -513,7 +517,22 @@ function AdminReviewPageContent() {
                 onClick={() => setExpandedId(isExpanded ? null : market.id)}
                 className="grid w-full grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 px-2 py-2.5 text-left text-sm cursor-pointer hover:bg-muted/50"
               >
-                <span className="font-medium truncate">{market.title}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="font-medium truncate">{market.title}</span>
+                  {mode === "detail" &&
+                    market.status !== "denied" &&
+                    MARKET_STATUS_BADGES[market.status] && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "shrink-0",
+                          MARKET_STATUS_BADGES[market.status].className,
+                        )}
+                      >
+                        {MARKET_STATUS_BADGES[market.status].label}
+                      </Badge>
+                    )}
+                </span>
                 <span className="text-muted-foreground">
                   {getCreatorName(m)}
                 </span>
@@ -544,9 +563,13 @@ function AdminReviewPageContent() {
     <div className="space-y-5">
       <section className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Review Markets</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Approve New Markets
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Review, edit, and approve or deny proposed markets.
+            Approve, edit or deny markets users have submitted. Approved and
+            Denied list past decisions (latest 50 each), with each approved
+            market&apos;s current status.
           </p>
         </div>
         <Button
@@ -562,7 +585,7 @@ function AdminReviewPageContent() {
 
       <div className="space-y-3">
         <AccordionSection
-          title="Pending Review"
+          title="Pending Approval"
           count={pending.length}
           defaultOpen
         >
@@ -588,7 +611,7 @@ export default function AdminReviewPage() {
         <div className="space-y-5">
           <section>
             <h1 className="text-3xl font-bold tracking-tight">
-              Review Markets
+              Approve New Markets
             </h1>
           </section>
           <div className="flex justify-center py-12">

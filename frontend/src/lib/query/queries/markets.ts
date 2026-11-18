@@ -66,6 +66,22 @@ export const disputeQuery = (marketId: string) =>
     staleTime: STALE.VOTES,
   });
 
+export const disputeSubmissionsQuery = (marketId: string) =>
+  queryOptions({
+    queryKey: queryKeys.disputes.submissions(marketId),
+    queryFn: ({ signal }) =>
+      api.listDisputeSubmissions(marketId, {}, { signal }),
+    staleTime: STALE.VOTES,
+  });
+
+// Signed-in only; session changes reset the cache, so the key needs no user id.
+export const disputeEligibilityQuery = (marketId: string) =>
+  queryOptions({
+    queryKey: queryKeys.disputes.eligibility(marketId),
+    queryFn: ({ signal }) => api.getDisputeEligibility(marketId, { signal }),
+    staleTime: STALE.VOTES,
+  });
+
 export const disputeVotesQuery = (marketId: string) =>
   queryOptions({
     queryKey: queryKeys.disputes.votes(marketId),

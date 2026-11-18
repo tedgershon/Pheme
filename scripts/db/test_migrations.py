@@ -119,6 +119,7 @@ def preserved_rows():
         SELECT jsonb_build_object(
             'profiles', (SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM profiles p),
             'markets', (SELECT jsonb_agg(to_jsonb(m) ORDER BY id) FROM markets m),
+            'disputes', (SELECT jsonb_agg(to_jsonb(d) ORDER BY id) FROM disputes d),
             'bets', (SELECT jsonb_agg(to_jsonb(b) ORDER BY id) FROM bets b),
             'ledger', (SELECT jsonb_agg(to_jsonb(t) ORDER BY id) FROM transactions t),
             'notifications', (SELECT jsonb_agg(to_jsonb(n) - 'market_id' ORDER BY id) FROM notifications n)
@@ -317,6 +318,14 @@ def main():
             )
         cli("migration", "up", "--local")
         assert before == preserved_rows(), "Upgrade changed existing application data"
+        # Dispute explanations move into the submissions table unchanged.
+        assert (
+            psql(
+                "SELECT count(*) || ':' || min(explanation) || ':' || min(submitter_id::text) "
+                "FROM dispute_submissions WHERE dispute_id = '61000000-0000-0000-0000-000000000001'"
+            )
+            == "1:  Legacy concern.  :50000000-0000-0000-0000-000000000002"
+        ), "Legacy dispute explanation was not preserved"
         assert fresh == catalog(), "Fresh and upgraded schemas differ"
         verify()
         cli("migration", "up", "--local")  # no pending versions, no replay

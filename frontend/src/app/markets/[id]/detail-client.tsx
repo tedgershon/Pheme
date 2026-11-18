@@ -14,6 +14,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BananaCoin } from "@/components/banana-coin";
 import {
+  DisputeConcernForm,
+  PublicDisputeSubmissions,
+} from "@/components/dispute-concern-form";
+import {
   buildMultiOptionPriceHistory,
   getOptionColor,
   MultiProbabilityChart,
@@ -40,7 +44,9 @@ import { useMe } from "@/lib/query/queries/auth";
 import {
   betsForMarketQuery,
   communityVotesQuery,
+  disputeEligibilityQuery,
   disputeQuery,
+  disputeSubmissionsQuery,
   disputeVotesQuery,
   marketQuery,
 } from "@/lib/query/queries/markets";
@@ -144,6 +150,10 @@ export default function MarketDetailClient({ id }: { id: string }) {
     ...disputeVotesQuery(id),
     enabled: market?.status === "disputed",
   });
+  const { data: disputeSubmissions } = useQuery({
+    ...disputeSubmissionsQuery(id),
+    enabled: market?.status === "disputed",
+  });
   const isCommunityResolutionMode =
     market?.status === "pending_resolution" && !market?.proposed_outcome;
   const { data: communityVotes = [] } = useQuery({
@@ -151,12 +161,11 @@ export default function MarketDetailClient({ id }: { id: string }) {
     enabled: isCommunityResolutionMode && !!market?.resolution_window_end,
   });
 
-  // portfolio drives whether the current user has bet on this market
-  // (disables voting in disputes for bettors)
-  const { data: userBets = [] } = useQuery({
-    queryKey: ["_userBetsOnMarket", id, user.id],
-    queryFn: () => Promise.resolve([] as Bet[]),
-    enabled: false,
+  // the caller's own standing (creator, active/refunded bettor, existing vote)
+  // so the vote buttons are disabled with a reason; the vote RPC is the gate
+  const { data: disputeEligibility } = useQuery({
+    ...disputeEligibilityQuery(id),
+    enabled: market?.status === "disputed" && !isDemo,
   });
 
   // mutation hooks, optimistic helpers under the hood
@@ -257,11 +266,25 @@ export default function MarketDetailClient({ id }: { id: string }) {
   const chartData = buildPriceHistory(marketBets);
   const isOpen = isMarketOpen(market);
   const isDisputed = market.status === "disputed";
-  const userHasBet = userBets.some((bet) => bet.market_id === market.id);
+  const isMarketCreator = user.id === market.creator_id;
+  const hasSubmittedConcern = disputeSubmissions?.has_submitted ?? false;
   const votingEndsAt = disputeDetails?.voting_deadline
     ? new Date(disputeDetails.voting_deadline)
     : null;
   const votingClosed = votingEndsAt ? votingEndsAt <= new Date() : false;
+  // stays false (buttons disabled) until eligibility loads, so nobody sees a
+  // button flash enabled and then disable
+  const canVoteInDispute =
+    !isMarketCreator && !votingClosed && !!disputeEligibility?.can_vote;
+  const disputeVoteNote = isMarketCreator
+    ? "You created this market, so you cannot vote on its dispute."
+    : disputeEligibility?.is_bettor
+      ? "You bet on this market, so you cannot vote on its dispute."
+      : disputeEligibility?.vote
+        ? `You voted ${disputeEligibility.vote}.`
+        : votingClosed
+          ? "Voting has ended."
+          : "Cast your vote on the final outcome.";
   const disputeDeadline = market.dispute_deadline
     ? new Date(market.dispute_deadline)
     : null;
@@ -462,15 +485,22 @@ export default function MarketDetailClient({ id }: { id: string }) {
     if (!market) return;
     const explanation = disputeExplanation.trim();
     if (!explanation) {
-      setBetError("Please add a short explanation for the dispute.");
+      setBetError("Please add a short explanation of your concern.");
       return;
     }
     setBetError(null);
     setBetSuccess(null);
     try {
-      await disputeMut.mutateAsync({ marketId: market.id, explanation });
+      const res = await disputeMut.mutateAsync({
+        marketId: market.id,
+        explanation,
+      });
       setDisputeExplanation("");
-      setBetSuccess("Market disputed. Voting is now open.");
+      setBetSuccess(
+        res.opened_case
+          ? "Dispute submitted. Voting is now open."
+          : "Concern submitted. It was added to this market's dispute.",
+      );
     } catch (err) {
       setBetError(parseApiError(err, "Failed to dispute market.").message);
     }
@@ -480,10 +510,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
     if (!market) return;
     setBetError(null);
     setBetSuccess(null);
-    if (userHasBet) {
-      setBetError("Bettors cannot vote in disputes.");
-      return;
-    }
+    if (!canVoteInDispute) return;
     try {
       await castDisputeMut.mutateAsync({ marketId: market.id, vote: outcome });
       setBetSuccess(`Voted ${outcome}.`);
@@ -943,11 +970,11 @@ export default function MarketDetailClient({ id }: { id: string }) {
 
                   {market.status === "admin_review" && isAdmin && (
                     <Link
-                      href="/admin/admin-review"
+                      href={`/admin/resolve#resolve-${market.id}`}
                       className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                     >
                       <AlertTriangle className="size-4" />
-                      Resolve in the admin review queue
+                      Make the final call in Resolve Markets
                     </Link>
                   )}
 
@@ -1009,7 +1036,17 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         bananas for voting correctly
                       </p>
 
-                      {isCreator ? (
+                      {isDemo ? (
+                        resolutionWindowExpired ? (
+                          <p className="text-xs italic text-muted-foreground">
+                            Resolution window has expired
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Sign in with your CMU email address to vote.
+                          </p>
+                        )
+                      ) : isCreator ? (
                         <p className="text-xs italic text-muted-foreground">
                           As the market creator, you propose a resolution via
                           the Creator Resolution section below.
@@ -1110,24 +1147,92 @@ export default function MarketDetailClient({ id }: { id: string }) {
                           .
                         </div>
                       )}
-                      <textarea
-                        value={disputeExplanation}
-                        onChange={(e) => {
-                          setDisputeExplanation(e.target.value);
-                          setBetError(null);
-                          setBetSuccess(null);
-                        }}
-                        placeholder="Why are you disputing this outcome?"
-                        className="w-full min-h-[90px] rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      {isDemo ? (
+                        <p className="text-xs text-muted-foreground">
+                          Sign in with your CMU email address to dispute this
+                          outcome.
+                        </p>
+                      ) : isMarketCreator ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          You proposed this outcome, so you cannot dispute it.
+                        </p>
+                      ) : (
+                        <DisputeConcernForm
+                          value={disputeExplanation}
+                          onChange={(value) => {
+                            setDisputeExplanation(value);
+                            setBetError(null);
+                            setBetSuccess(null);
+                          }}
+                          onSubmit={handleDispute}
+                          submitting={disputing}
+                          placeholder="Why are you disputing this outcome?"
+                          submitLabel="Submit Dispute"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {isDisputed && (
+                    <div className="space-y-3 mt-4 pt-4 border-t">
+                      <p className="text-sm font-medium">Submitted Concerns</p>
+                      <PublicDisputeSubmissions
+                        items={disputeSubmissions?.items ?? []}
+                        total={disputeSubmissions?.total ?? 0}
                       />
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={handleDispute}
-                        disabled={disputing}
-                      >
-                        {disputing ? "Submitting dispute..." : "Submit Dispute"}
-                      </Button>
+                      {isDemo ? (
+                        votingClosed ? null : (
+                          <p className="text-xs text-muted-foreground">
+                            Sign in with your CMU email address to submit a
+                            concern.
+                          </p>
+                        )
+                      ) : isMarketCreator ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          You proposed this outcome, so you cannot add a
+                          concern.
+                        </p>
+                      ) : votingClosed ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          The window for submitting concerns has closed.
+                        </p>
+                      ) : hasSubmittedConcern ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          You have already submitted a concern. It cannot be
+                          edited.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-xs text-muted-foreground">
+                            Anyone except the creator, including bettors, can
+                            add one concern until voting ends
+                            {votingEndsAt
+                              ? ` on ${votingEndsAt.toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  },
+                                )}`
+                              : ""}
+                            . Adding one does not extend voting.
+                          </p>
+                          <DisputeConcernForm
+                            value={disputeExplanation}
+                            onChange={(value) => {
+                              setDisputeExplanation(value);
+                              setBetError(null);
+                              setBetSuccess(null);
+                            }}
+                            onSubmit={handleDispute}
+                            submitting={disputing}
+                            placeholder="What concern do you want admins and voters to see?"
+                            submitLabel="Submit Concern"
+                          />
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -1135,30 +1240,34 @@ export default function MarketDetailClient({ id }: { id: string }) {
                     <div className="space-y-3 mt-4 pt-4 border-t">
                       <p className="text-sm font-medium">Community Vote</p>
                       <div className="text-xs text-muted-foreground">
-                        {userHasBet
-                          ? "Bettors cannot vote in disputes."
-                          : "Cast your vote on the final outcome."}
+                        {isDemo
+                          ? votingClosed
+                            ? "Voting has ended."
+                            : "Sign in with your CMU email address to vote."
+                          : disputeVoteNote}
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span>YES votes: {voteTotals.yes}</span>
                         <span>NO votes: {voteTotals.no}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          className="h-12 text-sm bg-success text-success-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-success)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-success)_70%,black)] hover:bg-success/90"
-                          onClick={() => handleVote("YES")}
-                          disabled={voting || userHasBet || votingClosed}
-                        >
-                          Vote YES
-                        </Button>
-                        <Button
-                          className="h-12 text-sm bg-danger text-danger-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] hover:bg-danger/90"
-                          onClick={() => handleVote("NO")}
-                          disabled={voting || userHasBet || votingClosed}
-                        >
-                          Vote NO
-                        </Button>
-                      </div>
+                      {!isDemo && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            className="h-12 text-sm bg-success text-success-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-success)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-success)_70%,black)] hover:bg-success/90"
+                            onClick={() => handleVote("YES")}
+                            disabled={voting || !canVoteInDispute}
+                          >
+                            Vote YES
+                          </Button>
+                          <Button
+                            className="h-12 text-sm bg-danger text-danger-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] hover:bg-danger/90"
+                            onClick={() => handleVote("NO")}
+                            disabled={voting || !canVoteInDispute}
+                          >
+                            Vote NO
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1178,10 +1287,15 @@ export default function MarketDetailClient({ id }: { id: string }) {
                   const optionLabel = bet.option_id
                     ? marketOptions.find((o) => o.id === bet.option_id)?.label
                     : null;
+                  // only the viewer learns which rows are theirs
+                  const isMine = !isDemo && bet.user_id === user.id;
                   return (
                     <div
                       key={bet.id}
-                      className="flex items-center justify-between text-sm"
+                      className={cn(
+                        "flex items-center justify-between text-sm",
+                        isMine && "-mx-1.5 rounded-md bg-primary/5 px-1.5",
+                      )}
                     >
                       <div className="flex items-center gap-2">
                         {optionLabel ? (
@@ -1207,6 +1321,14 @@ export default function MarketDetailClient({ id }: { id: string }) {
                             },
                           )}
                         </span>
+                        {isMine && (
+                          <Badge
+                            variant="outline"
+                            className="border-primary/40 text-primary"
+                          >
+                            You
+                          </Badge>
+                        )}
                       </div>
                       <span className="inline-flex items-center gap-0.5 font-medium">
                         <BananaCoin size={14} />

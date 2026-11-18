@@ -18,6 +18,17 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  // Old bookmarks: the resolution queue was renamed from "Admin Review".
+  // Redirects run before proxy.ts, so the admin gate still applies.
+  async redirects() {
+    return [
+      {
+        source: "/admin/admin-review",
+        destination: "/admin/resolve",
+        permanent: false,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

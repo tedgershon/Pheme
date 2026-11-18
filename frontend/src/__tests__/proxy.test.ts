@@ -18,7 +18,8 @@ const adminPages = [
   "/admin",
   "/admin/review",
   "/admin/stats",
-  "/admin/admin-review",
+  "/admin/resolve",
+  "/admin/disputes",
   "/admin/users",
   "/admin/users/nested",
 ];

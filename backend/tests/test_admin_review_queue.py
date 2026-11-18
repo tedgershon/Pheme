@@ -52,14 +52,19 @@ class Query:
 
 class Database:
     def __init__(self, rows):
-        self.rows, self.calls = rows, []
+        self.rows, self.calls, self.rpc_calls = rows, [], []
         self.postgrest = SimpleNamespace(auth=lambda _token: None)
 
     def table(self, name):
         return Query(self, name)
 
-    def rpc(self, *_):
-        raise AssertionError("The queue listing must not settle or mutate markets")
+    def rpc(self, name, params):
+        # Only the read-only admin submissions lookup is allowed; settlement is not.
+        if name != "admin_dispute_submissions":
+            raise AssertionError("The queue listing must not settle or mutate markets")
+        self.rpc_calls.append(params)
+        rows = [dict(row) for row in self.rows.get("submissions", []) if row["market_id"] in params["p_market_ids"]]
+        return SimpleNamespace(execute=lambda: SimpleNamespace(data=rows))
 
 
 @pytest.fixture

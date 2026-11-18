@@ -44,12 +44,25 @@ class AdminReviewPerson(BaseModel):
     display_name: str | None = None
 
 
+class AdminDisputeSubmission(BaseModel):
+    """A concern with its submitter, visible only to admins."""
+
+    id: str
+    explanation: str
+    created_at: datetime
+    submitter: AdminReviewPerson
+    # active: still holds a bet; refunded: bet-placement ledger entry but no bet left.
+    bettor_context: Literal["none", "active", "refunded"]
+
+
 class AdminReviewDispute(BaseModel):
     id: str
     explanation: str
     voting_deadline: datetime
     created_at: datetime
     disputer: AdminReviewPerson | None = None
+    submission_count: int = 0
+    submissions: list[AdminDisputeSubmission] = []
 
 
 class VoteTally(BaseModel):
@@ -67,3 +80,24 @@ class AdminReviewItem(BaseModel):
     dispute_votes: VoteTally
     community_votes: VoteTally
     bettor_count: int
+
+
+class AdminDisputeCase(BaseModel):
+    """One market-level dispute case with every submitted concern."""
+
+    dispute_id: str
+    opened_at: datetime
+    voting_deadline: datetime
+    market: MarketResponse
+    creator: AdminReviewPerson | None = None
+    submission_count: int
+    submissions: list[AdminDisputeSubmission]
+    dispute_votes: VoteTally
+    bettor_count: int
+
+
+class AdminDisputeCasePage(BaseModel):
+    items: list[AdminDisputeCase]
+    total: int
+    limit: int
+    offset: int

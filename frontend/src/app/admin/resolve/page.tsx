@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AdminDisputeSubmissions } from "@/components/admin-dispute-submissions";
 import { BananaCoin } from "@/components/banana-coin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,7 +122,7 @@ function QueueItem({
   }
 
   return (
-    <Card size="sm" id={`admin-review-${market.id}`}>
+    <Card size="sm" id={`resolve-${market.id}`}>
       <CardHeader className="space-y-2 pb-0">
         <div className="flex flex-wrap items-center gap-2">
           <Badge
@@ -239,11 +240,12 @@ function QueueItem({
         )}
 
         {item.dispute && (
-          <Field
-            label={`Dispute by ${personName(item.dispute.disputer)} · filed ${formatDate(item.dispute.created_at)} · voting ended ${formatDate(item.dispute.voting_deadline)}`}
-          >
-            {item.dispute.explanation}
-          </Field>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">
+              {`${item.dispute.submission_count} submitted concern${item.dispute.submission_count === 1 ? "" : "s"} · case opened ${formatDate(item.dispute.created_at)} · voting ended ${formatDate(item.dispute.voting_deadline)}`}
+            </span>
+            <AdminDisputeSubmissions submissions={item.dispute.submissions} />
+          </div>
         )}
 
         <div className="space-y-2 border-t pt-3">
@@ -319,10 +321,11 @@ export default function AdminResolutionQueuePage() {
     <div className="space-y-5">
       <section className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin Review</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Resolve Markets</h1>
           <p className="text-sm text-muted-foreground">
-            Markets whose dispute or community vote ended without a decision.
-            Review the evidence and settle each one.
+            Markets whose dispute or community vote ended without a result (too
+            few votes or a tie). Read the evidence and make the final YES, NO or
+            Ambiguous call.
           </p>
         </div>
         <Button
@@ -350,7 +353,7 @@ export default function AdminResolutionQueuePage() {
           <CardContent className="space-y-3 py-6 text-center">
             <p className="text-sm text-danger">
               {
-                parseApiError(error, "Could not load the admin review queue.")
+                parseApiError(error, "Could not load markets to resolve.")
                   .message
               }
             </p>

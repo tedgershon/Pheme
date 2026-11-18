@@ -24,6 +24,14 @@ export const adminReviewQueueQuery = () =>
     staleTime: STALE.ADMIN,
   });
 
+export const adminDisputeCasesQuery = (params: api.AdminDisputeCaseParams) =>
+  queryOptions({
+    queryKey: queryKeys.admin.disputeCasePage(params),
+    queryFn: () => api.getAdminDisputeCases(params),
+    staleTime: STALE.ADMIN,
+    placeholderData: (previous) => previous,
+  });
+
 export const searchUsersQuery = (query: string) =>
   queryOptions({
     queryKey: queryKeys.admin.users(query),

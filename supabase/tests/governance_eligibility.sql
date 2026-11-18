@@ -27,5 +27,8 @@ UPDATE markets SET proposed_outcome='YES' WHERE id='91000000-0000-0000-0000-0000
 SELECT file_dispute('91000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000002','The proposed outcome conflicts with the published result.');
 SELECT pg_temp.check_true((SELECT disputer_id='90000000-0000-0000-0000-000000000002' AND explanation='The proposed outcome conflicts with the published result.' FROM disputes WHERE market_id='91000000-0000-0000-0000-000000000001'),'bettor filing preserves submitter and explanation under market');
 SELECT pg_temp.reject_sql(format('SELECT cast_dispute_vote(%L,%L,%L)',(SELECT id FROM disputes WHERE market_id='91000000-0000-0000-0000-000000000001'),'90000000-0000-0000-0000-000000000002','YES'),'placed bets cannot');
-SELECT pg_temp.reject_sql($q$SELECT file_dispute('91000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000005','Review')$q$,'pending_resolution');
+SELECT file_dispute('91000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000005','Second concern from a neutral user.');
+SELECT pg_temp.check_true((SELECT count(*)=1 FROM disputes WHERE market_id='91000000-0000-0000-0000-000000000001') AND (SELECT count(*)=2 FROM dispute_submissions WHERE market_id='91000000-0000-0000-0000-000000000001'),'later filings join the single market case');
+UPDATE markets SET status='open' WHERE id='91000000-0000-0000-0000-000000000001';
+SELECT pg_temp.reject_sql($q$SELECT file_dispute('91000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000006','Review')$q$,'pending_resolution or disputed');
 ROLLBACK;

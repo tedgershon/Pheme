@@ -1,7 +1,7 @@
 import logging
 from collections import Counter
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query, status
@@ -22,6 +22,7 @@ from notification_service import (
 )
 from observability import AppError, ErrorCode
 from schemas.admin import (
+    AdminDisputeCasePage,
     AdminReviewItem,
     BackrollRequest,
     StatsResponse,
@@ -267,6 +268,117 @@ async def admin_resolve_market(
             raise AppError(500, ErrorCode.INTERNAL_ERROR, "Failed to resolve market.", original=exc) from exc
 
 
+def _submissions_by_market(supabase: Client, market_ids: list[str]) -> dict[str, list[dict]]:
+    """Concerns with submitters and bettor context; the RPC refuses non-admins."""
+    if not market_ids:
+        return {}
+    try:
+        rows = supabase.rpc("admin_dispute_submissions", {"p_market_ids": market_ids}).execute().data or []
+    except APIError as exc:
+        raise AppError(
+            500, ErrorCode.INTERNAL_ERROR, "Failed to load dispute submissions.", original=exc,
+        ) from exc
+    grouped: dict[str, list[dict]] = {}
+    for row in rows:
+        grouped.setdefault(row["market_id"], []).append({
+            "id": row["id"],
+            "explanation": row["explanation"],
+            "created_at": row["created_at"],
+            "submitter": {"andrew_id": row["andrew_id"], "display_name": row["display_name"]},
+            "bettor_context": row["bettor_context"],
+        })
+    return grouped
+
+
+def _normalize_for_listing(supabase: Client, what: str) -> None:
+    # Expired dispute/community windows escalate lazily; apply them before listing.
+    try:
+        normalize_markets(get_supabase_service_client() or supabase)
+    except Exception:
+        logger.warning("Failed to normalize markets before %s listing", what, exc_info=True)
+
+
+@router.get("/markets/disputes", response_model=AdminDisputeCasePage)
+async def list_dispute_cases(
+    _current_user: Annotated[dict, Depends(require_admin)],
+    supabase: Annotated[Client, Depends(get_supabase_client)],
+    token: str | None = Depends(get_user_token),
+    market_status: Annotated[Literal["disputed", "admin_review"] | None, Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
+    """Dispute cases grouped by market, oldest first, with every submitted concern.
+
+    Includes markets still in voting (`disputed`) so admins can read concerns before
+    escalation. This is read-only: settlement stays on the admin resolve route, which
+    only accepts `admin_review` markets.
+    """
+    statuses = [market_status] if market_status else ["disputed", "admin_review"]
+    with user_auth(supabase, token):
+        _normalize_for_listing(supabase, "dispute-case")
+        page = (
+            supabase.table("disputes")
+            .select(
+                "id, market_id, voting_deadline, created_at, "
+                "markets!inner(*, creator:profiles!creator_id(andrew_id, display_name))",
+                count="exact",
+            )
+            .in_("markets.status", statuses)
+            .order("created_at", desc=False)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+        cases = page.data or []
+        market_ids = [case["market_id"] for case in cases]
+        if not market_ids:
+            return {"items": [], "total": page.count or 0, "limit": limit, "offset": offset}
+
+        dispute_votes = (
+            supabase.table("resolution_votes").select("market_id, selected_outcome")
+            .in_("market_id", market_ids).execute()
+        ).data or []
+        bets = (
+            supabase.table("bets").select("market_id, user_id").in_("market_id", market_ids).execute()
+        ).data or []
+        option_market_ids = [
+            case["market_id"] for case in cases if case["markets"].get("market_type") == "multichoice"
+        ]
+        options = (
+            supabase.table("market_options").select("*").in_("market_id", option_market_ids)
+            .order("sort_order").execute()
+        ).data if option_market_ids else []
+        submissions = _submissions_by_market(supabase, market_ids)
+
+    tally = Counter((row["market_id"], row["selected_outcome"]) for row in dispute_votes)
+    bettors: dict[str, set[str]] = {}
+    for bet in bets:
+        bettors.setdefault(bet["market_id"], set()).add(bet["user_id"])
+    options_by_market: dict[str, list[dict]] = {}
+    for option in options or []:
+        options_by_market.setdefault(option["market_id"], []).append(option)
+
+    items = []
+    for case in cases:
+        market_id = case["market_id"]
+        market = case["markets"]
+        creator = market.pop("creator", None)
+        if market.get("market_type") == "multichoice":
+            market["options"] = options_by_market.get(market_id, [])
+        case_submissions = submissions.get(market_id, [])
+        items.append({
+            "dispute_id": case["id"],
+            "opened_at": case["created_at"],
+            "voting_deadline": case["voting_deadline"],
+            "market": market,
+            "creator": creator,
+            "submission_count": len(case_submissions),
+            "submissions": case_submissions,
+            "dispute_votes": {"yes": tally[(market_id, "YES")], "no": tally[(market_id, "NO")]},
+            "bettor_count": len(bettors.get(market_id, ())),
+        })
+    return {"items": items, "total": page.count or 0, "limit": limit, "offset": offset}
+
+
 @router.get("/markets/admin-review", response_model=list[AdminReviewItem])
 async def list_admin_review_queue(
     _current_user: Annotated[dict, Depends(require_admin)],
@@ -275,11 +387,7 @@ async def list_admin_review_queue(
 ):
     """Escalated markets awaiting an admin decision, oldest close date first."""
     with user_auth(supabase, token):
-        try:
-            # Expired dispute/community windows escalate lazily; apply them before listing.
-            normalize_markets(get_supabase_service_client() or supabase)
-        except Exception:
-            logger.warning("Failed to normalize markets before admin-review listing", exc_info=True)
+        _normalize_for_listing(supabase, "admin-review")
 
         markets = (
             supabase.table("markets")
@@ -299,6 +407,7 @@ async def list_admin_review_queue(
             .in_("market_id", market_ids)
             .execute()
         ).data or []
+        submissions = _submissions_by_market(supabase, [row["market_id"] for row in disputes])
         dispute_votes = (
             supabase.table("resolution_votes")
             .select("market_id, selected_outcome")
@@ -342,6 +451,9 @@ async def list_admin_review_queue(
         if market.get("market_type") == "multichoice":
             market["options"] = options_by_market.get(market_id, [])
         dispute = disputes_by_market.get(market_id)
+        if dispute:
+            case_submissions = submissions.get(market_id, [])
+            dispute = {**dispute, "submission_count": len(case_submissions), "submissions": case_submissions}
         queue.append({
             "market": market,
             "creator": creator,
@@ -390,10 +502,12 @@ async def list_markets_for_review(
             .execute()
         )
 
+        # Every approved market, whatever happened after approval (closed,
+        # disputed, resolved...). The page shows each one's current status.
         approved = (
             supabase.table("markets")
             .select(review_select)
-            .eq("status", "open")
+            .not_.in_("status", ["pending_review", "denied"])
             .not_.is_("reviewed_by", "null")
             .order("review_date", desc=True)
             .limit(50)

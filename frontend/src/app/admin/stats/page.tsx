@@ -8,17 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { parseApiError } from "@/lib/api";
+import { MARKET_STATUS_BADGES } from "@/lib/constants";
 import { adminStatsQuery } from "@/lib/query/queries/admin";
 import { useMe } from "@/lib/query/queries/auth";
-
-const STATUS_COLORS: Record<string, string> = {
-  open: "bg-success-foreground text-success",
-  closed: "bg-muted text-muted-foreground",
-  pending_resolution: "bg-warning-foreground text-warning",
-  disputed: "bg-danger-foreground text-danger",
-  admin_review: "bg-warning-foreground text-warning",
-  resolved: "bg-primary/10 text-primary",
-};
 
 export default function AdminStatsPage() {
   const router = useRouter();
@@ -111,12 +103,9 @@ export default function AdminStatsPage() {
                   <Badge
                     key={status}
                     variant="secondary"
-                    className={STATUS_COLORS[status] ?? ""}
+                    className={MARKET_STATUS_BADGES[status]?.className ?? ""}
                   >
-                    {count}{" "}
-                    {status
-                      .replace(/_/g, " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                    {count} {MARKET_STATUS_BADGES[status]?.label ?? status}
                   </Badge>
                 ),
               )}

@@ -5,6 +5,7 @@
 | [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) | Local Docker, app environment, Google sign-in and operator setup |
 | [HOSTED_DEVELOPMENT.md](HOSTED_DEVELOPMENT.md) | Hosted Supabase with local app servers, independent Google OAuth and release transition |
 | [PROJECT_SPECS.md](PROJECT_SPECS.md) | Product rules, implemented workflows and architecture |
+| [MARKET_LIFECYCLE.md](MARKET_LIFECYCLE.md) | Market status decision tree and where each status appears for admins |
 | [AUTHZ_MATRIX.md](AUTHZ_MATRIX.md) | Intended page, control and API authorization policy |
 | [DATA_MODEL.md](DATA_MODEL.md) | Persistent entities, relationships and database invariants |
 | [MIGRATIONS.md](MIGRATIONS.md) | SQL layout, setup limitations and change procedure |
