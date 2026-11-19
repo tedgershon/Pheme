@@ -26,7 +26,11 @@ Configure `SUPABASE_URL` and `SUPABASE_KEY` in `.env`. The
 `SUPABASE_SERVICE_ROLE_KEY` is backend-only and supports trusted operations
 such as reminder notifications. Never put it in frontend public variables.
 `config.py` defines all settings; `CORS_ORIGINS` is a JSON array and defaults
-to `["http://localhost:3000"]`. Match it to the frontend origin.
+to `["http://localhost:3000"]`. Match it to the frontend origin. Optional
+`CORS_ORIGIN_REGEX` also allows origins that change per deployment, such as
+Vercel previews; it must match the whole origin and should be anchored to your
+own project and team. See
+[HOSTED_DEVELOPMENT.md](../docs/HOSTED_DEVELOPMENT.md#deploy-to-vercel).
 
 Use [MIGRATIONS.md](../docs/MIGRATIONS.md) for the canonical bootstrap and
 checked legacy upgrade procedure. Do not replay the archived SQL iterations.

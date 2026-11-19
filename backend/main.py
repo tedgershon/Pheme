@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from config import get_settings
+from config import cors_options, get_settings
 from dependencies import require_admin
 from middleware.request_context import RequestContextMiddleware
 from observability import ErrorCode, init_observability, report_and_safe_message
@@ -66,13 +66,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 
 app.add_middleware(RequestContextMiddleware)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=get_settings().cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, **cors_options(get_settings()))
 
 app.include_router(admin.router)
 app.include_router(auth.router)

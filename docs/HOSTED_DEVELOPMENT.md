@@ -86,6 +86,45 @@ Restart both application servers using the commands in
 Use `http://localhost:3000/auth` for sign-in. Confirm the API's market reads reach
 the hosted project and browser requests pass the configured localhost CORS check.
 
+## Deploy to Vercel
+
+The frontend and backend are separate Vercel projects importing the same
+repository. Before launch both use this hosted Pheme project; after it becomes
+production, Preview must point at a non-production project instead.
+
+| Project | Root Directory | Environment variables (Production and Preview) |
+| --- | --- | --- |
+| Backend | `backend` | `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SENTRY_ENVIRONMENT`, `CORS_ORIGINS`, `CORS_ORIGIN_REGEX` |
+| Frontend | `frontend` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SENTRY_ENVIRONMENT` |
+
+- [backend/vercel.json](../backend/vercel.json) routes every path to `main.py`.
+  The service-role key belongs to the backend project only.
+- Add variables by hand rather than through the Supabase marketplace
+  integration, which copies the service-role key and database URLs into every
+  project it links.
+- Use a non-production `SENTRY_ENVIRONMENT` such as `staging` until launch.
+  Never use `development` on a deployment: it mounts `/api/__sentry-test`.
+- `NEXT_PUBLIC_*` values are fixed at build time; redeploy after changing them.
+- Point `NEXT_PUBLIC_API_URL` at the backend's production domain. Vercel's
+  default Deployment Protection covers preview URLs, so a protected backend
+  preview would answer browser requests with a login page.
+- Set backend `CORS_ORIGINS` to a JSON array containing the frontend's
+  production domain (and `http://localhost:3000` if local servers share the
+  backend). Set `CORS_ORIGIN_REGEX` to
+  `https://<frontend-project>-[a-z0-9-]+-<team-slug>\.vercel\.app`, which matches
+  both `<project>-<hash>-<team>` and `<project>-git-<branch>-<team>` preview
+  URLs. The pattern must match the whole origin and credentials are allowed,
+  so never widen it to all of `vercel.app`. Redeploy the backend afterwards.
+- In Supabase Auth → URL Configuration, add the redirect URLs
+  `https://<frontend-domain>/auth/callback` and
+  `https://*-<team-slug>.vercel.app/**`. The Google client is unchanged because
+  its redirect URI is the Supabase callback.
+
+Check `GET /` on the backend returns `{"status": "ok", ...}`. On the deployed
+frontend, confirm Google sign-in returns to the Vercel site and survives a
+reload, markets load without CORS errors in the browser console, and avatar
+upload and removal work. Repeat sign-in once on a preview deployment.
+
 ## Operator account and verification
 
 Ordinary signup still requires an Andrew email. Before an external operator
