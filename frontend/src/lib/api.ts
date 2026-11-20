@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { supabase } from "./supabase";
 import type {
   AdminDisputeCasePage,
@@ -58,11 +59,14 @@ export class ApiError extends Error {
   public readonly userMessage: string;
   public readonly fieldErrors: { field: string; message: string }[];
   public readonly raw: string;
+  /** Backend `x-request-id`, matching `extra.request_id` on its Sentry event. */
+  public readonly requestId: string | null;
 
   constructor(
     public status: number,
     // Preserve body for existing callers until their error handling is migrated.
     public body: string,
+    requestId: string | null = null,
   ) {
     let code = "UNKNOWN";
     let userMessage = `Request failed (${status}).`;
@@ -100,7 +104,25 @@ export class ApiError extends Error {
     this.userMessage = userMessage;
     this.fieldErrors = fieldErrors;
     this.raw = body;
+    this.requestId = requestId;
   }
+}
+
+/**
+ * Report a server failure so the browser event can be matched to the backend
+ * event by request ID. Expected 4xx responses are not reported. The path omits
+ * the query string, which can carry search text.
+ */
+function reportServerError(error: ApiError, path: string) {
+  if (error.status < 500) return;
+  Sentry.captureException(error, {
+    tags: {
+      error_code: error.code,
+      http_status: String(error.status),
+      ...(error.requestId ? { request_id: error.requestId } : {}),
+    },
+    extra: { path: path.split("?")[0] },
+  });
 }
 
 export function parseApiError(
@@ -158,7 +180,13 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const raw = await res.text();
 
   if (!res.ok) {
-    throw new ApiError(res.status, raw);
+    const error = new ApiError(
+      res.status,
+      raw,
+      res.headers.get("x-request-id"),
+    );
+    reportServerError(error, path);
+    throw error;
   }
 
   if (!raw) {

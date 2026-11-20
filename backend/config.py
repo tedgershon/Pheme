@@ -45,6 +45,8 @@ def cors_options(settings: Settings) -> dict:
         "allow_credentials": True,
         "allow_methods": ["*"],
         "allow_headers": ["*"],
+        # Lets the browser read the correlation ID and attach it to reports.
+        "expose_headers": ["x-request-id"],
     }
 
 

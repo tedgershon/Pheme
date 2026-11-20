@@ -94,16 +94,28 @@ production, Preview must point at a non-production project instead.
 
 | Project | Root Directory | Environment variables (Production and Preview) |
 | --- | --- | --- |
-| Backend | `backend` | `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SENTRY_ENVIRONMENT`, `CORS_ORIGINS`, `CORS_ORIGIN_REGEX` |
-| Frontend | `frontend` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SENTRY_ENVIRONMENT` |
+| Backend | `backend` | `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `CORS_ORIGINS`, `CORS_ORIGIN_REGEX` |
+| Frontend | `frontend` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_ENVIRONMENT`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_AUTH_TOKEN` (optionally `SENTRY_ORG`, `SENTRY_PROJECT`) |
 
 - [backend/vercel.json](../backend/vercel.json) routes every path to `main.py`.
   The service-role key belongs to the backend project only.
 - Add variables by hand rather than through the Supabase marketplace
   integration, which copies the service-role key and database URLs into every
   project it links.
-- Use a non-production `SENTRY_ENVIRONMENT` such as `staging` until launch.
-  Never use `development` on a deployment: it mounts `/api/__sentry-test`.
+- Use a non-production `SENTRY_ENVIRONMENT` such as `staging` until launch,
+  and the same value for the frontend's `NEXT_PUBLIC_SENTRY_ENVIRONMENT` and
+  `SENTRY_ENVIRONMENT`. Never use `development` on a deployment: it mounts
+  `/api/__sentry-test`.
+- The backend and frontend use separate Sentry projects and DSNs. The frontend
+  `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` hold the same frontend DSN.
+  `SENTRY_AUTH_TOKEN` is an organization token used only at build time to
+  upload source maps; never give it a `NEXT_PUBLIC_` name. Set
+  `SENTRY_ORG`/`SENTRY_PROJECT` when the Sentry slugs differ from the defaults
+  in [next.config.ts](../frontend/next.config.ts).
+- Leave `SENTRY_RELEASE` unset: the backend's `resolve_release` and the
+  frontend's Sentry build plugin both use Vercel's `VERCEL_GIT_COMMIT_SHA`.
+  This requires the project setting that exposes system environment variables
+  (on by default).
 - `NEXT_PUBLIC_*` values are fixed at build time; redeploy after changing them.
 - Point `NEXT_PUBLIC_API_URL` at the backend's production domain. Vercel's
   default Deployment Protection covers preview URLs, so a protected backend
@@ -124,6 +136,37 @@ Check `GET /` on the backend returns `{"status": "ok", ...}`. On the deployed
 frontend, confirm Google sign-in returns to the Vercel site and survives a
 reload, markets load without CORS errors in the browser console, and avatar
 upload and removal work. Repeat sign-in once on a preview deployment.
+
+### Verify Sentry
+
+Run this after changing Sentry settings or the error-reporting code. It uses
+real failures and needs no fault-injection route. Record each event link.
+
+1. **Tagged handled error.** While the daily claim is available, open
+   `/portfolio` in two tabs and claim in both. The second shows "Already
+   claimed today." Its backend event has `error_code` `CLAIM_ALREADY_TODAY`,
+   `user.id` equal to your profile UUID, `extra.request_id`, the staging
+   environment and the deployed commit as its release.
+2. **Unhandled error and correlation.** Open
+   `/markets/not-a-uuid`. A malformed ID fails Postgres UUID parsing in
+   `GET /api/markets/{id}` and returns a real 500. In the browser's network
+   panel, note the response's `x-request-id`. Expect a backend event tagged
+   `INTERNAL_ERROR` with that `extra.request_id`, and a browser `ApiError`
+   event in the frontend project tagged with the same `request_id` and
+   `http_status` `500`. The server prefetch for the same page may add a
+   server-side frontend event with its own request ID. If malformed IDs later
+   return 404, use another real unhandled failure for this step.
+3. **Readable stack and source maps.** The browser event's stack shows
+   original source such as `src/lib/api.ts`, not minified chunks. The release
+   under Settings → Source Maps lists an uploaded artifact bundle.
+4. **Privacy.** In both events, the `authorization` and `cookie` headers show
+   `[Filtered]`; frames have no local variables; no `andrew_id`, email,
+   display name or token value appears in tags, extras, request data or
+   breadcrumbs. The user context contains only the UUID.
+5. **Alerts.** Alert rules that notify people filter on
+   `environment:production`, so staging and preview events do not page anyone.
+6. **Disabled locally.** With `SENTRY_DSN` unset, the backend logs
+   `Sentry DSN not set; skipping Sentry init` and requests behave normally.
 
 ## Operator account and verification
 

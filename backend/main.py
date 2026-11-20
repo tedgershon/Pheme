@@ -56,9 +56,11 @@ async def validation_handler(request: Request, exc: RequestValidationError) -> J
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    # RequestContextMiddleware reports route failures with request context.
+    # This fallback covers failures outside it, such as in CORSMiddleware.
     if isinstance(exc, HTTPException):
         raise exc
-    message = report_and_safe_message(exc, "Internal server error.")
+    message = report_and_safe_message(exc, "Internal server error.", code=ErrorCode.INTERNAL_ERROR)
     return JSONResponse(
         status_code=500,
         content={"detail": {"code": ErrorCode.INTERNAL_ERROR.value, "message": message}},
