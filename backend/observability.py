@@ -9,10 +9,13 @@ See ``docs/OBSERVABILITY.md`` for the error-handling and diagnostics contract.
 from __future__ import annotations
 
 import logging
+import os
+import re
 import uuid
 from contextvars import ContextVar
 from enum import Enum
 from typing import Any
+from urllib.parse import parse_qsl, urlencode
 
 import sentry_sdk
 from fastapi import HTTPException
@@ -20,6 +23,7 @@ from pythonjsonlogger.jsonlogger import JsonFormatter
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
+from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 
 from config import get_settings
 
@@ -28,6 +32,19 @@ _user_id: ContextVar[str | None] = ContextVar("_user_id", default=None)
 
 _HEALTH_CHECK_PATHS = {"/", "/health", "/api/health"}
 _SCRUB_HEADERS = {"authorization", "cookie", "x-api-key"}
+# Keys scrubbed anywhere in an event (extras, request data, breadcrumb and span
+# data), on top of the SDK's credential denylist. Only the profile UUID may
+# identify an account. ``http.query`` is the query string of outgoing Supabase
+# requests, whose PostgREST filters can carry search text such as an andrew_id.
+_SCRUB_KEYS = [
+    "andrew_id", "email", "display_name", "access_token", "refresh_token", "http.query",
+]
+# Inbound query parameters that can carry account identifiers; ``q`` is the
+# super-admin user search, which matches on andrew_id.
+_SCRUB_QUERY_PARAMS = {"q", *_SCRUB_KEYS}
+_FILTERED = "[Filtered]"
+# Accept a caller's request ID only when it is short and log-safe.
+_REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,128}")
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +118,11 @@ class AppError(HTTPException):
         extras: dict[str, Any] | None = None,
         errors: list[dict[str, Any]] | None = None,
     ) -> None:
+        # The integrations would otherwise capture a 5xx AppError a second
+        # time, without its tag; _before_send drops that duplicate.
+        self.reported = original is not None
         if original is not None:
-            with sentry_sdk.push_scope() as scope:
+            with sentry_sdk.new_scope() as scope:
                 scope.set_tag("error_code", code.value)
                 if extras:
                     for key, value in extras.items():
@@ -154,25 +174,51 @@ def _configure_logging(environment: str) -> None:
     root.setLevel(logging.INFO)
 
 
+def _scrub_query_string(event: dict[str, Any]) -> None:
+    request = event.get("request")
+    if not isinstance(request, dict):
+        return
+    query = request.get("query_string")
+    if isinstance(query, str) and query:
+        pairs = parse_qsl(query, keep_blank_values=True)
+        request["query_string"] = urlencode(
+            [(k, _FILTERED if k.lower() in _SCRUB_QUERY_PARAMS else v) for k, v in pairs],
+            safe="[]",
+        )
+
+
 def _before_send(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any] | None:
-    """Strip auth headers and ``andrew_id`` from extras before sending."""
+    """Deduplicate and tag AppError events, attach the request ID, strip secrets.
+
+    The configured ``EventScrubber`` handles denylisted keys at any depth.
+    """
+
+    exc_info = hint.get("exc_info") or (None, None, None)
+    exc = exc_info[1]
+    if isinstance(exc, AppError):
+        if exc.reported:
+            return None  # Already captured through its original exception.
+        detail = exc.detail if isinstance(exc.detail, dict) else {}
+        if "code" in detail:
+            event.setdefault("tags", {})["error_code"] = detail["code"]
+
+    rid = _request_id.get()
+    if rid:
+        event.setdefault("extra", {}).setdefault("request_id", rid)
 
     request = event.get("request") or {}
     headers = request.get("headers")
     if isinstance(headers, dict):
         for key in list(headers.keys()):
             if key.lower() in _SCRUB_HEADERS:
-                headers[key] = "[Filtered]"
+                headers[key] = _FILTERED
     elif isinstance(headers, list):
         for idx, item in enumerate(headers):
             if isinstance(item, (list, tuple)) and len(item) == 2:
                 name, _ = item
                 if isinstance(name, str) and name.lower() in _SCRUB_HEADERS:
-                    headers[idx] = [name, "[Filtered]"]
-
-    extra = event.get("extra")
-    if isinstance(extra, dict) and "andrew_id" in extra:
-        extra["andrew_id"] = "[Filtered]"
+                    headers[idx] = [name, _FILTERED]
+    _scrub_query_string(event)
 
     return event
 
@@ -185,7 +231,47 @@ def _before_send_transaction(
     transaction = event.get("transaction")
     if isinstance(transaction, str) and transaction in _HEALTH_CHECK_PATHS:
         return None
+    _scrub_query_string(event)
     return event
+
+
+def sentry_options(
+    *,
+    environment: str,
+    release: str | None,
+    traces_sample_rate: float,
+) -> dict[str, Any]:
+    """``sentry_sdk.init`` options other than the DSN, shared with the tests."""
+
+    return {
+        "environment": environment,
+        # None lets the SDK detect the release (SENTRY_RELEASE, local Git).
+        "release": release,
+        "traces_sample_rate": traces_sample_rate,
+        "send_default_pii": False,
+        # Frame locals include the full profile row and raw ASGI headers
+        # (bearer token, cookies), which key-based scrubbing cannot reach.
+        "include_local_variables": False,
+        "event_scrubber": EventScrubber(denylist=[*DEFAULT_DENYLIST, *_SCRUB_KEYS], recursive=True),
+        "integrations": [
+            FastApiIntegration(transaction_style="endpoint"),
+            StarletteIntegration(),
+            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
+        ],
+        "before_send": _before_send,
+        "before_send_transaction": _before_send_transaction,
+    }
+
+
+def resolve_release(configured: str | None) -> str | None:
+    """Prefer ``SENTRY_RELEASE``, then the deployed Vercel commit.
+
+    The Python SDK does not read ``VERCEL_GIT_COMMIT_SHA``, and a Vercel
+    deployment has no Git checkout to detect. The frontend build plugin reads
+    the same variable, so both projects report the same release.
+    """
+
+    return configured or os.environ.get("VERCEL_GIT_COMMIT_SHA") or None
 
 
 def init_observability() -> None:
@@ -205,23 +291,19 @@ def init_observability() -> None:
 
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
-        environment=settings.sentry_environment,
-        release=settings.sentry_release,
-        traces_sample_rate=settings.sentry_traces_sample_rate,
-        send_default_pii=False,
-        integrations=[
-            FastApiIntegration(transaction_style="endpoint"),
-            StarletteIntegration(),
-            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
-        ],
-        before_send=_before_send,
-        before_send_transaction=_before_send_transaction,
+        **sentry_options(
+            environment=settings.sentry_environment,
+            release=resolve_release(settings.sentry_release),
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+        ),
     )
 
 
 def begin_request(request_id: str | None = None) -> str:
-    """Set a fresh request_id for this request. Returns the id."""
+    """Set this request's ID, keeping a caller's ID only when it is log-safe."""
 
+    if not (request_id and _REQUEST_ID_PATTERN.fullmatch(request_id)):
+        request_id = None
     rid = request_id or uuid.uuid4().hex
     _request_id.set(rid)
     return rid
@@ -247,6 +329,7 @@ def report_and_safe_message(
     user_message: str,
     *,
     level: str = "error",
+    code: ErrorCode | None = None,
     extras: dict[str, Any] | None = None,
 ) -> str:
     """Capture ``exc`` to Sentry with full context, return only the safe message.
@@ -256,8 +339,10 @@ def report_and_safe_message(
     while preserving everything in Sentry.
     """
 
-    with sentry_sdk.push_scope() as scope:
+    with sentry_sdk.new_scope() as scope:
         scope.level = level
+        if code is not None:
+            scope.set_tag("error_code", code.value)
         if extras:
             for key, value in extras.items():
                 scope.set_extra(key, value)
