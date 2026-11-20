@@ -22,6 +22,7 @@ from _user_messages import (
     USER_FACING_MESSAGES,
     VARIANT_MESSAGES,
 )
+from conftest import ROLE_IDS
 
 from observability import ErrorCode
 
@@ -87,8 +88,21 @@ def _assert_message(cell, detail):
         assert code in DYNAMIC_CODES, f"{code} has no entry in _user_messages.py"
 
 
+def _assert_sentry_events(cell, response, events, where):
+    """Each event a failing cell captures carries its code, request ID and user."""
+    if response.status_code < 400:
+        return
+    detail = response.json().get("detail")
+    code = detail.get("code") if isinstance(detail, dict) else None
+    for event in events:
+        assert event.get("tags", {}).get("error_code") == code, f"untagged event: {where}"
+        assert event["extra"]["request_id"] == response.headers["x-request-id"], where
+        if cell.role in ROLE_IDS:
+            assert event["user"]["id"] == ROLE_IDS[cell.role], where
+
+
 @pytest.mark.parametrize("cell", MATRIX_CELLS, ids=_cell_id)
-def test_endpoint_matches_matrix(cell, as_role, matrix_world):
+def test_endpoint_matches_matrix(cell, as_role, matrix_world, sentry_events):
     world = matrix_world(cell.role)
     context = (cell.setup(world) if cell.setup else None) or {}
     path = cell.path.format_map(_PathParams(context))
@@ -104,6 +118,7 @@ def test_endpoint_matches_matrix(cell, as_role, matrix_world):
         _assert_message(cell, detail)
     if cell.check:
         cell.check(response, context)
+    _assert_sentry_events(cell, response, sentry_events, where)
 
 
 # ── catalog and cell hygiene ─────────────────────────────────
