@@ -76,6 +76,7 @@ pnpm lint
 pnpm exec tsc --noEmit
 pnpm test
 pnpm build
+pnpm e2e   # needs Docker and the local Supabase stack; see frontend/README.md
 ```
 
 Use `pnpm format` for frontend formatting (Biome). For documentation-only
@@ -104,10 +105,13 @@ so a failing cell is named by method, path and role. These tests use an
 in-memory database that emulates stored-function preconditions; SQL behavior
 stays in the disposable-database suite above.
 
-Optional schema fuzzing and Playwright coverage are planned in
-[#13](https://github.com/tedgershon/Pheme/issues/13) and the
-[browser testing issues](https://github.com/tedgershon/Pheme/issues/14); they are
-not in CI yet.
+The `e2e` job starts a disposable local Supabase stack, points the backend
+and a production frontend build at it, and runs the Playwright suite in
+`frontend/e2e/`. On failure it uploads `playwright-report` (HTML report, traces
+and server logs). The suite currently holds fixture smoke tests; page, control
+and error-message coverage is planned in
+[#15–17](https://github.com/tedgershon/Pheme/issues/15). Optional schema
+fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) is not in CI yet.
 
 ## 7. Commit, PR and squash-merge format
 

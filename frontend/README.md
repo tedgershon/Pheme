@@ -59,8 +59,63 @@ pnpm test
 pnpm build
 ```
 
-`pnpm format` runs Biome formatting. `pnpm test` runs Vitest; Playwright
-setup is planned in [#14](https://github.com/tedgershon/Pheme/issues/14).
+`pnpm format` runs Biome formatting. `pnpm test` runs Vitest unit tests.
+
+## Running e2e tests
+
+The Playwright suite in `e2e/` signs in real accounts and writes markets, bets
+and balances, so it only runs against the disposable local Docker Supabase
+stack and refuses any other Supabase URL. Its servers get the local stack's
+URL and keys (and empty Sentry DSNs) through environment variables, which take
+precedence over `.env.local` and `backend/.env`. You do not need to switch those
+files away from the hosted project.
+
+One-time setup, from the repository root: install the Supabase CLI and the
+backend virtual environment as described in
+[LOCAL_DEVELOPMENT.md](../docs/LOCAL_DEVELOPMENT.md), then run
+`pnpm exec playwright install chromium` from this directory.
+
+```sh
+npx --no-install supabase start   # from the repository root, with Docker running
+pnpm e2e                          # all browser tests
+pnpm e2e e2e/smoke/               # one directory or file
+pnpm e2e:ui                       # Playwright UI mode, to step through tests
+pnpm e2e:debug                    # headed, with the inspector
+```
+
+`pnpm e2e` reads the local stack's keys from `supabase status`, then starts its
+own backend on port 8100 and frontend on port 3100 with those keys. It reuses
+servers that are already listening on those ports. Your usual dev servers on
+3000/8000 can keep running against the hosted project. The frontend server
+builds into `.next-e2e/` so it does not collide with `pnpm dev`. It uses
+`../.venv` for Python; set `E2E_PYTHON` to use another interpreter. If a local
+database predates recent migrations, apply them with
+`npx --no-install supabase migration up --local`.
+
+To test servers you started yourself, set `PLAYWRIGHT_BASE_URL` and
+`E2E_API_URL`; both must use the local stack. CI does this with a production
+build. Failed runs keep traces, screenshots and video in `test-results/` and
+the HTML report in `playwright-report/` (`pnpm exec playwright show-report`).
+
+Write tests with the fixtures from `e2e/fixtures.ts`. Import `test` and
+`expect` from there:
+
+- `signInAs(role)` adds a real Supabase session for `user`, `admin` or
+  `super_admin` as the app's SSR cookies. It does not navigate.
+- `signOut()` removes the session cookies and storage.
+- `seedMarket(opts)` inserts a market (default: open, created by `admin`).
+- `seedBet(market, { role, side, amount })` places a bet through the API, so
+  balances, pools and the ledger change transactionally.
+- `setBalance(role, amount)` and `getBalance(role)` write and read a fixture
+  balance directly.
+
+Global setup creates or repairs the three fixture accounts. They use the same
+UUIDs as the backend API fixtures (`backend/tests/fixture_identities.json`).
+After each test, the fixtures delete the markets it seeded and their dependent
+rows, and restore the fixture balances. Tests run one at a time because they
+share these accounts. `seedMarket`, `setBalance` and the role setup are direct
+service-role writes for test setup only. Assert balance effects through
+`seedBet` or the UI.
 
 Render safe messages from `parseApiError(error, fallback)`; do not expose
 raw backend response bodies. See [OBSERVABILITY.md](../docs/OBSERVABILITY.md)
@@ -83,5 +138,5 @@ To smoke-test page gates with the frontend and backend running:
    Do not change hosted roles solely for this check.
 
 Focused proxy tests use mocked Auth/profile responses and real Next.js request,
-response and matcher utilities. They do not replace the browser suite planned
-in #14–17 or a real OAuth smoke test.
+response and matcher utilities. They do not replace the browser coverage planned
+in #15–17 or a real OAuth smoke test.

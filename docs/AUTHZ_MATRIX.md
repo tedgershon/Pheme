@@ -152,7 +152,8 @@ API authorization remains independent.
 
 [Proxy tests](../frontend/src/__tests__/proxy.test.ts) cover these redirects,
 role restrictions, failure cases, cookie propagation and matcher coverage.
-Browser integration coverage remains planned in #14–17.
+The Playwright harness and fixtures exist ([#14](https://github.com/tedgershon/Pheme/issues/14));
+browser coverage of these redirects and controls remains planned in #15–17.
 
 ---
 
@@ -464,8 +465,10 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
    [#12](https://github.com/tedgershon/Pheme/issues/12)): add the section 7 row
    and its cell in `backend/tests/_matrix_cells.py` together. Optional schema
    fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) and browser
-   coverage ([#14–17](https://github.com/tedgershon/Pheme/issues/14)) are
-   planned; do not describe them as existing enforcement.
+   coverage ([#15–17](https://github.com/tedgershon/Pheme/issues/15)) are
+   planned; do not describe them as existing enforcement. The Playwright
+   harness from [#14](https://github.com/tedgershon/Pheme/issues/14) runs only
+   fixture smoke tests.
 
 ## 10. Related contracts
 
