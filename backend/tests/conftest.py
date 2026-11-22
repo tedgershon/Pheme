@@ -4,6 +4,7 @@ Database invariants are exercised by scripts/db/test_migrations.py against a
 disposable Supabase instance. Never use these fixtures as evidence of SQL safety.
 """
 
+import json
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -18,11 +19,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import observability
 from dependencies import get_supabase_client
 
-ROLE_IDS = {
-    "user": "60000000-0000-0000-0000-000000000001",
-    "admin": "60000000-0000-0000-0000-000000000002",
-    "super_admin": "60000000-0000-0000-0000-000000000003",
-}
+# Shared with the browser fixtures in frontend/e2e/ so both suites use the same
+# stable identities.
+ROLE_IDS = json.loads(
+    (Path(__file__).with_name("fixture_identities.json")).read_text(encoding="utf-8")
+)
 
 
 TABLE_DEFAULTS = {"markets": {"yes_pool_total": 0, "no_pool_total": 0}}
