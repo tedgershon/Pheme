@@ -108,9 +108,12 @@ stays in the disposable-database suite above.
 The `e2e` job starts a disposable local Supabase stack, points the backend
 and a production frontend build at it, and runs the Playwright suite in
 `frontend/e2e/`. On failure it uploads `playwright-report` (HTML report, traces
-and server logs). The suite currently holds fixture smoke tests; page, control
-and error-message coverage is planned in
-[#15–17](https://github.com/tedgershon/Pheme/issues/15). Optional schema
+and server logs). It includes the page-gating tests generated from
+[AUTHZ_MATRIX.md](docs/AUTHZ_MATRIX.md) section 5. As with the API matrix, add
+a section 5 row and its `describePage()` call together; a coverage test fails
+otherwise (see [frontend/e2e/README.md](frontend/e2e/README.md)). Control and
+error-message coverage is planned in
+[#16–17](https://github.com/tedgershon/Pheme/issues/16). Optional schema
 fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) is not in CI yet.
 
 ## 7. Commit, PR and squash-merge format

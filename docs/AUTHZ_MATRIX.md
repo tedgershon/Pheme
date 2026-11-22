@@ -152,8 +152,12 @@ API authorization remains independent.
 
 [Proxy tests](../frontend/src/__tests__/proxy.test.ts) cover these redirects,
 role restrictions, failure cases, cookie propagation and matcher coverage.
-The Playwright harness and fixtures exist ([#14](https://github.com/tedgershon/Pheme/issues/14));
-browser coverage of these redirects and controls remains planned in #15–17.
+Browser tests in [`frontend/e2e/page-gating/`](../frontend/e2e/page-gating/)
+check every cell of this table for all five roles, including that each redirect
+is the server's first response ([#15](https://github.com/tedgershon/Pheme/issues/15)).
+They read the table from this file, so a new row needs a `describePage()` call
+there; a coverage test fails otherwise. Browser coverage of section 6 controls
+remains planned in #16.
 
 ---
 
@@ -465,10 +469,14 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
    [#12](https://github.com/tedgershon/Pheme/issues/12)): add the section 7 row
    and its cell in `backend/tests/_matrix_cells.py` together. Optional schema
    fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) and browser
-   coverage ([#15–17](https://github.com/tedgershon/Pheme/issues/15)) are
-   planned; do not describe them as existing enforcement. The Playwright
-   harness from [#14](https://github.com/tedgershon/Pheme/issues/14) runs only
-   fixture smoke tests.
+   coverage of controls and error messages
+   ([#16–17](https://github.com/tedgershon/Pheme/issues/16)) are planned; do
+   not describe them as existing enforcement.
+6. Page coverage exists ([#15](https://github.com/tedgershon/Pheme/issues/15)):
+   the Playwright page-gating tests read section 5 directly. Add a row and its
+   `describePage()` call in `frontend/e2e/page-gating/` together; the coverage
+   test fails when either is missing. If a page test fails, fix the code; change
+   a cell only as a deliberate policy change.
 
 ## 10. Related contracts
 
@@ -488,6 +496,8 @@ Community rewards require a matching atomic settlement receipt; direct calls can
 
 ## Changelog
 
+- #15: section 5 is executable as the Playwright page-gating suite with a
+  row-coverage guard. No cells changed.
 - #12: section 7 is executable as `MATRIX_CELLS` with a route-coverage guard.
   The duplicate dispute-vote cell is `409` (was `403`), and dispute votes
   without a dispute are documented as `404`.
