@@ -78,7 +78,7 @@ backend virtual environment as described in
 ```sh
 npx --no-install supabase start   # from the repository root, with Docker running
 pnpm e2e                          # all browser tests
-pnpm e2e e2e/smoke/               # one directory or file
+pnpm e2e e2e/page-gating/         # one directory or file
 pnpm e2e:ui                       # Playwright UI mode, to step through tests
 pnpm e2e:debug                    # headed, with the inspector
 ```
@@ -122,7 +122,9 @@ raw backend response bodies. See [OBSERVABILITY.md](../docs/OBSERVABILITY.md)
 for the error contract and Sentry configuration, and
 [AUTHZ_MATRIX.md](../docs/AUTHZ_MATRIX.md) for page/control policy.
 
-To smoke-test page gates with the frontend and backend running:
+`pnpm e2e e2e/page-gating/` checks every page gate against the local stack
+(see [e2e/README.md](e2e/README.md)). To smoke-test page gates by hand against
+another deployment, with the frontend and backend running:
 
 1. In a signed-out/private browser window, visit `/markets/create`, `/portfolio`,
    `/profile` and `/rewards`. Each should return HTTP 307 to `/auth` before any
@@ -138,5 +140,5 @@ To smoke-test page gates with the frontend and backend running:
    Do not change hosted roles solely for this check.
 
 Focused proxy tests use mocked Auth/profile responses and real Next.js request,
-response and matcher utilities. They do not replace the browser coverage planned
-in #15–17 or a real OAuth smoke test.
+response and matcher utilities. The browser page-gating suite checks the same
+gates end to end; neither replaces a real OAuth smoke test.
