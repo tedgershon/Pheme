@@ -119,7 +119,7 @@ describeControl("6b", '"Admin Panel" menu link', () => {
 
 describeControl("6b", "Role-preview toggle (planned)", () => {
   // No role-preview toggle exists yet; the row is marked planned in the matrix.
-  // These document the intended cells and run once the toggle is built.
+  // These document the intended cells and run once #76 builds the toggle.
   for (const [caller, cell] of [
     ["user", "hidden"],
     ["admin", "visible"],

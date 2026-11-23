@@ -47,7 +47,7 @@ service role cannot write that list. Approved signups still receive only the
 
 ### Role-preview override (admin tooling)
 
-A role-preview toggle is planned (not built yet; see §6b) that would let admins *render the UI as if* they were `user`. **It must be presentation-only:** the backend still reads the actual profile role for authorization. The tables below describe intended page, control and API authorization; the role-preview toggle must not bypass server-side checks.
+A role-preview toggle is planned in [#76](https://github.com/tedgershon/Pheme/issues/76) (not built yet; see §6b) that would let admins *render the UI as if* they were `user`. **It must be presentation-only:** the backend still reads the actual profile role for authorization. The tables below describe intended page, control and API authorization; the role-preview toggle must not bypass server-side checks.
 
 ---
 
@@ -191,6 +191,9 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | "Admin Panel" menu link | `hidden` | `hidden` | `visible` (in the account dropdown) | `visible` |
 | Role-preview toggle (planned) | `hidden` | `hidden` | `visible` | `visible` |
 
+The role-preview toggle is not built yet; [#76](https://github.com/tedgershon/Pheme/issues/76) specifies it. Its cells are the
+intended policy.
+
 ### 6c. Admin pages
 
 | Control | `user` | `admin` | `super_admin` |
@@ -224,7 +227,7 @@ bettors ([#16](https://github.com/tedgershon/Pheme/issues/16)). Hidden controls
 with a permission reason are paired with the API call they would make, which
 must be rejected. Each row's tests sit in a `describeControl()` call named after
 the row; a coverage test fails when a row has none. The planned role-preview
-toggle row is `test.fixme` until the toggle exists.
+toggle row is `test.fixme` until [#76](https://github.com/tedgershon/Pheme/issues/76) builds the toggle.
 
 ---
 

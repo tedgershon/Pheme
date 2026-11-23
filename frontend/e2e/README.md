@@ -62,6 +62,8 @@ in `describeControl(section, rowName, ...)`, where `rowName` is the row's first
 cell without backticks. **Add a 6a–6c row and its `describeControl()` call
 together**: `coverage.spec.ts` fails when a row has no call, and a call whose
 name is not a row fails on its own.
+The planned role-preview toggle row runs as `test.fixme` until
+[#76](https://github.com/tedgershon/Pheme/issues/76) builds the toggle.
 
 - `marketIn(state, setup)` (from `controls/market-states.ts`) builds a market in
   `open`, `closed`, `resolved`, `proposed`, `disputed`, `community` or
