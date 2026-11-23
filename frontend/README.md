@@ -117,6 +117,10 @@ Write tests with the fixtures from `e2e/fixtures.ts`. Import `test` and
 - `apiAs(caller, method, path, body?)` calls the API as a fixture account or
   `"anon"` and returns `{ status, body }` without throwing, for setup steps and
   rejection checks.
+- `accessTokenFor(role)` returns a fixture account's access token, for tests
+  that send a browser request as a different account.
+- `resetDailyClaim(role)` deletes that account's daily-claim ledger rows so it
+  can claim again. Claims made during a test are removed afterwards.
 
 Global setup creates or repairs the three fixture accounts. They use the same
 UUIDs as the backend API fixtures (`backend/tests/fixture_identities.json`).
