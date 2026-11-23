@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BananaCoin } from "@/components/banana-coin";
 import { NotificationsMenu } from "@/components/notifications-menu";
+import { PhemeMark } from "@/components/pheme-logo";
+import { TartanCoin } from "@/components/tartan-coin";
 import { buttonVariants } from "@/components/ui/button";
 import { UserMenu } from "@/components/user-menu";
 import { useMe } from "@/lib/query/queries/auth";
@@ -25,11 +26,13 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b border-border bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 text-lg font-bold">
-            <span className="text-2xl" role="img" aria-label="banana">
-              🍌
-            </span>
-            <span>BananaGains</span>
+          <Link
+            href="/"
+            aria-label="Pheme home"
+            className="flex items-center gap-2 text-lg font-bold"
+          >
+            <PhemeMark size={28} />
+            <span>Pheme</span>
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">
             {NAV_LINKS.map((link) => (
@@ -58,7 +61,7 @@ export function Navbar() {
                   "gap-1.5",
                 )}
               >
-                <BananaCoin size={16} />
+                <TartanCoin size={16} />
                 <span>{user.banana_balance.toLocaleString()}</span>
               </Link>
               <NotificationsMenu />

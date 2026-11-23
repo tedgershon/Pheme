@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Trophy } from "lucide-react";
-import { BananaCoin } from "@/components/banana-coin";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { weeklyLeaderboardQuery } from "@/lib/query/queries/leaderboard";
@@ -84,7 +84,7 @@ export function WeeklyLeaderboard() {
                       </div>
                       <div className="flex items-center gap-1 text-sm font-semibold text-success">
                         +
-                        <BananaCoin size={14} />
+                        <TartanCoin size={14} />
                         {entry.gains.toLocaleString()}
                       </div>
                     </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BananaCoin } from "@/components/banana-coin";
+import { TartanCoin } from "@/components/tartan-coin";
 import { useMe } from "@/lib/query/queries/auth";
 import { useSession } from "@/lib/SessionProvider";
 
@@ -24,8 +24,8 @@ export function DailyClaimBanner() {
 
   const claimMessage =
     user.claim_amount === 1000
-      ? "Your daily 1,000 banana coins are ready to claim!"
-      : "Your daily banana coins are ready to claim!";
+      ? "Your daily 1,000 Tartan Coins are ready to claim!"
+      : "Your daily Tartan Coins are ready to claim!";
 
   return (
     <div className="bg-primary/10 border-b border-primary/20">
@@ -34,7 +34,7 @@ export function DailyClaimBanner() {
           href="/portfolio"
           className="flex items-center gap-2 text-sm hover:underline"
         >
-          <BananaCoin size={18} />
+          <TartanCoin size={18} />
           <span className="font-medium">{claimMessage}</span>
         </Link>
         <button

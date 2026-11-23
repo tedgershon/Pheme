@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
-import { BananaCoin } from "@/components/banana-coin";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -124,14 +124,14 @@ export default function PortfolioPage() {
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-sm text-muted-foreground">Balance</span>
               <span className="flex items-center gap-1.5 text-lg font-bold">
-                <BananaCoin size={18} />
+                <TartanCoin size={18} />
                 {user.banana_balance.toLocaleString()}
               </span>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-sm text-muted-foreground">Active Bets</span>
               <span className="flex items-center gap-1.5 text-lg font-bold">
-                <BananaCoin size={18} />
+                <TartanCoin size={18} />
                 {activeBets.toLocaleString()}
               </span>
             </div>
@@ -158,9 +158,9 @@ export default function PortfolioPage() {
                     {claim.isPending ? (
                       <Spinner />
                     ) : user.claim_amount < 1000 ? (
-                      `Claim ${user.claim_amount.toLocaleString()} Daily Bananas`
+                      `Claim ${user.claim_amount.toLocaleString()} Daily Tartan Coins`
                     ) : (
-                      "Claim 1,000 Daily Bananas"
+                      "Claim 1,000 Daily Tartan Coins"
                     )}
                   </Button>
                 )}
@@ -202,7 +202,7 @@ export default function PortfolioPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 text-base font-semibold">
-                        <BananaCoin size={16} />
+                        <TartanCoin size={16} />
                         {bet.amount.toLocaleString()}
                       </div>
                     </CardContent>
@@ -361,7 +361,7 @@ export default function PortfolioPage() {
                     className={`flex items-center gap-0.5 text-sm font-semibold ${isPositive ? "text-success" : "text-danger"}`}
                   >
                     {isPositive ? "+" : ""}
-                    <BananaCoin size={14} />
+                    <TartanCoin size={14} />
                     {Math.abs(tx.amount).toLocaleString()}
                   </span>
                 </div>

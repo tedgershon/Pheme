@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, Clock, Timer } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BananaCoin } from "@/components/banana-coin";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -175,7 +175,7 @@ function ResolutionCard({
 
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           Reward pool:
-          <BananaCoin size={12} />
+          <TartanCoin size={12} />
           <span className="font-medium">{rewardPool.toLocaleString()}</span>
         </div>
 

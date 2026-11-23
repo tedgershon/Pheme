@@ -4,7 +4,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { Trophy } from "lucide-react";
 import Image from "next/image";
 import { BadgeCircle } from "@/components/badge";
-import { BananaCoin } from "@/components/banana-coin";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useMe } from "@/lib/query/queries/auth";
@@ -172,7 +172,7 @@ export default function LeaderboardPage() {
       <section className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
         <p className="text-sm text-muted-foreground">
-          Who's got the biggest bunch? See who's ruling the banana republic
+          Who's stacking the most Tartan Coins? See who's leading the pack.
         </p>
       </section>
 
@@ -241,7 +241,7 @@ export default function LeaderboardPage() {
                     )}
                   >
                     {gainValue(entry) > 0 ? "+" : ""}
-                    <BananaCoin size={16} />
+                    <TartanCoin size={16} />
                     {gainValue(entry).toLocaleString()}
                   </div>
                 </div>

@@ -4,11 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { BananaCoin } from "@/components/banana-coin";
 import {
   getOptionColor,
   ProbabilityChart,
 } from "@/components/probability-chart";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -173,7 +173,7 @@ export function HottestMarketDisplay() {
             <MarketOptions market={market} />
 
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <BananaCoin size={16} />
+              <TartanCoin size={16} />
               <span>{volume.toLocaleString()} vol</span>
             </div>
 

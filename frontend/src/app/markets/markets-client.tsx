@@ -3,11 +3,11 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { BananaCoin } from "@/components/banana-coin";
 import { CategoryFilter } from "@/components/category-filter";
 import { buildPriceHistory } from "@/components/hottest-market";
 import { MarketCard } from "@/components/market-card";
 import { ProbabilityChart } from "@/components/probability-chart";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -143,7 +143,7 @@ function TrendingFeaturedMarkets() {
                   </p>
                 )}
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <BananaCoin size={14} />
+                  <TartanCoin size={14} />
                   <span>{totalVolume.toLocaleString()} total coin volume</span>
                 </div>
                 <div className="mt-auto flex flex-col gap-2">

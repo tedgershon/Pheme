@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { BananaCoin } from "@/components/banana-coin";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -116,12 +116,12 @@ export default function AdminStatsPage() {
         <Card size="sm" className="py-2">
           <CardHeader className="pb-0">
             <span className="text-xs text-muted-foreground">
-              Total Banana Currency Traded
+              Total Tartan Coins Traded
             </span>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-3xl font-bold">
-              <BananaCoin size={28} />
+              <TartanCoin size={28} />
               {stats.total_banana_traded.toLocaleString()}
             </div>
           </CardContent>

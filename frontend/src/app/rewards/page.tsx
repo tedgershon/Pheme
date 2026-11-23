@@ -12,6 +12,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  badgeDisplayName,
+  trackDescription,
+  trackDisplayName,
+} from "@/lib/badge-names";
 import { useUpdateProfile } from "@/lib/query/mutations/auth";
 import { useMe } from "@/lib/query/queries/auth";
 import { rewardsQuery } from "@/lib/query/queries/rewards";
@@ -22,7 +27,7 @@ import type {
 } from "@/lib/types";
 
 const TRACK_ICONS: Record<string, string> = {
-  banana_baron: "🍌",
+  banana_baron: "🪙",
   oracle: "🔮",
   architect: "🏗️",
   degen: "🎲",
@@ -89,7 +94,7 @@ function TrackCard({
       ? Math.min(100, Math.round((absoluteProgress / nextThreshold) * 100))
       : 100;
   const progressColor =
-    nextTierDef?.color ?? currentTierDef?.color ?? "#eab308";
+    nextTierDef?.color ?? currentTierDef?.color ?? "var(--primary)";
 
   const progressValueLabel =
     nextThreshold !== null
@@ -101,16 +106,18 @@ function TrackCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <span>{icon}</span>
-          {track.track_display_name}
+          {trackDisplayName(track.track, track.track_display_name)}
         </CardTitle>
-        <CardDescription>{track.track_description}</CardDescription>
+        <CardDescription>
+          {trackDescription(track.track, track.track_description)}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {nextTierDef ? (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                {progressValueLabel} to {nextTierDef.name}
+                {progressValueLabel} to {badgeDisplayName(nextTierDef)}
               </span>
               <span className="font-medium">{progressPercent}%</span>
             </div>
@@ -185,7 +192,7 @@ function TrackCard({
                   <p
                     className={`text-sm font-medium ${!isEarned && !isNext ? "text-muted-foreground" : ""}`}
                   >
-                    {tier.name}{" "}
+                    {badgeDisplayName(tier)}{" "}
                     <span className="text-xs text-muted-foreground">
                       ({tier.threshold.toLocaleString()})
                     </span>
@@ -298,7 +305,7 @@ export default function RewardsPage() {
       <section className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">Rewards</h1>
         <p className="text-sm text-muted-foreground">
-          Level up your badges and show off your BananaGains prowess
+          Level up your badges and show off your Pheme prowess
         </p>
       </section>
 
