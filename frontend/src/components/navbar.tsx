@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NotificationsMenu } from "@/components/notifications-menu";
@@ -23,16 +24,24 @@ export function Navbar() {
   const { user } = useMe();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-white">
+    <header className="sticky top-0 z-50 border-b border-border bg-nav-background">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <div className="flex items-center gap-8">
           <Link
             href="/"
-            aria-label="Pheme home"
+            aria-label="Pheme at Carnegie Mellon University, home"
             className="flex items-center gap-2 text-lg font-bold"
           >
             <PhemeMark size={28} />
-            <span>Pheme</span>
+            <span>Pheme @</span>
+            <Image
+              src="/assets/cmu-wordmark.png"
+              alt=""
+              width={52}
+              height={34}
+              priority
+              className="h-[34px] w-auto"
+            />
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">
             {NAV_LINKS.map((link) => (
@@ -40,10 +49,10 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent",
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-primary/25 hover:text-primary-foreground",
                   pathname === link.href
                     ? "text-foreground"
-                    : "text-muted-foreground",
+                    : "text-nav-muted-foreground",
                 )}
               >
                 {link.label}

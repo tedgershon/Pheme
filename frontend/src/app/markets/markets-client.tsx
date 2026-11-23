@@ -149,13 +149,13 @@ function TrendingFeaturedMarkets() {
                 <div className="mt-auto flex flex-col gap-2">
                   <Button
                     size="lg"
-                    className="w-full bg-success text-success-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-success)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-success)_70%,black)]"
+                    className="w-full bg-success text-success-foreground hover:bg-success hover:brightness-105 [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-success)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-success)_70%,black)]"
                   >
                     Yes {probability}%
                   </Button>
                   <Button
                     size="lg"
-                    className="w-full bg-danger text-danger-foreground [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-danger)_70%,black)]"
+                    className="w-full bg-danger text-danger-foreground hover:bg-danger hover:brightness-105 [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-danger)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-danger)_70%,black)]"
                   >
                     No {100 - probability}%
                   </Button>
