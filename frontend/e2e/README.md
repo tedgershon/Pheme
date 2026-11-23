@@ -136,10 +136,4 @@ To run them locally, build and start the frontend yourself and set
 
 Known gaps these tests document rather than hide:
 
-- `NOTIFICATION_NOT_FOUND`: the notification menu shows nothing when a delete
-  fails, so the test checks the 404 response and that nothing raw is shown.
-- `MARKET_NOT_PENDING_REVIEW` on `/admin/review`: the page refetches the queue
-  before reporting the failure, and the market has left the queue, so the row
-  and its message disappear. The test checks the response and that the row
-  went.
 - `UNAUTHORIZED` is shown as text; the page does not send the user to `/auth`.

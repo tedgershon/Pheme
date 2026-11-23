@@ -1,21 +1,24 @@
-// Error messages from the admin pages: market review and user roles. Each test
-// makes the real backend reject the action and checks the message the page
-// shows: the exact text, and no raw error text.
+// Error messages from the admin pages: market review, market resolution and
+// user roles. Each test makes the real backend reject the action and checks the
+// message the page shows: the exact text, and no raw error text.
 
 import type { Page } from "@playwright/test";
-import { expect, test } from "../fixtures";
+import { expect, test } from "../controls/market-states";
 import { ROLE_IDS } from "../support/local-stack";
 import { serviceClient } from "../support/supabase";
 import {
   actAndAwaitResponse,
   changeRequest,
   expectSafeMessage,
-  RAW_ERROR_MARKERS,
 } from "./helpers";
 
 const REVIEW = {
   method: "POST",
   path: /^\/api\/admin\/markets\/[^/]+\/review$/,
+};
+const ADMIN_RESOLVE = {
+  method: "POST",
+  path: /^\/api\/admin\/markets\/[^/]+\/resolve$/,
 };
 const SET_ROLE = {
   method: "PUT",
@@ -148,18 +151,46 @@ test("MARKET_NOT_PENDING_REVIEW → 'Market is not pending review.'", async ({
 
   const response = await approve(page, row);
 
-  // The page refetches the queue before it reports the failure, and the market
-  // is no longer in the queue, so its row (and the row's error message) is gone
-  // by the time the message would show. Check what the user can rely on: the
-  // backend's safe message, and that nothing raw reaches the page.
+  // The queue refetch runs before the failure is reported and takes the market
+  // out of the queue, so the message must outlive the row: the page shows it
+  // above the queue instead.
   expect(response.status()).toBe(400);
-  const { detail } = await response.json();
-  expect(detail).toEqual({
-    code: "MARKET_NOT_PENDING_REVIEW",
-    message: "Market is not pending review.",
-  });
   await expect(row).toBeHidden();
-  expect((await page.locator("body").innerText()) ?? "").not.toMatch(
-    RAW_ERROR_MARKERS,
-  );
+  await expect(
+    page.getByText(`Could not review “${market.title}”`),
+  ).toBeVisible();
+  await expectSafeMessage(page, "Market is not pending review.");
+});
+
+test("MARKET_ALREADY_RESOLVED on /admin/resolve → 'Market is already resolved.'", async ({
+  page,
+  signInAs,
+  marketIn,
+}) => {
+  const market = await marketIn("admin_review", { creator: "user" });
+  await signInAs("admin");
+  await page.goto("/admin/resolve");
+  const card = page.locator(`#resolve-${market.id}`);
+  await expect(card).toContainText(market.title);
+
+  // Another admin settles the market while this page is open.
+  const { error } = await serviceClient()
+    .from("markets")
+    .update({ status: "resolved", resolved_outcome: "YES" })
+    .eq("id", market.id);
+  expect(error).toBeNull();
+
+  await card.getByRole("button", { name: "Resolve YES" }).click();
+  const response = await actAndAwaitResponse(page, ADMIN_RESOLVE, async () => {
+    await card.getByRole("button", { name: "Confirm" }).click();
+  });
+
+  // As on /admin/review, the refetch removes the card before the failure is
+  // reported, so the page shows the message above the queue.
+  expect(response.status()).toBe(400);
+  await expect(card).toBeHidden();
+  await expect(
+    page.getByText(`Could not resolve “${market.title}”`),
+  ).toBeVisible();
+  await expectSafeMessage(page, "Market is already resolved.");
 });

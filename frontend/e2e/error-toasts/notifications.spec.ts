@@ -1,8 +1,7 @@
 // NOTIFICATION_NOT_FOUND. A notification that is missing and one that belongs
 // to someone else get the same 404, so its existence is not revealed
-// (AUTHZ_MATRIX.md section 7f). The notification menu shows no message when a
-// delete fails, so unlike the other error specs there is no text to compare:
-// the checks are the response itself, and that nothing raw reaches the page.
+// (AUTHZ_MATRIX.md section 7f). The API test checks the response itself; the
+// menu test checks the message the menu shows when the delete fails.
 
 import { expect, test } from "../fixtures";
 import { ROLE_IDS } from "../support/local-stack";
@@ -10,8 +9,7 @@ import { serviceClient } from "../support/supabase";
 import {
   actAndAwaitResponse,
   changeRequest,
-  errorAlert,
-  RAW_ERROR_MARKERS,
+  expectSafeMessage,
 } from "./helpers";
 
 const DELETE = {
@@ -62,7 +60,7 @@ test("NOTIFICATION_NOT_FOUND: another account's notification gets a safe 404", a
   }
 });
 
-test("NOTIFICATION_NOT_FOUND from the menu: the failed delete shows nothing raw", async ({
+test("NOTIFICATION_NOT_FOUND from the menu → 'Notification not found.'", async ({
   page,
   signInAs,
   accessTokenFor,
@@ -86,17 +84,9 @@ test("NOTIFICATION_NOT_FOUND from the menu: the failed delete shows nothing raw"
     });
 
     expect(response.status()).toBe(404);
-    expect((await response.json()).detail).toEqual({
-      code: "NOTIFICATION_NOT_FOUND",
-      message: "Notification not found.",
-    });
-    // The menu has no error display, so no alert appears, and the page text
-    // carries nothing from the failed request.
-    await expect(errorAlert(page)).toHaveCount(0);
-    expect(await page.locator("body").innerText()).not.toMatch(
-      RAW_ERROR_MARKERS,
-    );
-    // The rejected delete removed nothing.
+    await expectSafeMessage(page, "Notification not found.");
+    // The rejected delete removed nothing, and the row is still listed.
+    await expect(item).toBeVisible();
     const { data } = await serviceClient()
       .from("notifications")
       .select("id")
