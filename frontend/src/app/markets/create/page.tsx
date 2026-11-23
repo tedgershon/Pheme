@@ -757,7 +757,9 @@ export default function CreateMarketPage() {
           </FormSection>
 
           {submitError && (
-            <p className="text-sm font-medium text-danger">{submitError}</p>
+            <p role="alert" className="text-sm font-medium text-danger">
+              {submitError}
+            </p>
           )}
 
           <Button

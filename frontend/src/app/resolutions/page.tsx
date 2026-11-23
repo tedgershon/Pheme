@@ -194,7 +194,9 @@ function ResolutionCard({
         ) : (
           <div className="space-y-2">
             {error && (
-              <p className="text-xs font-medium text-danger">{error}</p>
+              <p role="alert" className="text-xs font-medium text-danger">
+                {error}
+              </p>
             )}
             <div className="grid grid-cols-2 gap-2">
               <Button

@@ -44,7 +44,13 @@ access. Signed-in visitors to `/auth` go to `/`; `/auth/callback` remains
 accessible for OAuth. Refreshed/deleted session cookies survive redirects.
 
 API authorization still applies independently. Role preview does not change
-the database role or grant page access.
+the database role or grant page access. An admin or super admin can open the
+account menu and choose "View as User" to see the UI as a
+regular user; a bar on every page shows the preview is on and has an "Exit
+preview" button. The preview is in-memory client state
+(`src/lib/stores/uiStore.ts`, applied in `useMe()`): it changes only the
+rendered role, never the identity or any API request, and a reload or
+sign-out ends it. See AUTHZ_MATRIX.md section 2.
 
 Use existing query keys/invalidators after mutations. The resolutions list
 and notification unread count poll; Redis/WebSocket synchronization remains
@@ -111,6 +117,10 @@ Write tests with the fixtures from `e2e/fixtures.ts`. Import `test` and
 - `apiAs(caller, method, path, body?)` calls the API as a fixture account or
   `"anon"` and returns `{ status, body }` without throwing, for setup steps and
   rejection checks.
+- `accessTokenFor(role)` returns a fixture account's access token, for tests
+  that send a browser request as a different account.
+- `resetDailyClaim(role)` deletes that account's daily-claim ledger rows so it
+  can claim again. Claims made during a test are removed afterwards.
 
 Global setup creates or repairs the three fixture accounts. They use the same
 UUIDs as the backend API fixtures (`backend/tests/fixture_identities.json`).

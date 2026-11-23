@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { useUiStore } from "../stores/uiStore";
 import { queryKeys } from "./keys";
 
 /**
@@ -119,4 +120,9 @@ export const invalidateAfterBadgeCheck = (qc: QueryClient) =>
 // Market details/review results and portfolio data can contain private content.
 // Reset cancels old requests, clears data and refetches mounted observers with
 // the new session; invalidation alone would keep the previous account's data.
-export const resetAfterSessionChange = (qc: QueryClient) => qc.resetQueries();
+// It also ends an admin role preview so a different account never inherits
+// one. Toggling the preview is not a session change and must not call this.
+export const resetAfterSessionChange = (qc: QueryClient) => {
+  useUiStore.getState().clearRolePreview();
+  return qc.resetQueries();
+};

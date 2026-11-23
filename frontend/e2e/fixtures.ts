@@ -100,8 +100,10 @@ class SessionCache {
 class TestData {
   readonly marketIds: string[] = [];
   private balances = new Map<string, number>();
+  private startedAt = new Date().toISOString();
 
   async snapshot() {
+    this.startedAt = new Date().toISOString();
     const { data, error } = await serviceClient()
       .from("profiles")
       .select("id, banana_balance")
@@ -128,6 +130,15 @@ class TestData {
         .in("id", this.marketIds);
       if (error) failures.push(`markets: ${error.message}`);
     }
+    // Daily claims have no market, so remove the ones this test made; otherwise
+    // the account counts as "claimed today" for every later test.
+    const { error: claimError } = await db
+      .from("transactions")
+      .delete()
+      .in("user_id", Object.values(ROLE_IDS))
+      .eq("transaction_type", "daily_claim")
+      .gte("created_at", this.startedAt);
+    if (claimError) failures.push(`daily claims: ${claimError.message}`);
     const { data, error } = await db
       .from("profiles")
       .select("id, banana_balance")
@@ -169,6 +180,10 @@ interface Fixtures {
     path: string,
     body?: unknown,
   ) => Promise<ApiResult>;
+  /** A fixture account's current access token, for requests the test rewrites. */
+  accessTokenFor: (role: Role) => Promise<string>;
+  /** Deletes a fixture account's daily-claim ledger rows so it can claim again (setup only). */
+  resetDailyClaim: (role: Role) => Promise<void>;
   /** Writes a fixture profile's balance directly (setup only). */
   setBalance: (role: Role, amount: number) => Promise<void>;
   getBalance: (role: Role) => Promise<number>;
@@ -283,6 +298,22 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
       const token =
         caller === "anon" ? null : (await sessions.get(caller)).accessToken;
       return callApi(token, method, path, body);
+    });
+  },
+
+  accessTokenFor: async ({ sessions }, use) => {
+    await use(async (role) => (await sessions.get(role)).accessToken);
+  },
+
+  // biome-ignore lint/correctness/noEmptyPattern: Playwright reads fixture dependencies from this pattern.
+  resetDailyClaim: async ({}, use) => {
+    await use(async (role) => {
+      const { error } = await serviceClient()
+        .from("transactions")
+        .delete()
+        .eq("user_id", ROLE_IDS[role])
+        .eq("transaction_type", "daily_claim");
+      if (error) throw new Error(`resetDailyClaim failed: ${error.message}`);
     });
   },
 

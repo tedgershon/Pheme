@@ -811,7 +811,9 @@ export default function MarketDetailClient({ id }: { id: string }) {
             </CardHeader>
             <CardContent className="space-y-3">
               {betError && (
-                <p className="text-xs font-medium text-danger">{betError}</p>
+                <p role="alert" className="text-xs font-medium text-danger">
+                  {betError}
+                </p>
               )}
               {betSuccess && (
                 <p className="text-xs font-medium text-success">{betSuccess}</p>
@@ -1062,7 +1064,10 @@ export default function MarketDetailClient({ id }: { id: string }) {
                       ) : (
                         <div className="space-y-2">
                           {communityError && (
-                            <p className="text-xs font-medium text-danger">
+                            <p
+                              role="alert"
+                              className="text-xs font-medium text-danger"
+                            >
                               {communityError}
                             </p>
                           )}
@@ -1357,7 +1362,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                   users. This action cannot be undone.
                 </p>
                 {backrollError && (
-                  <p className="text-xs font-medium text-danger">
+                  <p role="alert" className="text-xs font-medium text-danger">
                     {backrollError}
                   </p>
                 )}

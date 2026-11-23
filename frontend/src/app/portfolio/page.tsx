@@ -142,7 +142,9 @@ export default function PortfolioPage() {
             {!user.above_cap && (
               <div className="px-4 py-3">
                 {claimError && (
-                  <p className="text-xs text-destructive mb-2">{claimError}</p>
+                  <p role="alert" className="text-xs text-destructive mb-2">
+                    {claimError}
+                  </p>
                 )}
                 {user.claimed_today && user.banana_balance <= 5000 ? (
                   <p className="text-xs text-muted-foreground">

@@ -47,7 +47,12 @@ service role cannot write that list. Approved signups still receive only the
 
 ### Role-preview override (admin tooling)
 
-A role-preview toggle is planned in [#76](https://github.com/tedgershon/Pheme/issues/76) (not built yet; see §6b) that would let admins *render the UI as if* they were `user`. **It must be presentation-only:** the backend still reads the actual profile role for authorization. The tables below describe intended page, control and API authorization; the role-preview toggle must not bypass server-side checks.
+An `admin` or `super_admin` can use the role-preview toggle in the account dropdown (§6b) to *render the UI as if* they were `user`. **It is presentation-only:** the backend, the proxy and the database still read the actual profile role for every decision, and the preview is never sent to the API. The tables below describe intended page, control and API authorization; the role-preview toggle does not bypass server-side checks.
+
+- **Target.** `user` only. A super admin cannot preview as `admin`, and there is no signed-out preview; use a signed-out window for `anon`/`demo`.
+- **Role, not identity.** Only the role changes. Context overlays (§3) still use the real account, so an admin previewing on a market they created or bet on still gets the creator or bettor restrictions.
+- **In memory only.** The preview is client state with no storage, cookie, URL parameter or header. A full reload, sign-out or account change ends it.
+- **Admin pages.** The proxy still admits the real role. While previewing, each admin page's client guard sends the browser to `/`; ending the preview restores access without a reload.
 
 ---
 
@@ -189,10 +194,14 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | Profile dropdown | `hidden` | `visible` | `visible` | `visible` |
 | Notification bell | `hidden` | `visible` | `visible` | `visible` |
 | "Admin Panel" menu link | `hidden` | `hidden` | `visible` (in the account dropdown) | `visible` |
-| Role-preview toggle (planned) | `hidden` | `hidden` | `visible` | `visible` |
+| Role-preview toggle | `hidden` | `hidden` | `visible` | `visible` |
 
-The role-preview toggle is not built yet; [#76](https://github.com/tedgershon/Pheme/issues/76) specifies it. Its cells are the
-intended policy.
+The role-preview toggle (§2) sits in the account dropdown next to "Admin
+Panel". It renders from the real role, so it stays visible while previewing and
+the admin can always end the preview. While a preview is active, a bar on every
+page says the UI is shown as a regular user with permissions unchanged, and has
+an "Exit preview" button. The other cells in this section and in §6a and §6c
+follow the previewed role.
 
 ### 6c. Admin pages
 
@@ -226,8 +235,9 @@ submitter, voter) and market state, including admins acting as creators and
 bettors ([#16](https://github.com/tedgershon/Pheme/issues/16)). Hidden controls
 with a permission reason are paired with the API call they would make, which
 must be rejected. Each row's tests sit in a `describeControl()` call named after
-the row; a coverage test fails when a row has none. The planned role-preview
-toggle row is `test.fixme` until [#76](https://github.com/tedgershon/Pheme/issues/76) builds the toggle.
+the row; a coverage test fails when a row has none. `role-preview.spec.ts`
+checks that previewing hides the admin-only controls, keeps the identity
+overlays, and leaves every API request unchanged.
 
 ---
 
@@ -480,9 +490,8 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
 5. API coverage exists ([#11](https://github.com/tedgershon/Pheme/issues/11),
    [#12](https://github.com/tedgershon/Pheme/issues/12)): add the section 7 row
    and its cell in `backend/tests/_matrix_cells.py` together. Optional schema
-   fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) and browser
-   coverage of error messages ([#17](https://github.com/tedgershon/Pheme/issues/17))
-   are planned; do not describe them as existing enforcement.
+   fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) is planned;
+   do not describe it as existing enforcement.
 6. Page coverage exists ([#15](https://github.com/tedgershon/Pheme/issues/15)):
    the Playwright page-gating tests read section 5 directly. Add a row and its
    `describePage()` call in `frontend/e2e/page-gating/` together; the coverage
@@ -511,6 +520,8 @@ Community rewards require a matching atomic settlement receipt; direct calls can
 
 ## Changelog
 
+- #76: the role-preview toggle is built (§2, §6b). The §6b row is no longer
+  planned; its cells are unchanged. No page-gating or API cells changed.
 - #16: section 6 is executable as the Playwright control suite with a
   row-coverage guard. Cells changed: binary and multichoice Place Bet on a
   market that is not open is `hidden` with a status note (was `disabled`, which

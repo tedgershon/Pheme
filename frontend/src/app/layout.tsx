@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { DailyClaimBanner } from "@/components/daily-claim-banner";
 import { Navbar } from "@/components/navbar";
+import { RolePreviewBar } from "@/components/role-preview-bar";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { SessionProvider } from "@/lib/SessionProvider";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -51,6 +52,7 @@ export default async function RootLayout({
       <body className="min-h-screen bg-background font-sans antialiased">
         <QueryProvider>
           <SessionProvider initialUser={initialUser}>
+            <RolePreviewBar />
             <DailyClaimBanner />
             <Navbar />
             <main className="mx-auto max-w-7xl px-4 pt-6 mb-6">{children}</main>
