@@ -30,7 +30,9 @@ describe("badgeDisplayName", () => {
 
 describe("track overrides", () => {
   it("renames the banana_baron track and its description", () => {
-    expect(trackDisplayName("banana_baron", "Stored track")).toBe("Tartan Pipes");
+    expect(trackDisplayName("banana_baron", "Stored track")).toBe(
+      "Tartan Pipes",
+    );
     expect(trackDescription("banana_baron", "Stored description")).toBe(
       "Earn your place in the pipe band by growing your Tartan Coin balance",
     );
