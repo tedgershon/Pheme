@@ -164,9 +164,7 @@ export function UserMenu() {
                   <Eye size={16} className="text-muted-foreground" />
                 )}
                 <span>
-                  {isPreviewing
-                    ? "Role preview: on (viewing as user)"
-                    : "Role preview: view as user"}
+                  {isPreviewing ? "View as User (on)" : "View as User"}
                 </span>
               </button>
             )}

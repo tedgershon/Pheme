@@ -121,7 +121,7 @@ describeControl("6b", "Role-preview toggle", () => {
   // The toggle lives in the account dropdown; anon has no dropdown at all.
   // Its behavior (what a preview hides and keeps) is in role-preview.spec.ts.
   const toggle = (page: Page) =>
-    page.getByRole("button", { name: /role preview/i });
+    page.getByRole("button", { name: /^View as User( \(on\))?$/ });
 
   test("anon → hidden", async ({ page, signInAs }) => {
     await openShell(page, signInAs, "anon");

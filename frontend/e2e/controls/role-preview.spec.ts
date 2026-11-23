@@ -13,8 +13,7 @@ import { ROLE_IDS } from "../support/local-stack";
 import { expect, type StatedMarket, test } from "./market-states";
 import { expectCell } from "./matrix";
 
-const BAR_TEXT =
-  "Previewing as a regular user. Your admin permissions are unchanged.";
+const BAR_TEXT = "Viewing as a user. Your admin permissions are unchanged.";
 const NOTES = {
   balance: "Your balance:",
   creatorCannotBet:
@@ -26,7 +25,7 @@ const NOTES = {
 const accountMenu = (page: Page) =>
   page.getByRole("button", { name: "Account menu" });
 const toggle = (page: Page) =>
-  page.getByRole("button", { name: /role preview/i });
+  page.getByRole("button", { name: /^View as User( \(on\))?$/ });
 const previewBar = (page: Page) => page.getByText(BAR_TEXT, { exact: true });
 const exitPreview = (page: Page) =>
   page.getByRole("button", { name: "Exit preview", exact: true });
@@ -110,7 +109,7 @@ test.describe("role preview", () => {
     await openMenu(page);
     await expectCell("hidden", adminPanel(page));
     await expect(toggle(page)).toHaveAttribute("aria-pressed", "true");
-    await expect(toggle(page)).toHaveText("Role preview: on (viewing as user)");
+    await expect(toggle(page)).toHaveText("View as User (on)");
     // The role badge follows the preview too.
     await expectCell(
       "hidden",

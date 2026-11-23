@@ -18,9 +18,7 @@ export function RolePreviewBar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2">
         <p className="flex items-center gap-2 text-sm">
           <Eye size={16} className="shrink-0" />
-          <span>
-            Previewing as a regular user. Your admin permissions are unchanged.
-          </span>
+          <span>Viewing as a user. Your admin permissions are unchanged.</span>
         </p>
         <Button variant="outline" size="sm" onClick={clearRolePreview}>
           Exit preview

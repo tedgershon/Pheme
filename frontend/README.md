@@ -45,7 +45,7 @@ accessible for OAuth. Refreshed/deleted session cookies survive redirects.
 
 API authorization still applies independently. Role preview does not change
 the database role or grant page access. An admin or super admin can open the
-account menu and choose "Role preview: view as user" to see the UI as a
+account menu and choose "View as User" to see the UI as a
 regular user; a bar on every page shows the preview is on and has an "Exit
 preview" button. The preview is in-memory client state
 (`src/lib/stores/uiStore.ts`, applied in `useMe()`): it changes only the

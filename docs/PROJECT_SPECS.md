@@ -30,7 +30,7 @@ operator. Exceptions permit signup only, never automatic role promotion.
 Profiles have `user`, `admin` or `super_admin` roles. Admins
 review markets and adjudicate escalations; super admins additionally manage
 roles. Role-preview controls affect presentation only: an admin can choose
-"Role preview: view as user" in the account menu to see the UI as a regular
+"View as User" in the account menu to see the UI as a regular
 user until they exit, reload or sign out, while the server keeps using their
 real role. See
 [AUTHZ_MATRIX.md](AUTHZ_MATRIX.md) for the intended permissions and known gaps.
