@@ -29,7 +29,7 @@ export function Navbar() {
             <span className="text-2xl" role="img" aria-label="banana">
               🍌
             </span>
-            <span>BananaGains</span>
+            <span>Pheme</span>
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">
             {NAV_LINKS.map((link) => (
