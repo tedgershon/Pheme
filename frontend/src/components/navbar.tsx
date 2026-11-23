@@ -25,8 +25,8 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-nav-background">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        <div className="flex items-center gap-8">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
+        <div className="flex items-center gap-3 md:gap-6">
           <Link
             href="/"
             aria-label="Pheme at Carnegie Mellon University, home"
@@ -51,7 +51,7 @@ export function Navbar() {
                 className={cn(
                   "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-brand-tint hover:text-brand-tint-foreground",
                   pathname === link.href
-                    ? "text-primary"
+                    ? "text-brand-tint-foreground"
                     : "text-nav-muted-foreground",
                 )}
               >
@@ -60,7 +60,7 @@ export function Navbar() {
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           {!isDemo && (
             <>
               <Link

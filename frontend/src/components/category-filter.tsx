@@ -14,7 +14,7 @@ export function CategoryFilter({
 }) {
   return (
     <div className="border-b border-border">
-      <div className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 pt-3 pb-4">
+      <div className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 py-2.5">
         <Button
           variant={selected === null ? "default" : "outline"}
           size="sm"

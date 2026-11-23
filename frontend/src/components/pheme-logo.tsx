@@ -15,7 +15,7 @@ export function PhemeMark({
       aria-hidden="true"
       className={cn("shrink-0", className)}
     >
-      <rect width="32" height="32" rx="9" fill="#c41230" />
+      <rect width="32" height="32" rx="9" fill="#182c4b" />
       <path
         d="M9 23V9h7.2a4.8 4.8 0 0 1 0 9.6H13"
         fill="none"

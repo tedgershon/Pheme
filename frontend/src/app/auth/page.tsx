@@ -18,7 +18,7 @@ export default function AuthPage() {
 
   if (!supabase) {
     return (
-      <div className="mx-auto mt-24 max-w-md text-center">
+      <div className="mx-auto mt-8 max-w-md text-center">
         <h1 className="mb-4 text-2xl font-bold">Auth Not Configured</h1>
         <p className="text-muted-foreground">
           Supabase environment variables are missing. The app is running in
@@ -60,8 +60,8 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="mx-auto mt-16 max-w-md">
-      <div className="mb-8 text-center">
+    <div className="mx-auto mt-4 sm:mt-8 max-w-md">
+      <div className="mb-4 text-center">
         <PhemeMark size={40} className="mx-auto" />
         <h1 className="mt-3 text-2xl font-bold">Welcome to Pheme</h1>
         <p className="mt-1 text-sm text-muted-foreground">

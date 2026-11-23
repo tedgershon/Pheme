@@ -119,17 +119,17 @@ function TrendingFeaturedMarkets() {
 
       <CardContent className="!pt-0 pb-0">
         {isLoading ? (
-          <div className="flex min-h-[220px] items-center justify-center">
+          <div className="flex py-4 items-center justify-center">
             <Spinner className="size-6" />
           </div>
         ) : !activeMarket ? (
-          <div className="flex min-h-[220px] items-center justify-center rounded-lg bg-muted/30 px-4 text-center text-sm text-muted-foreground">
+          <div className="flex py-4 items-center justify-center rounded-lg bg-muted/30 px-4 text-center text-sm text-muted-foreground">
             No trending markets yet.
           </div>
         ) : (
           <Link href={`/markets/${activeMarket.id}`}>
-            <div className="grid h-full sm:grid-cols-2">
-              <div className="flex flex-col gap-2.5 px-2 pb-0 pt-0 sm:pr-6">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <span className="glimmer-dot size-2.5 rounded-full bg-success" />
                   <Badge variant="outline">{activeMarket.category}</Badge>
@@ -146,7 +146,7 @@ function TrendingFeaturedMarkets() {
                   <TartanCoin size={14} />
                   <span>{totalVolume.toLocaleString()} total coin volume</span>
                 </div>
-                <div className="mt-auto flex flex-col gap-2">
+                <div className="mt-auto grid grid-cols-2 gap-2">
                   <Button
                     size="lg"
                     className="w-full bg-success text-success-foreground hover:bg-success hover:brightness-105 [box-shadow:0_4px_0_color-mix(in_oklch,var(--color-success)_70%,black)] active:[box-shadow:0_2px_0_color-mix(in_oklch,var(--color-success)_70%,black)]"
@@ -162,12 +162,12 @@ function TrendingFeaturedMarkets() {
                 </div>
               </div>
 
-              <div className="min-h-[200px] px-2 pb-0 pt-0 sm:pl-0 sm:pr-2">
+              <div className="min-w-0">
                 {activeMarket.market_type === "binary" &&
                 chartData.length > 0 ? (
                   <ProbabilityChart data={chartData} />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
+                  <div className="flex h-full w-full items-center justify-center rounded-lg py-3 bg-muted/30 text-sm text-muted-foreground">
                     {activeMarket.market_type === "binary"
                       ? "No bet history yet"
                       : "Multichoice market"}
@@ -202,7 +202,7 @@ function NewestMarkets({ markets }: { markets: Market[] }) {
       </CardHeader>
       <CardContent className="!p-0">
         {newest.length === 0 ? (
-          <p className="px-6 py-4 text-sm text-muted-foreground">
+          <p className="px-4 py-2 text-sm text-muted-foreground">
             No new markets yet.
           </p>
         ) : (
@@ -213,7 +213,7 @@ function NewestMarkets({ markets }: { markets: Market[] }) {
                 <Link
                   key={market.id}
                   href={`/markets/${market.id}`}
-                  className="flex items-center gap-3 px-6 py-3 transition-colors hover:bg-accent/50"
+                  className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-accent/50"
                 >
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-semibold leading-snug truncate">
@@ -264,7 +264,7 @@ export default function MarketsClient() {
   return (
     <>
       <div
-        className="-mt-6"
+        className="-mt-4"
         style={{
           marginLeft: "calc(-50vw + 50%)",
           marginRight: "calc(-50vw + 50%)",
@@ -277,11 +277,11 @@ export default function MarketsClient() {
         />
       </div>
 
-      <div className="mt-6 space-y-8">
-        <section className="space-y-4">
+      <div className="mt-4 space-y-5">
+        <section className="space-y-2.5">
           <h1 className="text-3xl font-bold tracking-tight">Markets</h1>
           {!isLoading && (
-            <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+            <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
               <TrendingFeaturedMarkets />
               <NewestMarkets markets={filtered} />
             </div>
@@ -294,18 +294,18 @@ export default function MarketsClient() {
           </div>
         ) : (
           <>
-            <section className="space-y-4">
+            <section className="space-y-2.5">
               <h2 className="text-lg font-semibold">
                 Open Markets ({openMarkets.length})
               </h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {openMarkets.map((market) => (
                   <MarketCard key={market.id} market={market} />
                 ))}
               </div>
             </section>
 
-            <section className="space-y-4">
+            <section className="space-y-2.5">
               <h2 className="text-lg font-semibold">
                 Markets Pending Resolution ({pendingResolutionMarkets.length})
               </h2>
@@ -314,7 +314,7 @@ export default function MarketsClient() {
                   No markets are currently pending resolution.
                 </p>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {pendingResolutionMarkets.map((market) => (
                     <MarketCard key={market.id} market={market} />
                   ))}
@@ -323,11 +323,11 @@ export default function MarketsClient() {
             </section>
 
             {closedMarkets.length > 0 && (
-              <section className="space-y-4">
+              <section className="space-y-2.5">
                 <h2 className="text-lg font-semibold">
                   Closed Markets ({closedMarkets.length})
                 </h2>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {closedMarkets.map((market) => (
                     <MarketCard key={market.id} market={market} />
                   ))}

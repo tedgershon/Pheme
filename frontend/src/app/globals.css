@@ -61,7 +61,7 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: color-mix(in srgb, #e0e0e0 55%, #fff);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -70,13 +70,13 @@
   --primary: var(--brand-accent);
   --primary-dark: #941120;
   --primary-hover: #941120;
-  --nav-background: #ffffff;
-  --nav-muted-foreground: #6d6e71;
+  --nav-background: color-mix(in srgb, #941120 22%, #f6ece9);
+  --nav-muted-foreground: #51393c;
   --primary-foreground: var(--brand-accent-ink);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: #626365;
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -117,7 +117,7 @@
   --primary: var(--brand-accent);
   --primary-dark: #941120;
   --primary-hover: color-mix(in srgb, var(--brand-accent) 85%, white);
-  --nav-background: #000000;
+  --nav-background: color-mix(in srgb, #941120 26%, #171717);
   --nav-muted-foreground: #e0e0e0;
   --primary-foreground: var(--brand-accent-ink);
   --secondary: oklch(0.269 0 0);

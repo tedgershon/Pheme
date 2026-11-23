@@ -55,7 +55,7 @@ export default async function RootLayout({
             <RolePreviewBar />
             <DailyClaimBanner />
             <Navbar />
-            <main className="mx-auto max-w-7xl px-4 pt-6 mb-6">{children}</main>
+            <main className="mx-auto max-w-7xl px-4 pt-4 mb-4">{children}</main>
           </SessionProvider>
         </QueryProvider>
       </body>

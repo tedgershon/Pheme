@@ -89,7 +89,7 @@ export function MarketCard({ market }: { market: Market }) {
             isOpen ? "market-card-open border-0 rounded-xl" : "",
           )}
         >
-          <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-3">
+          <CardHeader className="flex flex-row items-start justify-between gap-3">
             <div className="flex-1 space-y-1.5">
               <div className="flex items-center gap-2">
                 <StatusDot market={market} />
@@ -112,7 +112,7 @@ export function MarketCard({ market }: { market: Market }) {
             )}
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="space-y-1.5">
                 {topOptions.map((opt) => {
                   const optPct =
@@ -174,7 +174,7 @@ export function MarketCard({ market }: { market: Market }) {
           isOpen ? "market-card-open border-0 rounded-xl" : "",
         )}
       >
-        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-3">
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div className="flex-1 space-y-1.5">
             <div className="flex items-center gap-2">
               <StatusDot market={market} />
@@ -190,7 +190,7 @@ export function MarketCard({ market }: { market: Market }) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-sm">
                 <span className="w-8 font-medium text-success">Yes</span>
