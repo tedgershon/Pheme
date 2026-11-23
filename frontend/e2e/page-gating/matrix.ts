@@ -79,7 +79,7 @@ const MARKERS: Record<string, string> = {
   "/leaderboard": "Leaderboard",
   "/resolutions": "Resolutions",
   "/rewards": "Rewards",
-  "/auth": "Welcome to BananaGains",
+  "/auth": "Welcome to Pheme",
   "/admin": "Admin Dashboard",
   "/admin/review": "Approve New Markets",
   "/admin/disputes": "Monitor Disputes",

@@ -2,8 +2,8 @@
 
 Pheme currently uses one hosted Supabase project for manual development, with
 the option to prepare that same project for production later. Local Docker
-Supabase remains the disposable migration/test target. No BananaGains database,
-accounts, OAuth credentials or balances are reused.
+Supabase remains the disposable migration/test target. No database,
+accounts, OAuth credentials or balances from the earlier prototype are reused.
 
 The hosted project's name is a label, not an environment boundary. Before it
 serves real users, remove controlled test data through a reviewed procedure and

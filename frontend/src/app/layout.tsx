@@ -9,7 +9,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import type { UserProfile } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "BananaGains | CMU's Prediction Market",
+  title: "Pheme | CMU's Prediction Market",
   description: "A campus prediction market for the CMU community",
 };
 
