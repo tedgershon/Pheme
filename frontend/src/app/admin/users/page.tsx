@@ -17,6 +17,7 @@ export default function AdminUsersPage() {
   const [input, setInput] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [messageIsError, setMessageIsError] = useState(false);
 
   // enabled only when a query has been submitted so typing doesn't fetch
   const { data: results = [], isFetching } = useQuery(
@@ -36,16 +37,19 @@ export default function AdminUsersPage() {
     const q = input.trim();
     if (!q) return;
     setMessage(null);
+    setMessageIsError(false);
     setSubmittedQuery(q);
   }
 
   async function handleRoleChange(userId: string, newRole: string) {
     setMessage(null);
+    setMessageIsError(false);
     try {
       const updated = await updateRole.mutateAsync({ userId, role: newRole });
       setMessage(`Role updated to ${updated.role} successfully.`);
     } catch (err) {
       setMessage(parseApiError(err, "Failed to update role.").message);
+      setMessageIsError(true);
     }
   }
 
@@ -76,7 +80,14 @@ export default function AdminUsersPage() {
         </Button>
       </div>
 
-      {message && <p className="text-sm text-muted-foreground">{message}</p>}
+      {message && (
+        <p
+          role={messageIsError ? "alert" : "status"}
+          className="text-sm text-muted-foreground"
+        >
+          {message}
+        </p>
+      )}
 
       {searched && results.length === 0 && (
         <p className="text-sm text-muted-foreground">

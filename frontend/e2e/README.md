@@ -9,6 +9,9 @@ in [frontend/README.md](../README.md#running-e2e-tests).
 - `page-gating/`: [AUTHZ_MATRIX.md](../../docs/AUTHZ_MATRIX.md) section 5.
 - `controls/`: AUTHZ_MATRIX.md section 6 (control visibility), plus the
   portfolio isolation check for gap B-2.
+- `error-toasts/`: the message a user sees for each reachable `ErrorCode`.
+- `hygiene/`: no session token, other account's Andrew ID or raw error text in
+  the rendered page.
 
 ## Page gating
 
@@ -88,3 +91,55 @@ state.
 
 `portfolio.spec.ts` seeds proposals by two accounts and checks that the user's
 portfolio page and its APIs show only the user's own.
+
+## Error messages
+
+The app has no toast component. A failed action shows its message inline, in an
+element with `role="alert"` (`role="status"` for the success message on
+`/admin/users`), and the text is the backend's own `detail.message`, read by
+`parseApiError`. Give any new inline error message `role="alert"`, or its test
+has nothing to select. The messages are not the wording proposed in the
+retired design: each test asserts what the backend actually returns, which is
+the contract the page shows. The one exception is the claim button, which words
+`CLAIM_ALREADY_TODAY` itself ("Already claimed today!").
+
+Every test in `error-toasts/` makes both assertions through
+`expectSafeMessage()`: the text equals the expected message exactly, and it
+matches none of `RAW_ERROR_MARKERS` (SQL, tracebacks, `HTTPException`, raw
+bodies, email addresses).
+
+Failures come from the real backend. `error-toasts/helpers.ts` documents the
+three ways a test makes it reject an action the page offers:
+
+- a stale page: change the database after the page loaded, then click;
+- another caller: `changeRequest(page, match, { token })` sends the request
+  with a different fixture account's token;
+- a changed request: `changeRequest(page, match, { path | body })`.
+
+`mockApi()` returns a canned response and is used only where the backend
+cannot be made to produce the failure on demand: `BET_INVALID_AMOUNT` (the
+request model refuses non-positive amounts first, so the database function's
+check is unreachable) and `RESOLUTION_WINDOW_EXPIRED` (every route settles an
+expired window before it calls the database function, so the code only occurs
+in a race). Each of those tests says so, and the 5xx tests in `hygiene/` are
+canned because they test how the page handles a failure, whatever its cause.
+
+Use `actAndAwaitResponse()` to click: it retries until a request goes out
+(clicks before hydration are lost) and never again afterwards, then returns the
+response so a test can also assert the status.
+
+`hygiene/no-leaks.spec.ts` checks pages for a JWT. `next dev` copies request
+cookies, which include the session, into the page's inline debug data, so
+those tests skip themselves on a dev server and run on production builds (CI).
+To run them locally, build and start the frontend yourself and set
+`PLAYWRIGHT_BASE_URL` and `E2E_API_URL`, as CI does.
+
+Known gaps these tests document rather than hide:
+
+- `NOTIFICATION_NOT_FOUND`: the notification menu shows nothing when a delete
+  fails, so the test checks the 404 response and that nothing raw is shown.
+- `MARKET_NOT_PENDING_REVIEW` on `/admin/review`: the page refetches the queue
+  before reporting the failure, and the market has left the queue, so the row
+  and its message disappear. The test checks the response and that the row
+  went.
+- `UNAUTHORIZED` is shown as text; the page does not send the user to `/auth`.

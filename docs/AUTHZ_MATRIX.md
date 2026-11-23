@@ -490,9 +490,8 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
 5. API coverage exists ([#11](https://github.com/tedgershon/Pheme/issues/11),
    [#12](https://github.com/tedgershon/Pheme/issues/12)): add the section 7 row
    and its cell in `backend/tests/_matrix_cells.py` together. Optional schema
-   fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) and browser
-   coverage of error messages ([#17](https://github.com/tedgershon/Pheme/issues/17))
-   are planned; do not describe them as existing enforcement.
+   fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) is planned;
+   do not describe it as existing enforcement.
 6. Page coverage exists ([#15](https://github.com/tedgershon/Pheme/issues/15)):
    the Playwright page-gating tests read section 5 directly. Add a row and its
    `describePage()` call in `frontend/e2e/page-gating/` together; the coverage

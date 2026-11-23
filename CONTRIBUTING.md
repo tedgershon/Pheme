@@ -113,8 +113,11 @@ and server logs). It includes the page-gating tests generated from
 a section 5 row and its `describePage()` call together; a coverage test fails
 otherwise (see [frontend/e2e/README.md](frontend/e2e/README.md)). The control
 tests cover section 6 the same way: add a 6a–6c row and its
-`describeControl()` call together. Error-message coverage is planned in
-[#17](https://github.com/tedgershon/Pheme/issues/17). Optional schema
+`describeControl()` call together. The error-message tests in
+`frontend/e2e/error-toasts/` and `frontend/e2e/hygiene/` check what users see
+when an action fails and that no token, other account's Andrew ID or raw error
+text reaches the page. Add a test there when you add an `ErrorCode` a user can
+reach, and give any new inline error message `role="alert"`. Optional schema
 fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) is not in CI yet.
 
 ## 7. Commit, PR and squash-merge format

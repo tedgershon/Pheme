@@ -289,7 +289,11 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
           />
         </div>
 
-        {actionError && <p className="text-sm text-danger">{actionError}</p>}
+        {actionError && (
+          <p role="alert" className="text-sm text-danger">
+            {actionError}
+          </p>
+        )}
 
         <div className="flex gap-2">
           <Button
