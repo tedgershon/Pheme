@@ -12,7 +12,7 @@ SELECT pg_temp.reject_sql($q$SELECT place_multichoice_bet(
  '92000000-0000-0000-0000-000000000001',10)$q$, 'Market has closed');
 SELECT pg_temp.check_true((SELECT pool_total=0 FROM market_options WHERE id='92000000-0000-0000-0000-000000000001'),'rejected bets leave pool unchanged');
 SELECT pg_temp.check_true((SELECT count(*)=0 FROM transactions WHERE market_id='91000000-0000-0000-0000-000000000002'),'rejected bets leave ledger unchanged');
-SELECT pg_temp.check_true((SELECT bool_and(banana_balance=1000) FROM profiles WHERE id::text LIKE '90000000-%'),'rejected bets leave wallets unchanged');
+SELECT pg_temp.check_true((SELECT bool_and(tartan_coin_balance=1000) FROM profiles WHERE id::text LIKE '90000000-%'),'rejected bets leave wallets unchanged');
 SELECT place_bet('90000000-0000-0000-0000-000000000002','91000000-0000-0000-0000-000000000001','YES',10);
 UPDATE markets SET status='pending_resolution', proposed_outcome='YES', dispute_deadline=now()+interval '1 day'
 WHERE id='91000000-0000-0000-0000-000000000001';

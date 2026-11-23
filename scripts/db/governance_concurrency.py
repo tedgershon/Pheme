@@ -24,7 +24,7 @@ def verify(psql, read_sql):
     assert psql(f"SELECT count(*) FROM transactions WHERE market_id='{market}' AND transaction_type='payout'") == '1'
     assert psql(f"SELECT count(*) FROM transactions WHERE market_id='{market}' AND transaction_type='resolution_vote_reward'") == '3'
     assert psql(f"SELECT count(*) FROM transactions WHERE market_id='{option_market}' AND transaction_type='payout'") == '1'
-    assert psql(f"SELECT banana_balance=1001.33 FROM profiles WHERE id='{bettor}'") == 't'
+    assert psql(f"SELECT tartan_coin_balance=1001.33 FROM profiles WHERE id='{bettor}'") == 't'
     assert psql(f"SELECT sum(amount)=0 FROM transactions WHERE market_id='{option_market}'") == 't'
     assert psql(f"SELECT pool_total=0 FROM market_options WHERE market_id='{option_market}'") == 't'
     # Concurrent admin submissions: exactly one AMBIGUOUS settlement and one refund per bettor.

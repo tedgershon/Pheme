@@ -16,7 +16,7 @@ class StatsResponse(BaseModel):
     users_by_role: dict[str, int]
     total_markets: int
     markets_by_status: dict[str, int]
-    total_banana_traded: float
+    total_tartan_coins_traded: float
     total_active_bets: int
 
 

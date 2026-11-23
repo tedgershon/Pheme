@@ -37,7 +37,7 @@ real role. See
 
 The initial grant is 1,000 Tartan Coins. A user can claim once per
 `America/New_York` calendar day when spendable balance is below 5,000. The
-amount is `min(1000, 5000 - banana_balance)`; active stakes do not count toward
+amount is `min(1000, 5000 - tartan_coin_balance)`; active stakes do not count toward
 that cap. Bets, claims, refunds and payouts must update balances and ledger
 entries transactionally. This is the development contract; remaining SQL
 enforcement and retry gaps are tracked in
@@ -121,11 +121,14 @@ and may equip badges for the leaderboard.
 
 | Track | Progress measure | Highest tier |
 | --- | --- | --- |
-| Tartan Pipes | Tartan Coin balance | Pipe Major |
+| Steel Baron | Tartan Coin balance | Steel Baron |
 | Oracle | Correct predictions | Oracle |
 | Architect | Approved markets created | Architect |
 | Degen | Number of bets placed | Degen |
 | Whale | Largest single stake in Tartan Coins | Whale |
+
+The Steel Baron ranks are Mill Apprentice (5,000), Steelworker (7,500),
+Mill Foreman (10,000), Mill Owner (20,000), and Steel Baron (50,000 Tartan Coins).
 
 ## Supporting surfaces
 

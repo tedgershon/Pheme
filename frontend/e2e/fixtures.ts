@@ -106,11 +106,11 @@ class TestData {
     this.startedAt = new Date().toISOString();
     const { data, error } = await serviceClient()
       .from("profiles")
-      .select("id, banana_balance")
+      .select("id, tartan_coin_balance")
       .in("id", Object.values(ROLE_IDS));
     if (error) throw new Error(`Could not read balances: ${error.message}`);
     for (const row of data)
-      this.balances.set(row.id, Number(row.banana_balance));
+      this.balances.set(row.id, Number(row.tartan_coin_balance));
   }
 
   async cleanup() {
@@ -141,16 +141,19 @@ class TestData {
     if (claimError) failures.push(`daily claims: ${claimError.message}`);
     const { data, error } = await db
       .from("profiles")
-      .select("id, banana_balance")
+      .select("id, tartan_coin_balance")
       .in("id", [...this.balances.keys()]);
     if (error) failures.push(`profiles: ${error.message}`);
     for (const row of data ?? []) {
       const original = this.balances.get(row.id);
-      if (original === undefined || Number(row.banana_balance) === original)
+      if (
+        original === undefined ||
+        Number(row.tartan_coin_balance) === original
+      )
         continue;
       const { error: restoreError } = await db
         .from("profiles")
-        .update({ banana_balance: original })
+        .update({ tartan_coin_balance: original })
         .eq("id", row.id);
       if (restoreError)
         failures.push(`balance ${row.id}: ${restoreError.message}`);
@@ -323,7 +326,7 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
     await use(async (role, amount) => {
       const { error } = await serviceClient()
         .from("profiles")
-        .update({ banana_balance: amount })
+        .update({ tartan_coin_balance: amount })
         .eq("id", ROLE_IDS[role]);
       if (error) throw new Error(`setBalance failed: ${error.message}`);
     });
@@ -334,11 +337,11 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
     await use(async (role) => {
       const { data, error } = await serviceClient()
         .from("profiles")
-        .select("banana_balance")
+        .select("tartan_coin_balance")
         .eq("id", ROLE_IDS[role])
         .single();
       if (error) throw new Error(`getBalance failed: ${error.message}`);
-      return Number(data.banana_balance);
+      return Number(data.tartan_coin_balance);
     });
   },
 });

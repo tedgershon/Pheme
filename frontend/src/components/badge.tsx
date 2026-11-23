@@ -1,7 +1,6 @@
 "use client";
 
 import { BadgeIcon } from "@/components/badge-icon";
-import { badgeDisplayName } from "@/lib/badge-names";
 import type { UserBadge } from "@/lib/types";
 
 export function BadgeCircle({
@@ -12,9 +11,8 @@ export function BadgeCircle({
   size?: number;
 }) {
   const def = badge.badge_definitions;
-  const name = badgeDisplayName(def);
   return (
-    <div role="img" title={name} aria-label={name}>
+    <div role="img" title={def.name} aria-label={def.name}>
       <BadgeIcon
         track={def.track}
         tier={badge.tier}

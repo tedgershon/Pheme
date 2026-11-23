@@ -16,7 +16,7 @@
 -- to profiles/markets do NOT have ON DELETE CASCADE.
 --
 -- Real users who placed bets on fixture markets are refunded *before* the
--- fixture rows are deleted, so banana_balance stays in sync with the
+-- fixture rows are deleted, so tartan_coin_balance stays in sync with the
 -- transactions ledger. (An earlier version of this file deleted real
 -- users' bet_placement rows along with the fixture market, leaving the
 -- balance silently short -- see PR #5 commit history for context.)
@@ -53,9 +53,9 @@ WHERE t.market_id IN (SELECT id FROM fixture_market_ids)
   AND t.user_id NOT IN (SELECT id FROM fixture_user_ids)
 GROUP BY t.user_id;
 
--- Reverse the impact on banana_balance.
+-- Reverse the impact on tartan_coin_balance.
 UPDATE profiles
-SET banana_balance = banana_balance - r.net_change
+SET tartan_coin_balance = tartan_coin_balance - r.net_change
 FROM real_user_fixture_impact r
 WHERE profiles.id = r.user_id;
 

@@ -1,7 +1,7 @@
 "use client";
 
 const TRACK_EMOJIS: Record<string, string> = {
-  banana_baron: "🪙",
+  steel_baron: "🪙",
   oracle: "🔮",
   architect: "🏗️",
   degen: "🎲",

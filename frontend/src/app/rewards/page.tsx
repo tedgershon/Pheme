@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { badgeDisplayName } from "@/lib/badge-names";
 import { useUpdateProfile } from "@/lib/query/mutations/auth";
 import { useMe } from "@/lib/query/queries/auth";
 import { rewardsQuery } from "@/lib/query/queries/rewards";
@@ -103,7 +102,7 @@ function TrackCard({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                {progressValueLabel} to {badgeDisplayName(nextTierDef)}
+                {progressValueLabel} to {nextTierDef.name}
               </span>
               <span className="font-medium">{progressPercent}%</span>
             </div>
@@ -178,7 +177,7 @@ function TrackCard({
                   <p
                     className={`text-sm font-medium ${!isEarned && !isNext ? "text-muted-foreground" : ""}`}
                   >
-                    {badgeDisplayName(tier)}{" "}
+                    {tier.name}{" "}
                     <span className="text-xs text-muted-foreground">
                       ({tier.threshold.toLocaleString()})
                     </span>

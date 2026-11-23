@@ -326,7 +326,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
       setBetError("Enter a valid positive amount.");
       return null;
     }
-    if (amount > user.banana_balance) {
+    if (amount > user.tartan_coin_balance) {
       setBetError("Insufficient Tartan Coin balance.");
       return null;
     }
@@ -835,7 +835,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       Your balance: <TartanCoin size={12} />
                       <span className="font-medium text-foreground">
-                        {user.banana_balance.toLocaleString()}
+                        {user.tartan_coin_balance.toLocaleString()}
                       </span>
                     </div>
                     {selectedOptionId && (
@@ -931,7 +931,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       Your balance: <TartanCoin size={12} />
                       <span className="font-medium text-foreground">
-                        {user.banana_balance.toLocaleString()}
+                        {user.tartan_coin_balance.toLocaleString()}
                       </span>
                     </div>
                     <input

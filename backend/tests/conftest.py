@@ -195,7 +195,7 @@ def test_profiles():
             "email": f"test-{role.replace('_', '-')}@andrew.cmu.edu",
             "andrew_id": f"test-{role.replace('_', '-')}",
             "display_name": f"Test {role}",
-            "banana_balance": 1000,
+            "tartan_coin_balance": 1000,
             "created_at": "2026-01-01T00:00:00+00:00",
             "role": role,
             "is_admin": role != "user",

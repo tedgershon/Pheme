@@ -14,6 +14,7 @@ archived history and test fixtures. Do not sort or replay them.
 | `20261117000000` | Admin resolution (#31): `AMBIGUOUS` outcome and `refund` ledger type; JWT-bound, creator-excluding `admin_resolve_market` with atomic refunds; `finalize_resolution` refuses `admin_review` outside that path. Widens constraints only; no data changes. |
 | `20261117000100` | Dispute submissions (#49): `dispute_submissions` table with existing explanations copied in; `file_dispute` accepts later submissions into an open case and binds the submitter to the JWT; `list_dispute_submissions` (public, anonymised) and `admin_dispute_submissions` (admin) functions. Removes client INSERT on `disputes` (cases open only through `file_dispute`). No wallet or status changes. |
 | `20261118000000` | Profile photo removal (#65): `Users can delete own avatar` DELETE policy on `storage.objects`, limited to the user's own `avatars/<user id>/` folder like the upload/update policies. No data changes. |
+| `20261123000000` | Renames the wallet column, daily claim RPC, leaderboard balance fields and badge stats key to the Tartan Coin and Steel Baron names. Updates existing badge definitions, earned track keys and equipped badge maps in place. |
 
 Never edit an applied version. Add a new timestamped file for future changes.
 The baseline contains initial `CREATE TABLE` statements and must **never** be
@@ -264,3 +265,15 @@ submitter data and table/function grants. The concurrency harness files eight
 overlapping submissions from four users and requires one case and four
 submissions; the legacy-upgrade scenarios require a pre-existing dispute's
 explanation to survive byte-for-byte.
+
+## Deploying Steel Baron and Tartan Coins
+
+Coordinate this migration with the API and frontend release. Pause traffic to the
+old application, review the linked dry run, apply the migration, deploy both
+updated services, and then resume traffic. API clients now read
+`tartan_coin_balance` and `total_tartan_coins_traded`. Direct database callers
+use `claim_daily_tartan_coins(uuid)` and the `steel_baron` badge track key.
+
+Verify a previously equipped balance badge still appears on the leaderboard and
+the same profile balance appears in the wallet. Badge UUIDs, tier thresholds,
+ledger amounts and claim eligibility carry over.

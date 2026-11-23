@@ -13,9 +13,9 @@ from supabase import Client
 router = APIRouter(prefix="/api", tags=["rewards"])
 
 TRACK_META = {
-    "banana_baron": {
-        "display_name": "Tartan Pipes",
-        "description": "Earn your place in the pipe band by growing your Tartan Coin balance",
+    "steel_baron": {
+        "display_name": "Steel Baron",
+        "description": "Grow your Tartan Coin balance and rise from Mill Apprentice to Steel Baron.",
     },
     "oracle": {
         "display_name": "Oracle",
@@ -50,7 +50,7 @@ def _get_user_stats(supabase: Client, user_id: str) -> dict[str, float]:
     row = (result.data or [{}])[0] if result.data else {}
 
     return {
-        "banana_baron": float(row.get("banana_baron") or 0),
+        "steel_baron": float(row.get("steel_baron") or 0),
         "oracle": int(row.get("oracle") or 0),
         "architect": int(row.get("architect") or 0),
         "degen": int(row.get("degen") or 0),
@@ -71,7 +71,7 @@ def _build_track_progress(
         tracks_map.setdefault(d["track"], []).append(d)
 
     result = []
-    for track_key in ("banana_baron", "oracle", "architect", "degen", "whale"):
+    for track_key in ("steel_baron", "oracle", "architect", "degen", "whale"):
         tiers = sorted(tracks_map.get(track_key, []), key=lambda t: t["tier"])
         meta = TRACK_META.get(track_key, {})
         current_value = stats.get(track_key, 0)

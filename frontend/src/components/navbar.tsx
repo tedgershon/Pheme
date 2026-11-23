@@ -71,7 +71,7 @@ export function Navbar() {
                 )}
               >
                 <TartanCoin size={16} />
-                <span>{user.banana_balance.toLocaleString()}</span>
+                <span>{user.tartan_coin_balance.toLocaleString()}</span>
               </Link>
               <NotificationsMenu />
               <Link
