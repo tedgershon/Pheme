@@ -1,13 +1,5 @@
 // Map stable track and tier IDs to display names, including previously earned badges.
 
-const TRACK_OVERRIDES: Record<string, { name: string; description: string }> = {
-  banana_baron: {
-    name: "Tartan Pipes",
-    description:
-      "Earn your place in the pipe band by growing your Tartan Coin balance",
-  },
-};
-
 const TIER_NAMES: Record<string, Record<number, string>> = {
   banana_baron: {
     1: "Chanter Novice",
@@ -16,15 +8,21 @@ const TIER_NAMES: Record<string, Record<number, string>> = {
     4: "Pipe Sergeant",
     5: "Pipe Major",
   },
+  degen: {
+    1: "Crew Rookie",
+    2: "Hill Pusher",
+    3: "Lead Mechanic",
+    4: "Crew Captain",
+    5: "Sweepstakes Veteran",
+  },
+  whale: {
+    1: "Stone Putter",
+    2: "Hammer Thrower",
+    3: "Weight Thrower",
+    4: "Caber Tosser",
+    5: "Highland Champion",
+  },
 };
-
-export function trackDisplayName(track: string, fallback: string): string {
-  return TRACK_OVERRIDES[track]?.name ?? fallback;
-}
-
-export function trackDescription(track: string, fallback: string): string {
-  return TRACK_OVERRIDES[track]?.description ?? fallback;
-}
 
 export function badgeDisplayName(badge: {
   track: string;

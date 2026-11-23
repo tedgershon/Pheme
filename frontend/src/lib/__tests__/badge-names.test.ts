@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  badgeDisplayName,
-  trackDescription,
-  trackDisplayName,
-} from "../badge-names";
+import { badgeDisplayName } from "../badge-names";
 
 describe("badgeDisplayName", () => {
   it.each([
@@ -18,6 +14,31 @@ describe("badgeDisplayName", () => {
     ).toBe(expected);
   });
 
+  it.each([
+    [
+      "degen",
+      "Crew Rookie",
+      "Hill Pusher",
+      "Lead Mechanic",
+      "Crew Captain",
+      "Sweepstakes Veteran",
+    ],
+    [
+      "whale",
+      "Stone Putter",
+      "Hammer Thrower",
+      "Weight Thrower",
+      "Caber Tosser",
+      "Highland Champion",
+    ],
+  ])("names all five tiers of the %s track", (track, ...names) => {
+    for (const [index, expected] of names.entries()) {
+      expect(
+        badgeDisplayName({ track, tier: index + 1, name: "Stored name" }),
+      ).toBe(expected);
+    }
+  });
+
   it("keeps the API name for other tracks and unknown tiers", () => {
     expect(
       badgeDisplayName({ track: "oracle", tier: 1, name: "Lucky Guess" }),
@@ -25,21 +46,5 @@ describe("badgeDisplayName", () => {
     expect(
       badgeDisplayName({ track: "banana_baron", tier: 6, name: "Custom" }),
     ).toBe("Custom");
-  });
-});
-
-describe("track overrides", () => {
-  it("renames the banana_baron track and its description", () => {
-    expect(trackDisplayName("banana_baron", "Stored track")).toBe(
-      "Tartan Pipes",
-    );
-    expect(trackDescription("banana_baron", "Stored description")).toBe(
-      "Earn your place in the pipe band by growing your Tartan Coin balance",
-    );
-  });
-
-  it("falls back to the API values for other tracks", () => {
-    expect(trackDisplayName("whale", "Whale")).toBe("Whale");
-    expect(trackDescription("whale", "Make waves")).toBe("Make waves");
   });
 });

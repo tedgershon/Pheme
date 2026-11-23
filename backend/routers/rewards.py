@@ -23,15 +23,15 @@ TRACK_META = {
     },
     "architect": {
         "display_name": "Architect",
-        "description": "Shape the platform by creating markets the community loves",
+        "description": "Create markets that earn approval",
     },
     "degen": {
-        "display_name": "Degen",
-        "description": "Go all-in by placing bets across markets of your choosing",
+        "display_name": "Buggy Crew",
+        "description": "Advance through the buggy crew with each bet you place",
     },
     "whale": {
-        "display_name": "Whale",
-        "description": "Make waves by placing massive single bets on the markets",
+        "display_name": "Highland Games",
+        "description": "Your largest single stake in Tartan Coins sets your Highland Games rank",
     },
 }
 

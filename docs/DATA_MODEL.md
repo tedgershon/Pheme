@@ -211,9 +211,9 @@ events are tracked in [#35](https://github.com/tedgershon/Pheme/issues/35).
 ### BadgeDefinition
 
 - `id` — UUID, PK
-- `track` — track name (`banana_baron`, `oracle`, `architect`, `degen`, `whale`)
+- `track` — stable identifier used for progress and equipped badges. The rewards API supplies the [display names](PROJECT_SPECS.md#rewards).
 - `tier` — 1–5
-- `name` — badge name (e.g., "Lucky Guess")
+- `name` — stored tier name (e.g., "Lucky Guess"). Rewards and leaderboard tooltips use the track and tier to display themed names for previously earned badges as well.
 - `description` — what the badge means
 - `threshold` — numeric threshold to earn this badge
 - `color` — hex color for badge display
@@ -227,7 +227,7 @@ Defines the badge system with 5 tracks and 5 tiers each (25 total badges)
 - `id` — UUID, PK
 - `user_id` — FK to `profiles`
 - `badge_id` — FK to `badge_definitions`
-- `track` — track name
+- `track` — same stable track identifier as the badge definition
 - `tier` — current tier (highest earned)
 - `earned_at` — timestamp
 - Unique constraint: `(user_id, track)` — one badge per track per user

@@ -114,6 +114,19 @@ Admin backroll cancels bets after a cutoff and refunds affected users through
 an RPC. Refunds adjust the matching binary or option pool. The bet-placement ledger remains an auditable participation record, so refunded bettors remain excluded from dispute voting while retaining permission to file disputes. It cannot operate on a resolved market. Resolved content is guarded
 against edits. See the SQL source for the currently implemented restrictions.
 
+## Rewards
+
+Each track has five tiers. Profiles retain the highest earned tier in each track
+and may equip badges for the leaderboard.
+
+| Track | Progress measure | Highest tier |
+| --- | --- | --- |
+| Tartan Pipes | Tartan Coin balance | Pipe Major |
+| Oracle | Correct predictions | Oracle |
+| Architect | Approved markets created | Architect |
+| Buggy Crew | Number of bets placed | Sweepstakes Veteran |
+| Highland Games | Largest single stake in Tartan Coins | Highland Champion |
+
 ## Supporting surfaces
 
 - Portfolio shows positions, transaction history and proposed-market sections.
@@ -122,8 +135,6 @@ against edits. See the SQL source for the currently implemented restrictions.
 - The leaderboard supports net-worth gain (balance plus unresolved stakes minus
   grants/claims) and a weekly payout-based view. Those measures are different;
   do not label gross payouts as net prediction returns.
-- Badge tracks are Tartan Pipes, Oracle, Architect, Degen and Whale, each with
-  five tiers. Store the highest earned tier per track; profiles may equip badges.
 - In-app notifications cover market review, closure and reminders through the
   menu. Full history, settlement/badge events and email delivery are tracked in
   [#34](https://github.com/tedgershon/Pheme/issues/34),

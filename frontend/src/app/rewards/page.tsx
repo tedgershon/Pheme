@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Check, Circle, Lock, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
-import { BadgeIcon } from "@/components/badge-icon";
+import { BadgeIcon, badgeEmoji } from "@/components/badge-icon";
 import {
   Card,
   CardContent,
@@ -12,11 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  badgeDisplayName,
-  trackDescription,
-  trackDisplayName,
-} from "@/lib/badge-names";
+import { badgeDisplayName } from "@/lib/badge-names";
 import { useUpdateProfile } from "@/lib/query/mutations/auth";
 import { useMe } from "@/lib/query/queries/auth";
 import { rewardsQuery } from "@/lib/query/queries/rewards";
@@ -25,14 +21,6 @@ import type {
   RewardsResponse,
   TrackProgress,
 } from "@/lib/types";
-
-const TRACK_ICONS: Record<string, string> = {
-  banana_baron: "🪙",
-  oracle: "🔮",
-  architect: "🏗️",
-  degen: "🎲",
-  whale: "🐋",
-};
 
 function normalizeEquippedBadges(
   source: EquippedBadgesMap | null | undefined,
@@ -73,7 +61,7 @@ function TrackCard({
   isSaving: boolean;
   onEquip: (track: string, badgeId: string | null) => void;
 }) {
-  const icon = TRACK_ICONS[track.track] ?? "🏆";
+  const icon = badgeEmoji(track.track);
   const valueTier = track.tiers.reduce((bestTier, tier) => {
     if (track.current_value >= tier.threshold) {
       return Math.max(bestTier, tier.tier);
@@ -106,13 +94,11 @@ function TrackCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <span>{icon}</span>
-          {trackDisplayName(track.track, track.track_display_name)}
+          {track.track_display_name}
         </CardTitle>
-        <CardDescription>
-          {trackDescription(track.track, track.track_description)}
-        </CardDescription>
+        <CardDescription>{track.track_description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {nextTierDef ? (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-sm">
@@ -138,7 +124,7 @@ function TrackCard({
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {track.tiers.map((tier) => {
             const isEarned = tier.tier <= effectiveTier;
             const isNext = tier.tier === effectiveTier + 1;
@@ -157,7 +143,7 @@ function TrackCard({
                 key={tier.id}
                 disabled={!canCardEquip}
                 onClick={activateCardEquip}
-                className={`grid w-full min-h-24 grid-cols-[auto_auto_1fr_auto] items-center gap-3 rounded-lg border px-3 py-2 text-left ${
+                className={`grid w-full min-h-14 grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border px-3 py-2 text-left ${
                   isEquipped
                     ? "border-green-500 bg-green-500/10"
                     : canCardEquip
@@ -208,7 +194,7 @@ function TrackCard({
                     </p>
                   )}
                 </div>
-                <div className="flex w-24 justify-end">
+                <div className="flex justify-end">
                   {isEarned ? (
                     <span
                       className={
@@ -301,7 +287,7 @@ export default function RewardsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <section className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">Rewards</h1>
         <p className="text-sm text-muted-foreground">
@@ -314,7 +300,7 @@ export default function RewardsPage() {
           <Spinner className="size-6" />
         </div>
       ) : data ? (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid items-start gap-3 md:grid-cols-2">
           {data.tracks.map((track) => (
             <TrackCard
               key={track.track}
