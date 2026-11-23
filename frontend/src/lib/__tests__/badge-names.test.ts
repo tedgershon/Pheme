@@ -15,27 +15,11 @@ describe("badgeDisplayName", () => {
   });
 
   it.each([
-    [
-      "degen",
-      "Crew Rookie",
-      "Hill Pusher",
-      "Lead Mechanic",
-      "Crew Captain",
-      "Sweepstakes Veteran",
-    ],
-    [
-      "whale",
-      "Stone Putter",
-      "Hammer Thrower",
-      "Weight Thrower",
-      "Caber Tosser",
-      "Highland Champion",
-    ],
-  ])("names all five tiers of the %s track", (track, ...names) => {
-    for (const [index, expected] of names.entries()) {
-      expect(
-        badgeDisplayName({ track, tier: index + 1, name: "Stored name" }),
-      ).toBe(expected);
+    ["degen", "Casual Better", "Regular", "Enthusiast", "Addicted", "Degen"],
+    ["whale", "Small Fish", "Dolphin", "Shark", "Orca", "Whale"],
+  ])("displays the original %s badges", (track, ...names) => {
+    for (const [index, name] of names.entries()) {
+      expect(badgeDisplayName({ track, tier: index + 1, name })).toBe(name);
     }
   });
 

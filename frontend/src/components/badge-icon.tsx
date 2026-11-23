@@ -4,8 +4,8 @@ const TRACK_EMOJIS: Record<string, string> = {
   banana_baron: "🪙",
   oracle: "🔮",
   architect: "🏗️",
-  degen: "🏁",
-  whale: "🏋️",
+  degen: "🎲",
+  whale: "🐋",
 };
 
 export function badgeEmoji(track: string): string {

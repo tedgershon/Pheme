@@ -124,8 +124,8 @@ and may equip badges for the leaderboard.
 | Tartan Pipes | Tartan Coin balance | Pipe Major |
 | Oracle | Correct predictions | Oracle |
 | Architect | Approved markets created | Architect |
-| Buggy Crew | Number of bets placed | Sweepstakes Veteran |
-| Highland Games | Largest single stake in Tartan Coins | Highland Champion |
+| Degen | Number of bets placed | Degen |
+| Whale | Largest single stake in Tartan Coins | Whale |
 
 ## Supporting surfaces
 

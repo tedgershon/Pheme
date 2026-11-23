@@ -26,12 +26,12 @@ TRACK_META = {
         "description": "Create markets that earn approval",
     },
     "degen": {
-        "display_name": "Buggy Crew",
-        "description": "Advance through the buggy crew with each bet you place",
+        "display_name": "Degen",
+        "description": "Go all-in by placing bets across markets of your choosing",
     },
     "whale": {
-        "display_name": "Highland Games",
-        "description": "Your largest single stake in Tartan Coins sets your Highland Games rank",
+        "display_name": "Whale",
+        "description": "Make waves by placing massive single bets on the markets",
     },
 }
 
