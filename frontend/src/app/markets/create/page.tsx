@@ -521,7 +521,7 @@ export default function CreateMarketPage() {
 
           {/* Admin-only fields */}
           <FormSection title="Review Information" note="(Admin Only)">
-            <div className="flex items-start gap-2 rounded-md bg-primary/10 px-3 py-2 text-xs text-primary-foreground">
+            <div className="flex items-start gap-2 rounded-md bg-brand-tint px-3 py-2 text-xs text-brand-tint-foreground">
               <Info className="mt-0.5 size-3.5 shrink-0" />
               These fields will be reviewed by admins and are not publicly
               displayed.

@@ -3,7 +3,8 @@
 const TRACK_OVERRIDES: Record<string, { name: string; description: string }> = {
   banana_baron: {
     name: "Tartan Pipes",
-    description: "Earn your place in the pipe band by growing your Tartan Coin balance",
+    description:
+      "Earn your place in the pipe band by growing your Tartan Coin balance",
   },
 };
 

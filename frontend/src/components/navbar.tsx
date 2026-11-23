@@ -49,9 +49,9 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-primary/25 hover:text-primary-foreground",
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-brand-tint hover:text-brand-tint-foreground",
                   pathname === link.href
-                    ? "text-foreground"
+                    ? "text-primary"
                     : "text-nav-muted-foreground",
                 )}
               >
