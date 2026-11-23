@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { parseApiError } from "@/lib/api";
 import {
   useDeleteNotification,
   useMarkNotificationsRead,
@@ -39,8 +40,16 @@ function timeAgo(iso: string): string {
 
 export function NotificationsMenu() {
   const [open, setOpen] = useState(false);
+  // The latest failed action. The menu holds it, not the row, so it survives
+  // the list refetch that runs before the mutation reports its failure.
+  const [error, setError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  useClickOutside(menuRef, () => setOpen(false));
+
+  function setMenuOpen(next: boolean) {
+    setOpen(next);
+    if (!next) setError(null);
+  }
+  useClickOutside(menuRef, () => setMenuOpen(false));
 
   const { data: unread } = useQuery(unreadCountQuery());
   const unreadCount = unread?.count ?? 0;
@@ -56,14 +65,21 @@ export function NotificationsMenu() {
   // auto-mark on open: clears the unread badge as soon as the user sees the list
   // biome-ignore lint/correctness/useExhaustiveDependencies: only fire on open edge
   useEffect(() => {
-    if (open && unreadCount > 0) markAll.mutate();
+    if (open && unreadCount > 0) {
+      markAll.mutate(undefined, {
+        onError: (err) =>
+          setError(
+            parseApiError(err, "Could not mark notifications as read.").message,
+          ),
+      });
+    }
   }, [open]);
 
   return (
     <div ref={menuRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => setMenuOpen(!open)}
         aria-label={
           unreadCount > 0
             ? `Notifications, ${unreadCount} unread`
@@ -87,6 +103,15 @@ export function NotificationsMenu() {
           <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
             <p className="text-sm font-semibold">Notifications</p>
           </div>
+
+          {error && (
+            <p
+              role="alert"
+              className="border-b border-border px-4 py-2 text-xs text-danger"
+            >
+              {error}
+            </p>
+          )}
 
           <div className="h-72 overflow-y-auto">
             {isLoading ? (
@@ -133,7 +158,16 @@ export function NotificationsMenu() {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          remove.mutate(n.id);
+                          setError(null);
+                          remove.mutate(n.id, {
+                            onError: (err) =>
+                              setError(
+                                parseApiError(
+                                  err,
+                                  "Could not delete the notification.",
+                                ).message,
+                              ),
+                          });
                         }}
                       >
                         <Trash2 className="size-3.5" />
@@ -149,7 +183,7 @@ export function NotificationsMenu() {
                       {href ? (
                         <Link
                           href={href}
-                          onClick={() => setOpen(false)}
+                          onClick={() => setMenuOpen(false)}
                           className={itemClass}
                         >
                           {inner}
