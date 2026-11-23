@@ -7,6 +7,8 @@ in [frontend/README.md](../README.md#running-e2e-tests).
 - `fixtures.ts`, `global-setup.ts`, `support/`: harness and fixtures.
 - `smoke/`: one test per fixture.
 - `page-gating/`: [AUTHZ_MATRIX.md](../../docs/AUTHZ_MATRIX.md) section 5.
+- `controls/`: AUTHZ_MATRIX.md section 6 (control visibility), plus the
+  portfolio isolation check for gap B-2.
 
 ## Page gating
 
@@ -51,3 +53,32 @@ lets both signed-out and signed-in visitors reach its route handler.
 
 The matrix is the spec. If a page test fails, fix the code. Change a cell only
 as a deliberate policy change, and update AUTHZ_MATRIX.md in the same PR.
+
+## Controls
+
+`controls/` checks the section 6 tables: `market-detail.spec.ts` (6a),
+`global-nav.spec.ts` (6b) and `admin-pages.spec.ts` (6c). Each row's tests sit
+in `describeControl(section, rowName, ...)`, where `rowName` is the row's first
+cell without backticks. **Add a 6a–6c row and its `describeControl()` call
+together**: `coverage.spec.ts` fails when a row has no call, and a call whose
+name is not a row fails on its own.
+
+- `marketIn(state, setup)` (from `controls/market-states.ts`) builds a market in
+  `open`, `closed`, `resolved`, `proposed`, `disputed`, `community` or
+  `admin_review` state. Overlays come from real rows made through the API:
+  `bettors`, `refunded` (bet, then an admin backroll), `disputer`,
+  `disputeVoters` and `communityVoters`. Only closing, resolving and escalating
+  are direct writes, since no user API does them.
+- Every test first waits for text that only renders once the page knows the
+  viewer and the market state (a creator note, a "You voted" note, a sign-in
+  prompt). Only then does it assert `hidden`, so a half-loaded page cannot pass.
+- `expectCell(cell, ...locators)`: `visible` means rendered and enabled,
+  `disabled` means rendered with the `disabled` attribute, `hidden` means not
+  rendered.
+- Section 6d: hidden or disabled controls with a permission reason also call
+  the API as that viewer and assert the rejection status.
+- Clicks and typing can be lost before hydration. Tests that interact retry
+  inside `expect(...).toPass()`, and never click anything that changes data.
+
+`portfolio.spec.ts` seeds proposals by two accounts and checks that the user's
+portfolio page and its APIs show only the user's own.

@@ -111,9 +111,10 @@ and a production frontend build at it, and runs the Playwright suite in
 and server logs). It includes the page-gating tests generated from
 [AUTHZ_MATRIX.md](docs/AUTHZ_MATRIX.md) section 5. As with the API matrix, add
 a section 5 row and its `describePage()` call together; a coverage test fails
-otherwise (see [frontend/e2e/README.md](frontend/e2e/README.md)). Control and
-error-message coverage is planned in
-[#16–17](https://github.com/tedgershon/Pheme/issues/16). Optional schema
+otherwise (see [frontend/e2e/README.md](frontend/e2e/README.md)). The control
+tests cover section 6 the same way: add a 6a–6c row and its
+`describeControl()` call together. Error-message coverage is planned in
+[#17](https://github.com/tedgershon/Pheme/issues/17). Optional schema
 fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) is not in CI yet.
 
 ## 7. Commit, PR and squash-merge format
