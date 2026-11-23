@@ -90,8 +90,8 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Totals for users, markets by status, bananas traded and active
-                bets.
+                Totals for users, markets by status, Tartan Coins traded and
+                active bets.
               </p>
             </CardContent>
           </Card>

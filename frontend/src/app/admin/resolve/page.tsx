@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AdminDisputeSubmissions } from "@/components/admin-dispute-submissions";
-import { BananaCoin } from "@/components/banana-coin";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -205,7 +205,7 @@ function QueueItem({
           )}
           <dt className="text-muted-foreground">Total pool</dt>
           <dd className="inline-flex items-center gap-0.5 font-medium">
-            <BananaCoin size={14} />
+            <TartanCoin size={14} />
             {totalPool.toLocaleString()}
           </dd>
           {!isMultichoice && (

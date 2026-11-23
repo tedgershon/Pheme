@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PhemeMark } from "@/components/pheme-logo";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { parseApiError } from "@/lib/api";
@@ -61,10 +62,8 @@ export default function AuthPage() {
   return (
     <div className="mx-auto mt-16 max-w-md">
       <div className="mb-8 text-center">
-        <span className="text-4xl" role="img" aria-label="banana">
-          🍌
-        </span>
-        <h1 className="mt-2 text-2xl font-bold">Welcome to Pheme</h1>
+        <PhemeMark size={40} className="mx-auto" />
+        <h1 className="mt-3 text-2xl font-bold">Welcome to Pheme</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Sign in with your CMU Google account to start predicting
         </p>

@@ -20,13 +20,13 @@ const CLAIM = { method: "POST", path: "/api/auth/claim-daily" };
 async function openPortfolio(page: Page) {
   await page.goto("/portfolio");
   await expect(
-    page.getByRole("button", { name: /Daily Bananas/ }),
+    page.getByRole("button", { name: /Daily Tartan Coins/ }),
   ).toBeVisible();
 }
 
 function claim(page: Page) {
   return actAndAwaitResponse(page, CLAIM, async () => {
-    await page.getByRole("button", { name: /Daily Bananas/ }).click();
+    await page.getByRole("button", { name: /Daily Tartan Coins/ }).click();
   });
 }
 

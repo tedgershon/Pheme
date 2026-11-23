@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { BananaCoin } from "@/components/banana-coin";
 import {
   DisputeConcernForm,
   PublicDisputeSubmissions,
@@ -23,6 +22,7 @@ import {
   MultiProbabilityChart,
   ProbabilityChart,
 } from "@/components/probability-chart";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -327,7 +327,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
       return null;
     }
     if (amount > user.banana_balance) {
-      setBetError("Insufficient banana balance.");
+      setBetError("Insufficient Tartan Coin balance.");
       return null;
     }
     return amount;
@@ -377,7 +377,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
         },
       });
       setBackrollResult(
-        `Backroll complete: ${result.bets_cancelled} bet(s) cancelled, ${result.total_refunded} banana(s) refunded.`,
+        `Backroll complete: ${result.bets_cancelled} bet(s) cancelled, ${result.total_refunded} Tartan Coin(s) refunded.`,
       );
     } catch (err) {
       setBackrollError(parseApiError(err, "Backroll failed.").message);
@@ -710,7 +710,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                 <dd className="font-medium">{closesAt}</dd>
                 <dt className="text-muted-foreground">Total Pool</dt>
                 <dd className="inline-flex items-center gap-0.5 font-medium">
-                  <BananaCoin size={14} />
+                  <TartanCoin size={14} />
                   {isMultichoice
                     ? mcTotalPool.toLocaleString()
                     : total.toLocaleString()}
@@ -747,7 +747,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                           {opt.label}
                         </span>
                         <span className="inline-flex items-center gap-1 text-sm font-medium">
-                          <BananaCoin size={14} />
+                          <TartanCoin size={14} />
                           {opt.pool_total.toLocaleString()}
                           <span className="text-xs text-muted-foreground">
                             ({getOptionPct(opt)}%)
@@ -760,12 +760,12 @@ export default function MarketDetailClient({ id }: { id: string }) {
                   <>
                     <dt className="text-muted-foreground">Yes Pool</dt>
                     <dd className="inline-flex items-center gap-0.5 font-medium text-success">
-                      <BananaCoin size={14} />
+                      <TartanCoin size={14} />
                       {market.yes_pool_total.toLocaleString()}
                     </dd>
                     <dt className="text-muted-foreground">No Pool</dt>
                     <dd className="inline-flex items-center gap-0.5 font-medium text-danger">
-                      <BananaCoin size={14} />
+                      <TartanCoin size={14} />
                       {market.no_pool_total.toLocaleString()}
                     </dd>
                   </>
@@ -774,7 +774,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                   <>
                     <dt className="text-muted-foreground">Voter Reward Pool</dt>
                     <dd className="inline-flex items-center gap-0.5 font-medium">
-                      <BananaCoin size={14} />
+                      <TartanCoin size={14} />
                       {voterRewardPool.toLocaleString()}
                     </dd>
                   </>
@@ -833,7 +833,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                 ) : isMultichoice ? (
                   <>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      Your balance: <BananaCoin size={12} />
+                      Your balance: <TartanCoin size={12} />
                       <span className="font-medium text-foreground">
                         {user.banana_balance.toLocaleString()}
                       </span>
@@ -929,7 +929,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                 ) : (
                   <>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      Your balance: <BananaCoin size={12} />
+                      Your balance: <TartanCoin size={12} />
                       <span className="font-medium text-foreground">
                         {user.banana_balance.toLocaleString()}
                       </span>
@@ -1035,7 +1035,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                                 (communityTally.yes + communityTally.no),
                             ).toLocaleString()
                           : voterRewardPool.toLocaleString()}{" "}
-                        bananas for voting correctly
+                        Tartan Coins for voting correctly
                       </p>
 
                       {isDemo ? (
@@ -1336,7 +1336,7 @@ export default function MarketDetailClient({ id }: { id: string }) {
                         )}
                       </div>
                       <span className="inline-flex items-center gap-0.5 font-medium">
-                        <BananaCoin size={14} />
+                        <TartanCoin size={14} />
                         {bet.amount.toLocaleString()}
                       </span>
                     </div>

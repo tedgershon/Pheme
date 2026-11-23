@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
-import { BananaCoin } from "@/components/banana-coin";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -66,7 +66,7 @@ function RankedMarketList({ markets }: { markets: Market[] }) {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>{dominant.label}</span>
                   <span className="inline-flex items-center gap-0.5">
-                    <BananaCoin size={12} />
+                    <TartanCoin size={12} />
                     {volume.toLocaleString()} vol
                   </span>
                 </div>

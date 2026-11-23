@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { BananaCoin } from "@/components/banana-coin";
 import { getOptionColor } from "@/components/probability-chart";
+import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { calendarDaysUntilClose } from "@/lib/datetime";
@@ -138,7 +138,7 @@ export function MarketCard({ market }: { market: Market }) {
                         {optPct}%
                       </span>
                       <span className="inline-flex w-16 items-center justify-end gap-0.5 font-medium text-sm">
-                        <BananaCoin size={14} />
+                        <TartanCoin size={14} />
                         {opt.pool_total.toLocaleString()}
                       </span>
                     </div>
@@ -152,7 +152,7 @@ export function MarketCard({ market }: { market: Market }) {
               </div>
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-0.5">
-                  <BananaCoin size={14} />
+                  <TartanCoin size={14} />
                   {totalPool.toLocaleString()} pool
                 </span>
                 <span>{formatCloseDate(market.close_at)}</span>
@@ -201,7 +201,7 @@ export function MarketCard({ market }: { market: Market }) {
                   />
                 </div>
                 <span className="inline-flex w-20 items-center justify-end gap-0.5 font-medium text-success">
-                  <BananaCoin size={14} />
+                  <TartanCoin size={14} />
                   {market.yes_pool_total.toLocaleString()}
                 </span>
               </div>
@@ -214,14 +214,14 @@ export function MarketCard({ market }: { market: Market }) {
                   />
                 </div>
                 <span className="inline-flex w-20 items-center justify-end gap-0.5 font-medium text-danger">
-                  <BananaCoin size={14} />
+                  <TartanCoin size={14} />
                   {market.no_pool_total.toLocaleString()}
                 </span>
               </div>
             </div>
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-0.5">
-                <BananaCoin size={14} />
+                <TartanCoin size={14} />
                 {total.toLocaleString()} pool
               </span>
               <span>{formatCloseDate(market.close_at)}</span>

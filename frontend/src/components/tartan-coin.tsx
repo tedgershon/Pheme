@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-export function BananaCoin({
+export function TartanCoin({
   size = 16,
   className,
 }: {
@@ -11,7 +11,7 @@ export function BananaCoin({
   return (
     <Image
       src="/assets/bananacoin.webp"
-      alt="banana coin"
+      alt="Tartan Coin"
       width={size}
       height={size}
       className={cn("inline-block", className)}
