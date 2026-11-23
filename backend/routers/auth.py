@@ -254,7 +254,7 @@ async def claim_daily_bananas(
     current_user: Annotated[dict, Depends(get_current_user)],
     supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
-    """Claim daily bananas (up to 1000, capped at 5000 balance)."""
+    """Claim daily Tartan Coins (up to 1000, capped at 5000 balance)."""
     try:
         result = supabase.rpc("claim_daily_bananas", {
             "p_user_id": current_user["id"],

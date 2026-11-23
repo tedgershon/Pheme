@@ -10,7 +10,7 @@ export function TartanCoin({
 }) {
   return (
     <Image
-      src="/assets/bananacoin.webp"
+      src="/assets/tartan-coin.svg"
       alt="Tartan Coin"
       width={size}
       height={size}

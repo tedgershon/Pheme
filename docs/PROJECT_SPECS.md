@@ -1,7 +1,7 @@
 # Pheme product and architecture
 
 Pheme lets the CMU community propose and trade on campus prediction markets
-using free virtual banana currency. The currency has no purchase, sale or
+using free virtual Tartan Coins. The currency has no purchase, sale or
 cash-out path. Pool shares indicate participation, not guaranteed forecasts.
 
 ## Architecture
@@ -35,7 +35,7 @@ user until they exit, reload or sign out, while the server keeps using their
 real role. See
 [AUTHZ_MATRIX.md](AUTHZ_MATRIX.md) for the intended permissions and known gaps.
 
-The initial grant is 1,000 bananas. A user can claim once per
+The initial grant is 1,000 Tartan Coins. A user can claim once per
 `America/New_York` calendar day when spendable balance is below 5,000. The
 amount is `min(1000, 5000 - banana_balance)`; active stakes do not count toward
 that cap. Bets, claims, refunds and payouts must update balances and ledger
@@ -122,7 +122,7 @@ against edits. See the SQL source for the currently implemented restrictions.
 - The leaderboard supports net-worth gain (balance plus unresolved stakes minus
   grants/claims) and a weekly payout-based view. Those measures are different;
   do not label gross payouts as net prediction returns.
-- Badge tracks are Banana Baron, Oracle, Architect, Degen and Whale, each with
+- Badge tracks are Tartan Pipes, Oracle, Architect, Degen and Whale, each with
   five tiers. Store the highest earned tier per track; profiles may equip badges.
 - In-app notifications cover market review, closure and reminders through the
   menu. Full history, settlement/badge events and email delivery are tracked in

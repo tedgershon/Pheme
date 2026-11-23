@@ -1,21 +1,19 @@
-// Pheme display names for badge tracks and tiers. The database and API keep
-// the original BananaGains names (and the `banana_baron` track id); the UI
-// shows these instead. Anything not listed falls back to the API value.
+// Map stable track and tier IDs to display names, including previously earned badges.
 
 const TRACK_OVERRIDES: Record<string, { name: string; description: string }> = {
   banana_baron: {
-    name: "Baron",
-    description: "Build your Tartan Coin fortune by growing your balance",
+    name: "Tartan Pipes",
+    description: "Earn your place in the pipe band by growing your Tartan Coin balance",
   },
 };
 
 const TIER_NAMES: Record<string, Record<number, string>> = {
   banana_baron: {
-    1: "Sprout",
-    2: "Saver",
-    3: "Tycoon",
-    4: "Mogul",
-    5: "Baron",
+    1: "Chanter Novice",
+    2: "Apprentice Piper",
+    3: "Tartan Piper",
+    4: "Pipe Sergeant",
+    5: "Pipe Major",
   },
 };
 
