@@ -40,7 +40,7 @@ export function Navbar() {
               width={52}
               height={34}
               priority
-              className="h-[34px] w-auto"
+              className="h-[34px] w-auto dark:brightness-0 dark:invert"
             />
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">
