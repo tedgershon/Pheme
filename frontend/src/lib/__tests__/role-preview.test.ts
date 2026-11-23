@@ -14,7 +14,7 @@ const PROFILE: UserProfile = {
   id: "11111111-1111-1111-1111-111111111111",
   andrew_id: "someone",
   display_name: "Some One",
-  banana_balance: 2500,
+  tartan_coin_balance: 2500,
   claim_eligible: true,
   claim_amount: 1000,
   equipped_badge_id: "badge-1",

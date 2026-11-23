@@ -19,7 +19,7 @@ from routers import admin, auth, bets, markets, resolution
 RPC_CASES = {
     "backroll": (admin, "/api/admin/markets/m1/backroll", {"cutoff_date": "2026-01-01T00:00:00Z"}, "admin_backroll_market", "Backroll failed."),
     "approve": (admin, "/api/admin/markets/m1/review", {"action": "approve"}, "approve_market", "Failed to approve market."),
-    "claim": (auth, "/api/auth/claim-daily", None, "claim_daily_bananas", "Failed to claim."),
+    "claim": (auth, "/api/auth/claim-daily", None, "claim_daily_tartan_coins", "Failed to claim."),
     "propose": (markets, "/api/markets/m1/resolve", {"outcome": "YES"}, "propose_resolution", "Failed to propose resolution."),
     "dispute_vote": (markets, "/api/markets/m1/dispute/vote", {"vote": "YES"}, "cast_dispute_vote", "Failed to cast vote."),
     "admin_resolve": (admin, "/api/admin/markets/m1/resolve", {"outcome": "YES"}, "admin_resolve_market", "Failed to resolve market."),
@@ -97,8 +97,8 @@ def test_expected_database_errors_keep_client_status(rpc_endpoint, code, message
     else:
         case.captured.assert_not_called()
     error_codes = {
-        ("claim_daily_bananas", "Already claimed today"): "CLAIM_ALREADY_TODAY",
-        ("claim_daily_bananas", "Balance is at or above the daily claim cap of 5000"): "CLAIM_AT_BALANCE_CAP",
+        ("claim_daily_tartan_coins", "Already claimed today"): "CLAIM_ALREADY_TODAY",
+        ("claim_daily_tartan_coins", "Balance is at or above the daily claim cap of 5000"): "CLAIM_AT_BALANCE_CAP",
         ("cast_community_vote", "Market is not in the resolution period"): "MARKET_NOT_PENDING_RESOLUTION",
         ("cast_community_vote", "Resolution voting window has expired"): "RESOLUTION_WINDOW_EXPIRED",
         ("cast_community_vote", "A database uniqueness constraint was violated"): "COMMUNITY_VOTE_DUPLICATE",

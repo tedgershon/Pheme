@@ -16,7 +16,7 @@ constraints and RPC definitions live in `supabase/migrations/`; read
 - `id` — UUID, PK, references `auth.users`
 - `andrew_id` — unique CMU Andrew ID
 - `display_name` — user's display name
-- `banana_balance` — current coin balance (excludes coins locked in active bets)
+- `tartan_coin_balance` — current coin balance (excludes coins locked in active bets)
 - `role` — `'user'`, `'admin'`, or `'super_admin'` (default: `'user'`)
 - `is_admin` — boolean, auto-synced from `role` for backward compatibility
 - `avatar_url` — optional profile image URL; uploads use the public `avatars` storage bucket under `<user id>/`. Removing a photo deletes that folder's files, then sets this to null so the initials fallback shows
@@ -211,9 +211,9 @@ events are tracked in [#35](https://github.com/tedgershon/Pheme/issues/35).
 ### BadgeDefinition
 
 - `id` — UUID, PK
-- `track` — track name (`banana_baron`, `oracle`, `architect`, `degen`, `whale`)
+- `track` — track key (`steel_baron`, `oracle`, `architect`, `degen`, or `whale`) used for progress and equipped badges. The rewards API supplies the [display names](PROJECT_SPECS.md#rewards).
 - `tier` — 1–5
-- `name` — badge name (e.g., "Banana Sprout")
+- `name` — stored tier name (e.g., "Lucky Guess"). Rewards and leaderboard tooltips display this name for both new and previously earned badges.
 - `description` — what the badge means
 - `threshold` — numeric threshold to earn this badge
 - `color` — hex color for badge display
@@ -227,7 +227,7 @@ Defines the badge system with 5 tracks and 5 tiers each (25 total badges)
 - `id` — UUID, PK
 - `user_id` — FK to `profiles`
 - `badge_id` — FK to `badge_definitions`
-- `track` — track name
+- `track` — same stable track identifier as the badge definition
 - `tier` — current tier (highest earned)
 - `earned_at` — timestamp
 - Unique constraint: `(user_id, track)` — one badge per track per user

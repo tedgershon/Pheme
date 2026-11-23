@@ -35,7 +35,7 @@ RESET ROLE;
 INSERT INTO private.signup_email_exceptions (email) VALUES ('operator@example.com');
 INSERT INTO auth.users (id, email, email_confirmed_at)
 VALUES ('81000000-0000-0000-0000-000000000002', 'Operator@example.com', now());
-SELECT pg_temp.assert((SELECT role = 'user' AND NOT is_admin AND banana_balance = 1000
+SELECT pg_temp.assert((SELECT role = 'user' AND NOT is_admin AND tartan_coin_balance = 1000
     FROM profiles WHERE id = '81000000-0000-0000-0000-000000000002'),
     'exception permits signup with ordinary role and a fresh wallet');
 SELECT pg_temp.assert((SELECT count(*) = 1 AND sum(amount) = 1000

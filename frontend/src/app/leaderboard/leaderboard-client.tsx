@@ -13,7 +13,7 @@ import type { LeaderboardEntry, UserBadge } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const TRACK_ORDER = [
-  "banana_baron",
+  "steel_baron",
   "oracle",
   "architect",
   "degen",

@@ -129,7 +129,7 @@ def disputed(creator="other", *, bettor=False, voted=False, submitted=False) -> 
 
 def balance(amount: float, inner: Setup) -> Setup:
     def setup(w: World) -> dict:
-        w.profile(w._role("self"))["banana_balance"] = amount
+        w.profile(w._role("self"))["tartan_coin_balance"] = amount
         return inner(w)
 
     return setup
@@ -486,7 +486,7 @@ def _admin_only(method, path, check=None):
 
 def _extra_target(w: World) -> dict:
     row = w.row("profiles", email="target@andrew.cmu.edu", andrew_id="target", display_name="Target",
-                banana_balance=1000, created_at="2026-01-01T00:00:00+00:00", role="user")
+                tartan_coin_balance=1000, created_at="2026-01-01T00:00:00+00:00", role="user")
     return {"user_id": row["id"]}
 
 

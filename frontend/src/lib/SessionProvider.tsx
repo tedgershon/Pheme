@@ -28,7 +28,7 @@ export const GUEST_USER: UserProfile = {
   id: "00000000-0000-0000-0000-000000000000",
   andrew_id: "",
   display_name: "Guest",
-  banana_balance: 0,
+  tartan_coin_balance: 0,
   created_at: new Date().toISOString(),
   claimed_today: false,
   role: "user",

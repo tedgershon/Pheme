@@ -48,7 +48,7 @@ def place_bet(db, p):
         raise sql_error("Market creators cannot place bets on their own markets")
     if market["status"] != "open":
         raise sql_error("Market is not open for betting")
-    balance = _find(db, "profiles", id=p["p_user_id"])["banana_balance"]
+    balance = _find(db, "profiles", id=p["p_user_id"])["tartan_coin_balance"]
     if balance < p["p_amount"]:
         raise sql_error("Insufficient balance")
     return {"bet_id": str(uuid4()), "new_balance": balance - p["p_amount"]}
@@ -69,7 +69,7 @@ def place_multichoice_bet(db, p):
         raise sql_error("Market is not multichoice")
     if p["p_user_id"] == market["creator_id"]:
         raise sql_error("Market creators cannot place bets on their own markets")
-    balance = _find(db, "profiles", id=p["p_user_id"])["banana_balance"]
+    balance = _find(db, "profiles", id=p["p_user_id"])["tartan_coin_balance"]
     if balance < p["p_amount"]:
         raise sql_error("Insufficient balance")
     return {"bet_id": str(uuid4()), "new_balance": balance - p["p_amount"]}
@@ -192,13 +192,13 @@ def approve_market(db, p):
     return {"market_id": market["id"], "status": "open"}
 
 
-def claim_daily_bananas(db, p):
+def claim_daily_tartan_coins(db, p):
     profile = _find(db, "profiles", id=p["p_user_id"])
     if _find(db, "transactions", user_id=p["p_user_id"], transaction_type="daily_claim"):
         raise sql_error("Already claimed today")
-    if profile["banana_balance"] >= CLAIM_CAP:
+    if profile["tartan_coin_balance"] >= CLAIM_CAP:
         raise sql_error("Balance is at or above the daily claim cap of 5000")
-    return {"new_balance": profile["banana_balance"] + 1000, "claimed_at": "2026-01-01T00:00:00+00:00"}
+    return {"new_balance": profile["tartan_coin_balance"] + 1000, "claimed_at": "2026-01-01T00:00:00+00:00"}
 
 
 def get_unread_notification_count(db, p):
@@ -229,7 +229,7 @@ RPC_HANDLERS = {
     "admin_resolve_market": admin_resolve_market,
     "admin_backroll_market": admin_backroll_market,
     "approve_market": approve_market,
-    "claim_daily_bananas": claim_daily_bananas,
+    "claim_daily_tartan_coins": claim_daily_tartan_coins,
     "get_unread_notification_count": get_unread_notification_count,
     "list_dispute_submissions": list_dispute_submissions,
     # Side-effect-only or aggregate reads the matrix does not assert on.

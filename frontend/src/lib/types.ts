@@ -22,7 +22,7 @@ export interface UserProfile {
   id: string;
   andrew_id: string;
   display_name: string;
-  banana_balance: number;
+  tartan_coin_balance: number;
   created_at: string;
   claimed_today: boolean;
   role: UserRole;
@@ -40,7 +40,7 @@ export interface AdminStats {
   users_by_role: Record<string, number>;
   total_markets: number;
   markets_by_status: Record<string, number>;
-  total_banana_traded: number;
+  total_tartan_coins_traded: number;
   total_active_bets: number;
 }
 
@@ -134,7 +134,7 @@ export interface LeaderboardEntry {
   id: string;
   andrew_id: string;
   display_name: string;
-  banana_balance: number;
+  tartan_coin_balance: number;
   gain: number;
   equipped_badge_id: string | null;
   equipped_badges: EquippedBadgesMap;
@@ -145,7 +145,7 @@ export interface WeeklyLeaderboardEntry {
   id: string;
   andrew_id: string;
   display_name: string;
-  banana_balance: number;
+  tartan_coin_balance: number;
   gains: number;
 }
 

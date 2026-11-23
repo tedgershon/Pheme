@@ -21,7 +21,7 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
  *     const me = await snapshotAndUpdate<UserProfile>(
  *       qc,
  *       queryKeys.me,
- *       (u) => u && { ...u, banana_balance: u.banana_balance - vars.amount },
+ *       (u) => u && { ...u, tartan_coin_balance: u.tartan_coin_balance - vars.amount },
  *     );
  *     return { rollbacks: [market.rollback, me.rollback] };
  *   },

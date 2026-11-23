@@ -12,6 +12,14 @@ VALUES ('60000000-0000-0000-0000-000000000001', 'Existing market', 'Preserve me'
     '50000000-0000-0000-0000-000000000001', now() + interval '1 day', 'Fixture', 'open');
 SELECT place_bet('50000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', 'YES', 100);
 SELECT claim_daily_bananas('50000000-0000-0000-0000-000000000002');
+-- A previously earned balance badge stays equipped even after the balance falls.
+INSERT INTO user_badges (user_id, badge_id, track, tier)
+SELECT '50000000-0000-0000-0000-000000000002', id, track, tier
+FROM badge_definitions WHERE track = 'banana_baron' AND tier = 2;
+UPDATE profiles SET equipped_badge_id = b.id,
+    equipped_badges = equipped_badges || jsonb_build_object(b.track, b.id)
+FROM badge_definitions b
+WHERE profiles.id = '50000000-0000-0000-0000-000000000002' AND b.track = 'banana_baron' AND b.tier = 2;
 INSERT INTO notifications (user_id, type, title, body, metadata) VALUES
     ('50000000-0000-0000-0000-000000000002', 'market_approved', 'Existing', 'Preserve me',
     '{"market_id": "60000000-0000-0000-0000-000000000001"}');

@@ -125,7 +125,7 @@ export default function PortfolioPage() {
               <span className="text-sm text-muted-foreground">Balance</span>
               <span className="flex items-center gap-1.5 text-lg font-bold">
                 <TartanCoin size={18} />
-                {user.banana_balance.toLocaleString()}
+                {user.tartan_coin_balance.toLocaleString()}
               </span>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
@@ -146,7 +146,7 @@ export default function PortfolioPage() {
                     {claimError}
                   </p>
                 )}
-                {user.claimed_today && user.banana_balance <= 5000 ? (
+                {user.claimed_today && user.tartan_coin_balance <= 5000 ? (
                   <p className="text-xs text-muted-foreground">
                     Claimed! Come back tomorrow.
                   </p>

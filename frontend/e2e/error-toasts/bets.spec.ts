@@ -34,7 +34,7 @@ function betYes(page: Page, amount: string) {
   });
 }
 
-test("BET_INSUFFICIENT_BALANCE → 'Insufficient banana balance.'", async ({
+test("BET_INSUFFICIENT_BALANCE → 'Insufficient Tartan Coin balance.'", async ({
   page,
   signInAs,
   seedMarket,
@@ -50,7 +50,7 @@ test("BET_INSUFFICIENT_BALANCE → 'Insufficient banana balance.'", async ({
   const response = await betYes(page, "10");
 
   expect(response.status()).toBe(409);
-  await expectSafeMessage(page, "Insufficient banana balance.");
+  await expectSafeMessage(page, "Insufficient Tartan Coin balance.");
 });
 
 test("BET_INVALID_AMOUNT → 'Bet amount must be positive.'", async ({

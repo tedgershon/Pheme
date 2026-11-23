@@ -1,12 +1,16 @@
 "use client";
 
 const TRACK_EMOJIS: Record<string, string> = {
-  banana_baron: "🪙",
+  steel_baron: "🪙",
   oracle: "🔮",
   architect: "🏗️",
   degen: "🎲",
   whale: "🐋",
 };
+
+export function badgeEmoji(track: string): string {
+  return TRACK_EMOJIS[track] ?? "🏆";
+}
 
 interface BadgeIconProps {
   track: string;
@@ -23,7 +27,7 @@ export function BadgeIcon({
   earned,
   size = 28,
 }: BadgeIconProps) {
-  const emoji = TRACK_EMOJIS[track] ?? "🏆";
+  const emoji = badgeEmoji(track);
   const fill = earned ? color : "var(--color-muted)";
   const emojiSize = size * 0.4;
 

@@ -17,7 +17,7 @@ from supabase import Client
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-TRACK_KEYS = ("banana_baron", "oracle", "architect", "degen", "whale")
+TRACK_KEYS = ("steel_baron", "oracle", "architect", "degen", "whale")
 TRACK_SET = set(TRACK_KEYS)
 MAX_DISPLAY_NAME_LENGTH = 32
 DISPLAY_NAME_ALLOWED_RE = re.compile(r"^[A-Za-z0-9 ._-]+$")
@@ -250,13 +250,13 @@ async def update_profile(
 
 
 @router.post("/claim-daily", response_model=ClaimResponse)
-async def claim_daily_bananas(
+async def claim_daily_tartan_coins(
     current_user: Annotated[dict, Depends(get_current_user)],
     supabase: Annotated[Client, Depends(get_supabase_client)],
 ):
-    """Claim daily bananas (up to 1000, capped at 5000 balance)."""
+    """Claim daily Tartan Coins (up to 1000, capped at 5000 balance)."""
     try:
-        result = supabase.rpc("claim_daily_bananas", {
+        result = supabase.rpc("claim_daily_tartan_coins", {
             "p_user_id": current_user["id"],
         }).execute()
         return result.data

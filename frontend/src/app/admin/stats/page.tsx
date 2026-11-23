@@ -122,7 +122,7 @@ export default function AdminStatsPage() {
           <CardContent>
             <div className="flex items-center gap-2 text-3xl font-bold">
               <TartanCoin size={28} />
-              {stats.total_banana_traded.toLocaleString()}
+              {stats.total_tartan_coins_traded.toLocaleString()}
             </div>
           </CardContent>
         </Card>

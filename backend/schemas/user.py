@@ -7,7 +7,7 @@ class UserProfileResponse(BaseModel):
     id: str
     andrew_id: str
     display_name: str
-    banana_balance: float
+    tartan_coin_balance: float
     created_at: datetime
     claimed_today: bool = False
     role: str = "user"
@@ -36,7 +36,7 @@ class LeaderboardEntry(BaseModel):
     id: str
     andrew_id: str
     display_name: str
-    banana_balance: float
+    tartan_coin_balance: float
     gain: float
     equipped_badge_id: str | None = None
     equipped_badges: dict[str, str] = Field(default_factory=dict)

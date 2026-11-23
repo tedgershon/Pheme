@@ -40,7 +40,7 @@ npx --no-install supabase migration list --local
 Use only the timestamped files in `supabase/migrations/`. All three versions
 listed in [MIGRATIONS.md](MIGRATIONS.md) must be recorded. There are no seeded
 users, markets, balances or privileged accounts. New signups receive the normal
-1,000-banana grant and matching ledger entry through the database trigger.
+1,000-coin grant and matching ledger entry through the database trigger.
 
 Ports 45320–45329 avoid the default range reserved on the development Windows
 machine. Studio is `http://127.0.0.1:45323`, the API is
@@ -104,7 +104,7 @@ base stack and CI can run without an OAuth client.
 
 Visit `/auth` and sign in with the intended Andrew account. Verify the callback
 returns to the app, refreshing retains the session, the account has one profile,
-and its initial balance and ledger grant are both 1,000 bananas.
+and its initial balance and ledger grant are both 1,000 Tartan Coins.
 
 ## Operator signup exception and initial super-admin
 

@@ -38,7 +38,7 @@ SELECT place_bet('10000000-0000-0000-0000-000000000002', '20000000-0000-0000-000
 SELECT place_bet('10000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 'NO', 200);
 SELECT pg_temp.reject($q$SELECT place_bet('10000000-0000-0000-0000-000000000002',
     '20000000-0000-0000-0000-000000000001', 'YES', 10000)$q$, 'Insufficient balance');
-SELECT pg_temp.assert((SELECT banana_balance = 900 FROM profiles WHERE id = '10000000-0000-0000-0000-000000000002'),
+SELECT pg_temp.assert((SELECT tartan_coin_balance = 900 FROM profiles WHERE id = '10000000-0000-0000-0000-000000000002'),
     'failed bet does not debit');
 SELECT pg_temp.assert((SELECT sum(amount) = -300 FROM transactions WHERE market_id = '20000000-0000-0000-0000-000000000001'),
     'bets have ledger entries');
@@ -50,7 +50,7 @@ SELECT pg_temp.assert((SELECT status = 'pending_resolution' AND dispute_deadline
 -- Simulate the backend invoking settlement after the dispute window expires.
 UPDATE markets SET dispute_deadline = now() - interval '1 second' WHERE id = '20000000-0000-0000-0000-000000000001';
 SELECT finalize_resolution('20000000-0000-0000-0000-000000000001', 'YES');
-SELECT pg_temp.assert((SELECT banana_balance = 1200 FROM profiles WHERE id = '10000000-0000-0000-0000-000000000002'),
+SELECT pg_temp.assert((SELECT tartan_coin_balance = 1200 FROM profiles WHERE id = '10000000-0000-0000-0000-000000000002'),
     'binary payout');
 SELECT pg_temp.reject($q$SELECT finalize_resolution('20000000-0000-0000-0000-000000000001', 'YES')$q$,
     'cannot be finalized');
@@ -70,25 +70,25 @@ SELECT cast_community_vote('20000000-0000-0000-0000-000000000002', '10000000-000
 UPDATE markets SET status = 'pending_resolution', resolution_window_end = now() - interval '1 second'
     WHERE id = '20000000-0000-0000-0000-000000000002';
 SELECT resolve_multichoice_market('20000000-0000-0000-0000-000000000002', ARRAY['30000000-0000-0000-0000-000000000001']::uuid[]);
-SELECT pg_temp.assert((SELECT banana_balance = 1300 FROM profiles WHERE id = '10000000-0000-0000-0000-000000000002'),
+SELECT pg_temp.assert((SELECT tartan_coin_balance = 1300 FROM profiles WHERE id = '10000000-0000-0000-0000-000000000002'),
     'option bet and payout');
 SELECT pg_temp.assert((SELECT sum(amount) = 0 FROM transactions WHERE market_id IN (
     '20000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002')), 'settlement conserves ledger');
 
-SELECT claim_daily_bananas('10000000-0000-0000-0000-000000000002');
-SELECT pg_temp.reject($q$SELECT claim_daily_bananas('10000000-0000-0000-0000-000000000002')$q$, 'Already claimed today');
-SELECT pg_temp.assert((SELECT banana_balance = 2300 FROM profiles WHERE id = '10000000-0000-0000-0000-000000000002'),
+SELECT claim_daily_tartan_coins('10000000-0000-0000-0000-000000000002');
+SELECT pg_temp.reject($q$SELECT claim_daily_tartan_coins('10000000-0000-0000-0000-000000000002')$q$, 'Already claimed today');
+SELECT pg_temp.assert((SELECT tartan_coin_balance = 2300 FROM profiles WHERE id = '10000000-0000-0000-0000-000000000002'),
     'claim and rejected repeat are atomic');
 SELECT pg_temp.reject($q$INSERT INTO transactions (user_id, transaction_type, amount) VALUES
     ('10000000-0000-0000-0000-000000000002', 'daily_claim', 1)$q$, 'idx_unique_daily_claim');
 -- Controlled balance fixture for the cap boundary, rolled back with this test.
-UPDATE profiles SET banana_balance = 4500 WHERE id = '10000000-0000-0000-0000-000000000004';
-SELECT pg_temp.assert((claim_daily_bananas('10000000-0000-0000-0000-000000000004')->>'claimed_amount')::numeric = 500,
+UPDATE profiles SET tartan_coin_balance = 4500 WHERE id = '10000000-0000-0000-0000-000000000004';
+SELECT pg_temp.assert((claim_daily_tartan_coins('10000000-0000-0000-0000-000000000004')->>'claimed_amount')::numeric = 500,
     'claim stops at the 5000 cap');
 SELECT pg_temp.assert((check_claim_eligibility('10000000-0000-0000-0000-000000000004')->>'eligible')::boolean = false,
     'cap and claimed eligibility');
-UPDATE profiles SET banana_balance = 5000 WHERE id = '10000000-0000-0000-0000-000000000003';
-SELECT pg_temp.reject($q$SELECT claim_daily_bananas('10000000-0000-0000-0000-000000000003')$q$, 'daily claim cap');
+UPDATE profiles SET tartan_coin_balance = 5000 WHERE id = '10000000-0000-0000-0000-000000000003';
+SELECT pg_temp.reject($q$SELECT claim_daily_tartan_coins('10000000-0000-0000-0000-000000000003')$q$, 'daily claim cap');
 INSERT INTO transactions (user_id, transaction_type, amount, created_at) VALUES
     ('10000000-0000-0000-0000-000000000001', 'daily_claim', 1, '2020-01-01 04:30:00+00'),
     ('10000000-0000-0000-0000-000000000001', 'daily_claim', 1, '2020-01-01 05:30:00+00');
@@ -97,8 +97,23 @@ SELECT pg_temp.reject($q$INSERT INTO transactions (user_id, transaction_type, am
     'idx_unique_daily_claim');
 SELECT pg_temp.assert((SELECT gain = 300 FROM get_networth_leaderboard(100)
     WHERE id = '10000000-0000-0000-0000-000000000002'), 'net worth subtracts grants and claims');
-SELECT * FROM get_gains_leaderboard(NULL, 10);
-SELECT * FROM get_user_badge_stats('10000000-0000-0000-0000-000000000002');
+SELECT tartan_coin_balance FROM get_gains_leaderboard(NULL, 10);
+SELECT pg_temp.assert((SELECT steel_baron = 2300 FROM
+    get_user_badge_stats('10000000-0000-0000-0000-000000000002')), 'Steel Baron measures wallet balance');
+SELECT pg_temp.assert((SELECT array_agg(name ORDER BY tier) =
+    ARRAY['Mill Apprentice','Steelworker','Mill Foreman','Mill Owner','Steel Baron']
+    AND array_agg(threshold ORDER BY tier) = ARRAY[5000,7500,10000,20000,50000]::numeric[]
+    FROM badge_definitions WHERE track = 'steel_baron'), 'Steel Baron ranks and thresholds');
+SELECT pg_temp.assert((SELECT array_agg(name ORDER BY tier) =
+    ARRAY['Casual Better','Regular','Enthusiast','Addicted','Degen']
+    FROM badge_definitions WHERE track = 'degen'), 'original Degen badges');
+SELECT pg_temp.assert((SELECT array_agg(name ORDER BY tier) =
+    ARRAY['Small Fish','Dolphin','Shark','Orca','Whale']
+    FROM badge_definitions WHERE track = 'whale'), 'original Whale badges');
+SELECT check_and_award_badges('10000000-0000-0000-0000-000000000003');
+SELECT pg_temp.assert(EXISTS (SELECT 1 FROM user_badges u JOIN badge_definitions b ON b.id = u.badge_id
+    WHERE u.user_id = '10000000-0000-0000-0000-000000000003' AND u.track = 'steel_baron'
+      AND u.tier = 1 AND b.name = 'Mill Apprentice'), 'first Steel Baron badge earned at 5000');
 SELECT check_and_award_badges('10000000-0000-0000-0000-000000000002');
 UPDATE profiles SET avatar_url = 'https://example.com/avatar.png', equipped_badges = '{"oracle": "fixture"}'
     WHERE id = '10000000-0000-0000-0000-000000000002';

@@ -97,7 +97,7 @@ async def get_stats(
         .eq("transaction_type", "bet_placement")
         .execute()
     )
-    total_banana_traded = sum(abs(row["amount"]) for row in (txn_data.data or []))
+    total_tartan_coins_traded = sum(abs(row["amount"]) for row in (txn_data.data or []))
 
     active_statuses = ("open", "closed", "pending_resolution", "disputed")
     bets_data = (
@@ -113,7 +113,7 @@ async def get_stats(
         users_by_role=users_by_role,
         total_markets=total_markets,
         markets_by_status=markets_by_status,
-        total_banana_traded=total_banana_traded,
+        total_tartan_coins_traded=total_tartan_coins_traded,
         total_active_bets=total_active_bets,
     )
 

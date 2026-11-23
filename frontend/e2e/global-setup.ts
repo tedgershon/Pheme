@@ -33,7 +33,7 @@ async function provision(role: Role) {
   // Roles and balances are setup state, written directly.
   const { error: profileError } = await serviceClient()
     .from("profiles")
-    .update({ role, banana_balance: FIXTURE_BALANCE })
+    .update({ role, tartan_coin_balance: FIXTURE_BALANCE })
     .eq("id", id);
   if (profileError) {
     throw new Error(

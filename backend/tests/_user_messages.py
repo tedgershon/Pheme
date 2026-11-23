@@ -20,7 +20,7 @@ USER_FACING_MESSAGES = {
     "ADMIN_CANNOT_CHANGE_OWN_ROLE": "Cannot change your own role.",
     "ADMIN_REQUIRED": "Admin access required.",
     "ADMIN_RESOLUTION_CREATOR_RESTRICTED": "You cannot resolve a market you created.",
-    "BET_INSUFFICIENT_BALANCE": "Insufficient banana balance.",
+    "BET_INSUFFICIENT_BALANCE": "Insufficient Tartan Coin balance.",
     "BET_INVALID_AMOUNT": "Bet amount must be positive.",
     "CLAIM_ALREADY_TODAY": "Already claimed today.",
     "CLAIM_AT_BALANCE_CAP": "Balance is at or above the 5,000 coin daily claim cap.",

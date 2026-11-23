@@ -25,7 +25,11 @@ export function usePlaceBet(marketId: string) {
       const me = await snapshotAndUpdate<UserProfile>(
         qc,
         queryKeys.me,
-        (u) => u && { ...u, banana_balance: u.banana_balance - vars.amount },
+        (u) =>
+          u && {
+            ...u,
+            tartan_coin_balance: u.tartan_coin_balance - vars.amount,
+          },
       );
       return { rollbacks: [market.rollback, me.rollback] };
     },
@@ -66,7 +70,11 @@ export function usePlaceMultichoiceBet(marketId: string) {
       const me = await snapshotAndUpdate<UserProfile>(
         qc,
         queryKeys.me,
-        (u) => u && { ...u, banana_balance: u.banana_balance - vars.amount },
+        (u) =>
+          u && {
+            ...u,
+            tartan_coin_balance: u.tartan_coin_balance - vars.amount,
+          },
       );
       return { rollbacks: [market.rollback, me.rollback] };
     },

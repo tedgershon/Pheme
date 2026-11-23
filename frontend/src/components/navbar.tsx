@@ -25,8 +25,8 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-nav-background">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        <div className="flex items-center gap-8">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
+        <div className="flex items-center gap-3 md:gap-6">
           <Link
             href="/"
             aria-label="Pheme at Carnegie Mellon University, home"
@@ -40,7 +40,7 @@ export function Navbar() {
               width={52}
               height={34}
               priority
-              className="h-[34px] w-auto"
+              className="h-[34px] w-auto dark:brightness-0 dark:invert"
             />
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">
@@ -49,9 +49,9 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-primary/25 hover:text-primary-foreground",
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-brand-tint hover:text-brand-tint-foreground",
                   pathname === link.href
-                    ? "text-foreground"
+                    ? "text-brand-tint-foreground"
                     : "text-nav-muted-foreground",
                 )}
               >
@@ -60,7 +60,7 @@ export function Navbar() {
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           {!isDemo && (
             <>
               <Link
@@ -71,7 +71,7 @@ export function Navbar() {
                 )}
               >
                 <TartanCoin size={16} />
-                <span>{user.banana_balance.toLocaleString()}</span>
+                <span>{user.tartan_coin_balance.toLocaleString()}</span>
               </Link>
               <NotificationsMenu />
               <Link

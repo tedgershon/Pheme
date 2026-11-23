@@ -5,10 +5,12 @@ application .env files or accepts a remote database URL. The only reset target
 is the harness-owned project `pheme-issue36` in `.migration-test/`.
 """
 
+import json
 import re
 import shutil
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
+from decimal import Decimal
 from pathlib import Path
 
 from governance_concurrency import verify as verify_governance_concurrency
@@ -114,10 +116,11 @@ def catalog():
     )
 
 
-def preserved_rows():
-    return psql("""
+def preserved_rows(*, legacy=False):
+    snapshot = psql("""
         SELECT jsonb_build_object(
             'profiles', (SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM profiles p),
+            'badges', (SELECT jsonb_agg(to_jsonb(b) ORDER BY id) FROM user_badges b),
             'markets', (SELECT jsonb_agg(to_jsonb(m) ORDER BY id) FROM markets m),
             'disputes', (SELECT jsonb_agg(to_jsonb(d) ORDER BY id) FROM disputes d),
             'bets', (SELECT jsonb_agg(to_jsonb(b) ORDER BY id) FROM bets b),
@@ -125,6 +128,17 @@ def preserved_rows():
             'notifications', (SELECT jsonb_agg(to_jsonb(n) - 'market_id' ORDER BY id) FROM notifications n)
         );
     """)
+    rows = json.loads(snapshot, parse_float=Decimal)
+    if legacy:
+        for profile in rows['profiles']:
+            profile['tartan_coin_balance'] = profile.pop('banana_balance')
+            equipped = profile['equipped_badges']
+            if 'banana_baron' in equipped:
+                equipped['steel_baron'] = equipped.pop('banana_baron')
+        for badge in rows['badges']:
+            if badge['track'] == 'banana_baron':
+                badge['track'] = 'steel_baron'
+    return rows
 
 
 def verify():
@@ -172,7 +186,7 @@ def verify():
                 "-v",
                 "ON_ERROR_STOP=1",
             ],
-            input=f"SELECT claim_daily_bananas('{user}');",
+            input=f"SELECT claim_daily_tartan_coins('{user}');",
             text=True,
             capture_output=True,
             check=False,
@@ -183,7 +197,7 @@ def verify():
 
     with ThreadPoolExecutor(max_workers=6) as pool:
         assert sum(pool.map(claim, range(6))) == 1
-    assert psql(f"SELECT banana_balance FROM profiles WHERE id = '{user}'") == "2000"
+    assert psql(f"SELECT tartan_coin_balance FROM profiles WHERE id = '{user}'") == "2000"
     assert (
         psql(
             f"SELECT count(*) FROM transactions WHERE user_id = '{user}' AND transaction_type = 'daily_claim'"
@@ -283,7 +297,7 @@ def main():
         if patched:
             # Existing deployments may have any subset of the later fixes.
             psql("BEGIN;\n" + REPAIR.read_text(encoding="utf-8") + "\nCOMMIT;")
-        before = preserved_rows()
+        before = preserved_rows(legacy=True)
         # Unsupported schemas must fail before recording any adopted version.
         psql("ALTER TABLE profiles ADD COLUMN unexpected_drift text;")
         error = psql(read_sql("scripts/db/adopt_legacy.sql"), fail=True)

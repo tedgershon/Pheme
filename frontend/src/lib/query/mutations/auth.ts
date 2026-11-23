@@ -19,7 +19,7 @@ export function useClaimDaily() {
         u
           ? {
               ...u,
-              banana_balance: res.new_balance,
+              tartan_coin_balance: res.new_balance,
               claimed_today: true,
               claim_eligible: false,
             }
