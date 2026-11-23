@@ -52,12 +52,25 @@ function getReviewerName(market: Market & Record<string, unknown>): string {
   return reviewer?.andrew_id ?? "—";
 }
 
-interface ReviewPanelProps {
-  market: Market & Record<string, unknown>;
-  onAction: () => void;
+/**
+ * A failed review action. The page holds it, not the row: the mutation reports
+ * its failure only after the queue refetch, which may already have removed the
+ * market (another admin reviewed it) and unmounted its ReviewPanel.
+ */
+interface ReviewActionError {
+  marketId: string;
+  title: string;
+  message: string;
 }
 
-function ReviewPanel({ market, onAction }: ReviewPanelProps) {
+interface ReviewPanelProps {
+  market: Market & Record<string, unknown>;
+  error: string | null;
+  onAction: () => void;
+  onError: (error: ReviewActionError | null) => void;
+}
+
+function ReviewPanel({ market, error, onAction, onError }: ReviewPanelProps) {
   const review = useReviewMarket();
   const [title, setTitle] = useState(market.title);
   const [description, setDescription] = useState(market.description);
@@ -71,7 +84,6 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
   const [link, setLink] = useState(market.link ?? "");
   const [notes, setNotes] = useState("");
   const [notesError, setNotesError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
 
   const prefix = `review-${market.id}`;
   const inputClass =
@@ -79,7 +91,7 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
 
   async function handleAction(action: "approve" | "deny") {
     setNotesError(null);
-    setActionError(null);
+    onError(null);
 
     if (action === "deny" && !notes.trim()) {
       setNotesError("Notes are required when denying a market.");
@@ -108,7 +120,11 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
       });
       onAction();
     } catch (err) {
-      setActionError(parseApiError(err, "Action failed.").message);
+      onError({
+        marketId: market.id,
+        title: market.title,
+        message: parseApiError(err, "Action failed.").message,
+      });
     }
   }
 
@@ -289,9 +305,9 @@ function ReviewPanel({ market, onAction }: ReviewPanelProps) {
           />
         </div>
 
-        {actionError && (
+        {error && (
           <p role="alert" className="text-sm text-danger">
-            {actionError}
+            {error}
           </p>
         )}
 
@@ -450,6 +466,9 @@ function AdminReviewPageContent() {
   });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [appliedDeepLink, setAppliedDeepLink] = useState(false);
+  const [actionError, setActionError] = useState<ReviewActionError | null>(
+    null,
+  );
 
   useEffect(() => {
     if (user.role === "user") {
@@ -498,6 +517,12 @@ function AdminReviewPageContent() {
   const pending = data?.pending ?? [];
   const approved = data?.approved ?? [];
   const denied = data?.denied ?? [];
+  // Shown in the market's panel while it is still pending, and at the top of
+  // the page once the refetch has taken it out of the queue.
+  const orphanedError =
+    actionError && !pending.some((m) => m.id === actionError.marketId)
+      ? actionError
+      : null;
 
   function handleAction() {
     setExpandedId(null);
@@ -567,7 +592,16 @@ function AdminReviewPageContent() {
               </button>
               {isExpanded &&
                 (mode === "review" ? (
-                  <ReviewPanel market={m} onAction={handleAction} />
+                  <ReviewPanel
+                    market={m}
+                    error={
+                      actionError?.marketId === market.id
+                        ? actionError.message
+                        : null
+                    }
+                    onAction={handleAction}
+                    onError={setActionError}
+                  />
                 ) : (
                   <DetailPanel market={m} />
                 ))}
@@ -601,6 +635,17 @@ function AdminReviewPageContent() {
           Refresh
         </Button>
       </section>
+
+      {orphanedError && (
+        <div className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-2 text-sm">
+          <p className="font-medium">
+            Could not review &ldquo;{orphanedError.title}&rdquo;
+          </p>
+          <p role="alert" className="text-danger">
+            {orphanedError.message}
+          </p>
+        </div>
+      )}
 
       <div className="space-y-3">
         <AccordionSection

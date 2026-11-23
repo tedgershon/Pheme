@@ -79,19 +79,33 @@ function Field({
   );
 }
 
+/**
+ * A failed resolution. The page holds it, not the card: the mutation reports
+ * its failure only after the queue refetch, which may already have removed the
+ * market (another admin settled it) and unmounted its QueueItem.
+ */
+interface ResolveError {
+  marketId: string;
+  title: string;
+  message: string;
+}
+
 function QueueItem({
   item,
   currentUserId,
+  error,
   onResolved,
+  onError,
 }: {
   item: AdminReviewItem;
   currentUserId: string;
+  error: string | null;
   onResolved: (message: string) => void;
+  onError: (error: ResolveError | null) => void;
 }) {
   const { market } = item;
   const resolve = useAdminResolveMarket();
   const [pending, setPending] = useState<ResolvedOutcome | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const isMultichoice = market.market_type === "multichoice";
   const isOwnMarket = market.creator_id === currentUserId;
   const outcomes: ResolvedOutcome[] = isMultichoice
@@ -105,7 +119,7 @@ function QueueItem({
     if (!pending) return;
     const outcome = pending;
     setPending(null);
-    setError(null);
+    onError(null);
     try {
       const result = await resolve.mutateAsync({
         marketId: market.id,
@@ -117,7 +131,11 @@ function QueueItem({
           : `"${market.title}" resolved ${outcome}; payouts settled.`,
       );
     } catch (err) {
-      setError(parseApiError(err, "Failed to resolve market.").message);
+      onError({
+        marketId: market.id,
+        title: market.title,
+        message: parseApiError(err, "Failed to resolve market.").message,
+      });
     }
   }
 
@@ -306,6 +324,7 @@ export default function AdminResolutionQueuePage() {
   const router = useRouter();
   const { user } = useMe();
   const [notice, setNotice] = useState<string | null>(null);
+  const [resolveError, setResolveError] = useState<ResolveError | null>(null);
   const isAdmin = user.role === "admin" || user.role === "super_admin";
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     ...adminReviewQueueQuery(),
@@ -320,6 +339,13 @@ export default function AdminResolutionQueuePage() {
   if (!isAdmin) return null;
 
   const items = data ?? [];
+  // Shown on the market's card while it is still queued, and at the top of the
+  // page once the refetch has taken it out of the queue.
+  const orphanedError =
+    resolveError &&
+    !items.some((item) => item.market.id === resolveError.marketId)
+      ? resolveError
+      : null;
 
   return (
     <div className="space-y-5">
@@ -346,6 +372,17 @@ export default function AdminResolutionQueuePage() {
         <p className="rounded-lg border border-success/40 bg-success/10 px-4 py-2 text-sm text-success">
           {notice}
         </p>
+      )}
+
+      {orphanedError && (
+        <div className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-2 text-sm">
+          <p className="font-medium">
+            Could not resolve &ldquo;{orphanedError.title}&rdquo;
+          </p>
+          <p role="alert" className="text-danger">
+            {orphanedError.message}
+          </p>
+        </div>
       )}
 
       {isLoading ? (
@@ -379,7 +416,13 @@ export default function AdminResolutionQueuePage() {
               key={item.market.id}
               item={item}
               currentUserId={user.id}
+              error={
+                resolveError?.marketId === item.market.id
+                  ? resolveError.message
+                  : null
+              }
               onResolved={setNotice}
+              onError={setResolveError}
             />
           ))}
         </div>
