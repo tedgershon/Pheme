@@ -249,7 +249,11 @@ function QueueItem({
         )}
 
         <div className="space-y-2 border-t pt-3">
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          )}
           {isOwnMarket ? (
             <p className="text-sm italic text-muted-foreground">
               You created this market, so another admin must resolve it.

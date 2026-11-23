@@ -747,7 +747,9 @@ export default function CreateMarketPage() {
           </Card>
 
           {submitError && (
-            <p className="text-sm font-medium text-danger">{submitError}</p>
+            <p role="alert" className="text-sm font-medium text-danger">
+              {submitError}
+            </p>
           )}
 
           <Button
