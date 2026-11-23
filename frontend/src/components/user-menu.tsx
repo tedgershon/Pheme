@@ -2,6 +2,8 @@
 
 import {
   BarChart3,
+  Eye,
+  EyeOff,
   List,
   LogOut,
   Settings,
@@ -14,7 +16,9 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { useMe } from "@/lib/query/queries/auth";
+import { isAdminRole } from "@/lib/role-preview";
 import { useSession } from "@/lib/SessionProvider";
+import { useUiStore } from "@/lib/stores/uiStore";
 import { useClickOutside } from "@/lib/use-click-outside";
 import { cn } from "@/lib/utils";
 
@@ -27,13 +31,16 @@ const MENU_ITEMS = [
 
 export function UserMenu() {
   const { isDemo, signOut } = useSession();
-  const { user } = useMe();
+  const { user, actualRole, isPreviewing } = useMe();
+  const setRolePreview = useUiStore((s) => s.setRolePreview);
+  const clearRolePreview = useUiStore((s) => s.clearRolePreview);
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useClickOutside(menuRef, () => setOpen(false));
 
-  const isAdmin = user.role === "admin" || user.role === "super_admin";
+  // follows the role preview, so the badge and Admin Panel link hide with it
+  const isAdmin = isAdminRole(user.role);
 
   if (isDemo) {
     return (
@@ -138,6 +145,30 @@ export function UserMenu() {
                 <Settings size={16} className="text-muted-foreground" />
                 <span>Admin Panel</span>
               </Link>
+            )}
+            {/* Rendered from the real role so an admin can always end the preview. */}
+            {isAdminRole(actualRole) && (
+              <button
+                type="button"
+                aria-pressed={isPreviewing}
+                onClick={() => {
+                  setOpen(false);
+                  if (isPreviewing) clearRolePreview();
+                  else setRolePreview("user");
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-accent"
+              >
+                {isPreviewing ? (
+                  <EyeOff size={16} className="text-muted-foreground" />
+                ) : (
+                  <Eye size={16} className="text-muted-foreground" />
+                )}
+                <span>
+                  {isPreviewing
+                    ? "Role preview: on (viewing as user)"
+                    : "Role preview: view as user"}
+                </span>
+              </button>
             )}
           </div>
 
