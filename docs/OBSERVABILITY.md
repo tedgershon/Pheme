@@ -91,9 +91,10 @@ reported. The reported path omits the query string. `ApiError.requestId`
 exposes the ID to callers.
 
 `withSentryConfig` uploads source maps when `SENTRY_AUTH_TOKEN` is set at build
-time. Its organization/project default to `bananagains`/`bananagains-frontend`
-(service identifiers, not product copy) and can be overridden with
-`SENTRY_ORG`/`SENTRY_PROJECT`.
+time. Its organization/project default to `pheme-mh`/`pheme-frontend` and can
+be overridden with `SENTRY_ORG`/`SENTRY_PROJECT`. The organization also has a
+`pheme-backend` project; the backend reports through its own DSN and has no
+slug setting.
 
 ## Configuration
 

@@ -63,8 +63,8 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(nextConfig, {
   // Source-map upload target. Override with SENTRY_ORG / SENTRY_PROJECT when
   // the Sentry slugs differ; uploads also need SENTRY_AUTH_TOKEN at build time.
-  org: process.env.SENTRY_ORG ?? "bananagains",
-  project: process.env.SENTRY_PROJECT ?? "bananagains-frontend",
+  org: process.env.SENTRY_ORG ?? "pheme-mh",
+  project: process.env.SENTRY_PROJECT ?? "pheme-frontend",
   silent: !process.env.CI,
   widenClientFileUpload: true,
   disableLogger: true,
