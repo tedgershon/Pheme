@@ -64,7 +64,7 @@ export default function AuthPage() {
         <span className="text-4xl" role="img" aria-label="banana">
           🍌
         </span>
-        <h1 className="mt-2 text-2xl font-bold">Welcome to BananaGains</h1>
+        <h1 className="mt-2 text-2xl font-bold">Welcome to Pheme</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Sign in with your CMU Google account to start predicting
         </p>

@@ -25,7 +25,7 @@ init_observability()
 
 is_production = get_settings().sentry_environment == "production"
 app = FastAPI(
-    title="BananaGains API",
+    title="Pheme API",
     version="0.1.0",
     docs_url=None if is_production else "/docs",
     redoc_url=None if is_production else "/redoc",
@@ -83,7 +83,7 @@ app.include_router(rewards.router)
 
 @app.get("/")
 def health_check():
-    return {"status": "ok", "service": "bananagains-api"}
+    return {"status": "ok", "service": "pheme-api"}
 
 
 # Temporary smoke-test endpoint for verifying Sentry capture end-to-end.
