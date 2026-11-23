@@ -47,7 +47,7 @@ service role cannot write that list. Approved signups still receive only the
 
 ### Role-preview override (admin tooling)
 
-Admins can use the role-preview toggle to *render the UI as if* they were `user`. **This is presentation-only:** the backend still reads the actual profile role for authorization. The tables below describe intended page, control and API authorization; the role-preview toggle must not bypass server-side checks.
+A role-preview toggle is planned (not built yet; see §6b) that would let admins *render the UI as if* they were `user`. **It must be presentation-only:** the backend still reads the actual profile role for authorization. The tables below describe intended page, control and API authorization; the role-preview toggle must not bypass server-side checks.
 
 ---
 
@@ -156,8 +156,8 @@ Browser tests in [`frontend/e2e/page-gating/`](../frontend/e2e/page-gating/)
 check every cell of this table for all five roles, including that each redirect
 is the server's first response ([#15](https://github.com/tedgershon/Pheme/issues/15)).
 They read the table from this file, so a new row needs a `describePage()` call
-there; a coverage test fails otherwise. Browser coverage of section 6 controls
-remains planned in #16.
+there; a coverage test fails otherwise. Section 6 controls have the same kind
+of browser coverage (§6d).
 
 ---
 
@@ -171,8 +171,8 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 
 | Control | `anon` / `demo` | `user` (no overlay) | `user+creator(M)` | `user+bettor(M)` | `admin` | `super_admin` |
 |---|---|---|---|---|---|---|
-| Place Bet (binary YES/NO) | `hidden` (sign-in CTA) | `visible` if `M.status='open'` else `disabled` | `hidden` (creators can't bet on own markets) | `visible` if `M.status='open'` | same as `user` | same as `user` |
-| Place Bet (multichoice) | `hidden` | `visible` if `M.status='open'` and option selected | `hidden` | `visible` | same as `user` | same as `user` |
+| Place Bet (binary YES/NO) | `hidden` (sign-in CTA) | `visible` if `M.status='open'`, else `hidden` (status note explains why betting stopped) | `hidden` (creators can't bet on own markets) | `visible` if `M.status='open'`, else `hidden` (status note) | same as `user` | same as `user` |
+| Place Bet (multichoice) | `hidden` | options `visible` if `M.status='open'` (Confirm Bet once one is selected), else `hidden` (status note) | `hidden` | `visible` if `M.status='open'` | same as `user` | same as `user` |
 | Propose Resolution (YES / NO) | `hidden` | `hidden` | `visible` if `M.status='closed'` | `hidden` | same creator restriction | same creator restriction |
 | Start Community Resolution | `hidden` | `hidden` | `visible` if `M.status='closed'` | `hidden` | same creator restriction | same creator restriction |
 | Submit Dispute / Concern | `hidden` (sign-in note) | `visible` if proposal and dispute window active, or `M.status='disputed'`, voting not ended and not `submitter(D)` | `hidden` (explanatory note instead) | same as `user` (active and refunded bettors may submit) | same as `user` | same as `user` |
@@ -188,8 +188,8 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | Sign In button | `visible` | `hidden` | `hidden` | `hidden` |
 | Profile dropdown | `hidden` | `visible` | `visible` | `visible` |
 | Notification bell | `hidden` | `visible` | `visible` | `visible` |
-| "Admin" nav link | `hidden` | `hidden` | `visible` | `visible` |
-| Role-preview toggle | `hidden` | `hidden` | `visible` | `visible` |
+| "Admin Panel" menu link | `hidden` | `hidden` | `visible` (in the account dropdown) | `visible` |
+| Role-preview toggle (planned) | `hidden` | `hidden` | `visible` | `visible` |
 
 ### 6c. Admin pages
 
@@ -202,9 +202,9 @@ Only mutating or context-conditional controls are listed. Read-only sections (pr
 | `/admin` dashboard card "Manage User Roles" | n/a | `hidden` | `visible` |
 | Approve Market button (`/admin/review`) | n/a (page redirects) | `visible` for `pending_review` markets | `visible` |
 | Deny Market button (`/admin/review`) | n/a | `visible` for `pending_review` markets | `visible` |
-| Resolve as YES / NO / AMBIGUOUS buttons (`/admin/resolve`) | n/a | `visible` for `admin_review` markets; AMBIGUOUS only for multichoice; `hidden` on markets the admin created | same as `admin` |
+| Resolve as YES / NO / AMBIGUOUS buttons (`/admin/resolve`) | n/a | `visible` for `admin_review` markets; multichoice markets show only AMBIGUOUS; `hidden` on markets the admin created | same as `admin` |
 | Search Users input (`/admin/users`) | n/a | `hidden` (page redirects) | `visible` |
-| Promote/Demote User (`/admin/users`) | n/a | `hidden` | `visible`, but `disabled` for self |
+| Promote/Demote User (`/admin/users`) | n/a | `hidden` | `visible` on `user` and `admin` rows; `hidden` on `super_admin` rows, including self (the API also refuses a self change) |
 
 **Dashboard card count by role** (codifies the "4 cards for admin / 5 cards for super_admin" target shape, ordered the way a market moves):
 
@@ -216,6 +216,15 @@ The dashboard renders these counts.
 ### 6d. Defense-in-depth requirement
 
 Every permission-based hidden mutation must also be rejected by the API for that role/context. State-invalid actions may return 400/409 instead. UI hiding is not an authorization boundary. Matrix-driven API coverage runs in CI: each cell of section 7 is a test (`backend/tests/_matrix_cells.py`), and a route without a cell fails `test_route_coverage.py`. Those tests check the HTTP layer; SQL enforcement is covered by the disposable-database suite.
+
+Browser tests in [`frontend/e2e/controls/`](../frontend/e2e/controls/) check
+the 6a, 6b and 6c rows per role, overlay (creator, active and refunded bettor,
+submitter, voter) and market state, including admins acting as creators and
+bettors ([#16](https://github.com/tedgershon/Pheme/issues/16)). Hidden controls
+with a permission reason are paired with the API call they would make, which
+must be rejected. Each row's tests sit in a `describeControl()` call named after
+the row; a coverage test fails when a row has none. The planned role-preview
+toggle row is `test.fixme` until the toggle exists.
 
 ---
 
@@ -469,14 +478,17 @@ Likewise, UI redirect destinations do not conceal the existence of route URLs.
    [#12](https://github.com/tedgershon/Pheme/issues/12)): add the section 7 row
    and its cell in `backend/tests/_matrix_cells.py` together. Optional schema
    fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) and browser
-   coverage of controls and error messages
-   ([#16–17](https://github.com/tedgershon/Pheme/issues/16)) are planned; do
-   not describe them as existing enforcement.
+   coverage of error messages ([#17](https://github.com/tedgershon/Pheme/issues/17))
+   are planned; do not describe them as existing enforcement.
 6. Page coverage exists ([#15](https://github.com/tedgershon/Pheme/issues/15)):
    the Playwright page-gating tests read section 5 directly. Add a row and its
    `describePage()` call in `frontend/e2e/page-gating/` together; the coverage
    test fails when either is missing. If a page test fails, fix the code; change
    a cell only as a deliberate policy change.
+7. Control coverage exists ([#16](https://github.com/tedgershon/Pheme/issues/16)):
+   add a 6a, 6b or 6c row and a `describeControl()` call with the same name in
+   `frontend/e2e/controls/` together. The same rule applies: fix the code, or
+   change the cell deliberately.
 
 ## 10. Related contracts
 
@@ -496,6 +508,16 @@ Community rewards require a matching atomic settlement receipt; direct calls can
 
 ## Changelog
 
+- #16: section 6 is executable as the Playwright control suite with a
+  row-coverage guard. Cells changed: binary and multichoice Place Bet on a
+  market that is not open is `hidden` with a status note (was `disabled`, which
+  the page never rendered); the "Admin" nav link row is the "Admin Panel" link
+  in the account dropdown; the role-preview toggle is marked planned (it was
+  never built); the Promote/Demote cell says super-admin rows, including self,
+  have no button (was "`disabled` for self"); the AMBIGUOUS wording now says
+  multichoice markets show only AMBIGUOUS. Fixed along the way: a dispute vote
+  answered `500` after it was recorded, and a `user` creator could not start
+  community resolution (`500`).
 - #15: section 5 is executable as the Playwright page-gating suite with a
   row-coverage guard. No cells changed.
 - #12: section 7 is executable as `MATRIX_CELLS` with a route-coverage guard.
