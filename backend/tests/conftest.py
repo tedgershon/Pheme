@@ -311,7 +311,11 @@ def seed_bet(fixture_database):
 
 @pytest.fixture
 def sentry_events():
-    """Exercise the real SDK without sending events to an external service."""
+    """Exercise the real SDK without sending events to an external service.
+
+    Uses the production options (integrations, scrubber, hooks) so duplicate
+    captures and scrubbing behave as deployed; only the transport differs.
+    """
     events = []
 
     class MemoryTransport(observability.sentry_sdk.transport.Transport):
@@ -325,7 +329,7 @@ def sentry_events():
         transport=MemoryTransport,
         default_integrations=False,
         auto_enabling_integrations=False,
-        before_send=observability._before_send,
+        **observability.sentry_options(environment="test", release="test", traces_sample_rate=0.0),
     )
     with observability.sentry_sdk.isolation_scope() as scope:
         scope.set_client(client)

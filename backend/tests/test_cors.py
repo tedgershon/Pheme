@@ -52,6 +52,13 @@ def test_listed_origin_is_allowed_with_credentials():
     assert response.headers["access-control-allow-credentials"] == "true"
 
 
+def test_request_id_header_is_readable_by_the_browser():
+    response = _client(_settings()).get("/ping", headers={"Origin": FRONTEND})
+
+    assert response.headers["access-control-allow-origin"] == FRONTEND
+    assert response.headers["access-control-expose-headers"] == "x-request-id"
+
+
 def test_preview_origins_need_the_regex():
     preview = "https://pheme-git-feature-x-acme.vercel.app"
 

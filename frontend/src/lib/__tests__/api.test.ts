@@ -6,6 +6,9 @@ import {
   parseApiError,
 } from "../api";
 
+const { captureException } = vi.hoisted(() => ({ captureException: vi.fn() }));
+
+vi.mock("@sentry/nextjs", () => ({ captureException }));
 vi.mock("../supabase", () => ({ supabase: null }));
 
 describe("ApiError", () => {
@@ -211,7 +214,10 @@ describe("parseApiError", () => {
 });
 
 describe("ApiError through the fetch helper", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    captureException.mockClear();
+  });
 
   it("surfaces an envelope message through an existing API call", async () => {
     const raw = JSON.stringify({
@@ -239,5 +245,54 @@ describe("ApiError through the fetch helper", () => {
     );
 
     await expect(listMarkets()).resolves.toEqual([]);
+  });
+
+  it("reports a server failure with the backend request ID", async () => {
+    const raw = JSON.stringify({
+      detail: { code: "INTERNAL_ERROR", message: "Internal server error." },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(raw, {
+          status: 500,
+          headers: { "x-request-id": "rid-123" },
+        }),
+      ),
+    );
+
+    const error = await listMarkets({ status: "open" }).catch((e) => e);
+
+    expect(error).toMatchObject({ status: 500, requestId: "rid-123" });
+    expect(captureException).toHaveBeenCalledTimes(1);
+    expect(captureException).toHaveBeenCalledWith(error, {
+      tags: {
+        error_code: "INTERNAL_ERROR",
+        http_status: "500",
+        request_id: "rid-123",
+      },
+      extra: { path: "/api/markets" },
+    });
+  });
+
+  it("does not report expected client errors", async () => {
+    const raw = JSON.stringify({
+      detail: { code: "MARKET_NOT_FOUND", message: "Market not found." },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(raw, {
+          status: 404,
+          headers: { "x-request-id": "rid-404" },
+        }),
+      ),
+    );
+
+    await expect(listMarkets()).rejects.toMatchObject({
+      status: 404,
+      requestId: "rid-404",
+    });
+    expect(captureException).not.toHaveBeenCalled();
   });
 });

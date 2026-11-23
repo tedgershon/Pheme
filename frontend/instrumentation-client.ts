@@ -1,3 +1,5 @@
+// Browser Sentry setup. Next.js loads this file in the browser; Turbopack
+// (the default bundler) ignores the older sentry.client.config.ts name.
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
@@ -20,3 +22,5 @@ Sentry.init({
     return event;
   },
 });
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
