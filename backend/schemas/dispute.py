@@ -71,12 +71,17 @@ class CastVoteRequest(BaseModel):
     vote: Literal["YES", "NO"]
 
 
-class VoteResponse(BaseModel):
+class CastVoteResponse(BaseModel):
+    """The vote cast_dispute_vote just recorded; the function returns no timestamp."""
+
     id: str
     dispute_id: str
     market_id: str
     voter_id: str
     selected_outcome: str
+
+
+class VoteResponse(CastVoteResponse):
     created_at: datetime
 
 

@@ -28,6 +28,15 @@ export type SeedMarketOptions = {
   creatorRole?: Role;
 } & Record<string, unknown>;
 
+/** A fixture account, or "anon" for a request without credentials. */
+export type Caller = Role | "anon";
+
+export interface ApiResult {
+  status: number;
+  // biome-ignore lint/suspicious/noExplicitAny: response bodies vary by route.
+  body: any;
+}
+
 export interface SeedBetOptions {
   role: Role;
   side: "YES" | "NO";
@@ -47,6 +56,31 @@ const MARKET_CHILD_TABLES = [
   "transactions",
   "notifications",
 ];
+
+/** One request to the API under test. Never throws on an error status. */
+async function callApi(
+  accessToken: string | null,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<ApiResult> {
+  const headers: Record<string, string> = {};
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const response = await fetch(`${process.env.E2E_API_URL}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const text = await response.text();
+  let parsed: unknown = text;
+  try {
+    parsed = text ? JSON.parse(text) : null;
+  } catch {
+    // Not JSON; keep the text.
+  }
+  return { status: response.status, body: parsed };
+}
 
 /** Reuses one Auth session per role per worker to stay under the sign-in rate limit. */
 class SessionCache {
@@ -125,6 +159,16 @@ interface Fixtures {
   seedMarket: (opts?: SeedMarketOptions) => Promise<SeededMarket>;
   /** Places a bet through the API, i.e. the transactional place_bet path. Returns the bet ID. */
   seedBet: (market: SeededMarket, opts: SeedBetOptions) => Promise<string>;
+  /**
+   * Calls the API as a fixture account, or anonymously. Returns the status and
+   * parsed body without throwing, so tests can assert rejections.
+   */
+  apiAs: (
+    caller: Caller,
+    method: string,
+    path: string,
+    body?: unknown,
+  ) => Promise<ApiResult>;
   /** Writes a fixture profile's balance directly (setup only). */
   setBalance: (role: Role, amount: number) => Promise<void>;
   getBalance: (role: Role) => Promise<number>;
@@ -212,32 +256,33 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
     );
   },
 
-  seedBet: async ({ testData, sessions }, use) => {
+  seedBet: async ({ testData, apiAs }, use) => {
     await use(async (market, { role, side, amount = 10 }) => {
       if (!testData.marketIds.includes(market.id)) {
         throw new Error(
           "seedBet only bets on markets from seedMarket, so teardown can remove them",
         );
       }
-      const { accessToken } = await sessions.get(role);
-      const response = await fetch(
-        `${process.env.E2E_API_URL}/api/markets/${market.id}/bets`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ side, amount }),
-        },
+      const { status, body } = await apiAs(
+        role,
+        "POST",
+        `/api/markets/${market.id}/bets`,
+        { side, amount },
       );
-      if (!response.ok) {
+      if (status !== 201) {
         throw new Error(
-          `seedBet failed: HTTP ${response.status} ${await response.text()}`,
+          `seedBet failed: HTTP ${status} ${JSON.stringify(body)}`,
         );
       }
-      const body = await response.json();
       return body.bet_id as string;
+    });
+  },
+
+  apiAs: async ({ sessions }, use) => {
+    await use(async (caller, method, path, body) => {
+      const token =
+        caller === "anon" ? null : (await sessions.get(caller)).accessToken;
+      return callApi(token, method, path, body);
     });
   },
 

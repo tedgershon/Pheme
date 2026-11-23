@@ -108,6 +108,9 @@ Write tests with the fixtures from `e2e/fixtures.ts`. Import `test` and
   balances, pools and the ledger change transactionally.
 - `setBalance(role, amount)` and `getBalance(role)` write and read a fixture
   balance directly.
+- `apiAs(caller, method, path, body?)` calls the API as a fixture account or
+  `"anon"` and returns `{ status, body }` without throwing, for setup steps and
+  rejection checks.
 
 Global setup creates or repairs the three fixture accounts. They use the same
 UUIDs as the backend API fixtures (`backend/tests/fixture_identities.json`).
@@ -122,8 +125,9 @@ raw backend response bodies. See [OBSERVABILITY.md](../docs/OBSERVABILITY.md)
 for the error contract and Sentry configuration, and
 [AUTHZ_MATRIX.md](../docs/AUTHZ_MATRIX.md) for page/control policy.
 
-`pnpm e2e e2e/page-gating/` checks every page gate against the local stack
-(see [e2e/README.md](e2e/README.md)). To smoke-test page gates by hand against
+`pnpm e2e e2e/page-gating/` checks every page gate and `pnpm e2e e2e/controls/`
+every section 6 control against the local stack (see
+[e2e/README.md](e2e/README.md)). To smoke-test page gates by hand against
 another deployment, with the frontend and backend running:
 
 1. In a signed-out/private browser window, visit `/markets/create`, `/portfolio`,
