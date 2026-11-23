@@ -57,3 +57,14 @@ test("setBalance changes the balance the app shows", async ({
   await expect(page.getByRole("heading", { name: market.title })).toBeVisible();
   await expect(page.locator('header a[href="/portfolio"]')).toHaveText("0");
 });
+
+test("apiAs calls the API as a fixture account or anonymously", async ({
+  apiAs,
+}) => {
+  const me = await apiAs("admin", "GET", "/api/auth/me");
+  expect(me.status).toBe(200);
+  expect(me.body.role).toBe("admin");
+
+  const anon = await apiAs("anon", "GET", "/api/auth/me");
+  expect(anon.status).toBe(401);
+});
