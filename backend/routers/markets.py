@@ -18,6 +18,7 @@ from market_linter import lint_market_fields
 from observability import AppError, ErrorCode
 from schemas.dispute import (
     CastVoteRequest,
+    CastVoteResponse,
     DisputeEligibility,
     DisputeResponse,
     DisputeSubmissionList,
@@ -376,10 +377,14 @@ async def start_community_resolution(
             ).isoformat(),
         }
 
+        # Creators have no UPDATE policy on markets, so the checked transition is
+        # a trusted server write; the status guard keeps it from racing another.
+        state_client = get_supabase_service_client() or supabase
         updated = (
-            supabase.table("markets")
+            state_client.table("markets")
             .update(update_payload)
             .eq("id", market_id)
+            .eq("status", "closed")
             .execute()
         )
         if not updated.data:
@@ -540,7 +545,7 @@ async def get_dispute_eligibility(
     }
 
 
-@router.post("/{market_id}/dispute/vote", response_model=VoteResponse)
+@router.post("/{market_id}/dispute/vote", response_model=CastVoteResponse)
 async def cast_vote(
     market_id: str,
     body: CastVoteRequest,

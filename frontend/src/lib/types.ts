@@ -366,12 +366,16 @@ export interface DisputeEligibility {
   can_vote: boolean;
 }
 
-export interface VoteResponse {
+/** The vote just recorded by POST /dispute/vote, which returns no timestamp. */
+export interface CastVoteResponse {
   id: string;
   dispute_id: string;
   market_id: string;
   voter_id: string;
   selected_outcome: BetSide;
+}
+
+export interface VoteResponse extends CastVoteResponse {
   created_at: string;
 }
 

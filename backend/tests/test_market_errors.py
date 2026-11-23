@@ -29,6 +29,8 @@ def market_api(monkeypatch):
     query.execute.return_value = SimpleNamespace(data=None)
     normalize = Mock(return_value=None)
     monkeypatch.setattr(markets, "normalize_market_state", normalize)
+    # Tests opt in to a server-role client; none may reach a configured project.
+    monkeypatch.setattr(markets, "get_supabase_service_client", lambda: None)
     captured = Mock()
     monkeypatch.setattr(observability.sentry_sdk, "capture_exception", captured)
     app = FastAPI()
@@ -73,6 +75,36 @@ def test_community_resolution_errors_preserve_status(market_api, creator, status
     market_api.captured.assert_not_called()
     if expected != 500:
         market_api.supabase.table.return_value.update.assert_not_called()
+
+
+def test_community_resolution_start_is_a_guarded_server_write(market_api, monkeypatch):
+    """Creators have no UPDATE policy on markets, so the user-JWT client cannot
+    write the transition; the checked route writes it with the server client."""
+    service = Mock()
+    query = service.table.return_value
+    for method in ("update", "eq"):
+        getattr(query, method).return_value = query
+    started = {
+        "id": "m1", "title": "T", "description": "D", "creator_id": "u1",
+        "created_at": "2026-01-01T00:00:00+00:00", "close_at": "2026-01-02T00:00:00+00:00",
+        "status": "pending_resolution", "resolution_criteria": "R", "category": "General",
+        "yes_pool_total": 0, "no_pool_total": 0,
+    }
+    query.execute.return_value = SimpleNamespace(data=[started])
+    monkeypatch.setattr(markets, "get_supabase_service_client", lambda: service)
+    market_api.normalize.return_value = {"id": "m1", "creator_id": "u1", "status": "closed"}
+
+    response = market_api.client.post("/api/markets/m1/community-resolution")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "pending_resolution"
+    service.table.assert_called_once_with("markets")
+    payload = query.update.call_args.args[0]
+    assert payload["status"] == "pending_resolution"
+    assert payload["proposed_outcome"] is None
+    query.eq.assert_any_call("id", "m1")
+    query.eq.assert_any_call("status", "closed")
+    market_api.supabase.table.return_value.update.assert_not_called()
 
 
 @pytest.mark.parametrize("message,status,code,safe_message", [
