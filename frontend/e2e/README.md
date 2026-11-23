@@ -143,4 +143,3 @@ Known gaps these tests document rather than hide:
   and its message disappear. The test checks the response and that the row
   went.
 - `UNAUTHORIZED` is shown as text; the page does not send the user to `/auth`.
-
