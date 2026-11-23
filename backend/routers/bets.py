@@ -73,7 +73,7 @@ async def place_bet(
             raise AppError(
                 status.HTTP_409_CONFLICT,
                 ErrorCode.BET_INSUFFICIENT_BALANCE,
-                'Insufficient banana balance.',
+                'Insufficient Tartan Coin balance.',
                 original=exc,
                 extras={'market_id': market_id},
             ) from exc
@@ -165,7 +165,7 @@ async def place_multichoice_bet(
             raise AppError(
                 status.HTTP_409_CONFLICT,
                 ErrorCode.BET_INSUFFICIENT_BALANCE,
-                'Insufficient banana balance.',
+                'Insufficient Tartan Coin balance.',
                 original=exc,
                 extras={'market_id': market_id},
             ) from exc

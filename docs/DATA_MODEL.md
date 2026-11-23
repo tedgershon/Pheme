@@ -213,7 +213,7 @@ events are tracked in [#35](https://github.com/tedgershon/Pheme/issues/35).
 - `id` — UUID, PK
 - `track` — track name (`banana_baron`, `oracle`, `architect`, `degen`, `whale`)
 - `tier` — 1–5
-- `name` — badge name (e.g., "Banana Sprout")
+- `name` — badge name (e.g., "Lucky Guess")
 - `description` — what the badge means
 - `threshold` — numeric threshold to earn this badge
 - `color` — hex color for badge display

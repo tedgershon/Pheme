@@ -183,7 +183,7 @@ checking the expected email again before promotion. No passwords, access tokens,
 or user-specific approvals are committed. Signup approval and role promotion
 are separate actions; the role script refuses to replace another super-admin.
 
-Record real sign-in/callback success, confirmed profiles, one 1,000-banana initial
+Record real sign-in/callback success, confirmed profiles, one 1,000-coin initial
 grant per new user, ordinary/admin role separation, and successful admin/user
 management access. Read-only database checks corroborate browser results but
 do not replace them. Detailed operator evidence belongs in the setup issue.

@@ -14,8 +14,8 @@ router = APIRouter(prefix="/api", tags=["rewards"])
 
 TRACK_META = {
     "banana_baron": {
-        "display_name": "Banana Baron",
-        "description": "Grow your banana empire by accumulating coins in your balance",
+        "display_name": "Tartan Pipes",
+        "description": "Earn your place in the pipe band by growing your Tartan Coin balance",
     },
     "oracle": {
         "display_name": "Oracle",

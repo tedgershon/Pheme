@@ -1,7 +1,7 @@
 # Pheme
 
 Pheme is a prediction market for the CMU community. Users propose markets,
-trade with free virtual banana currency, and settle outcomes through creator
+trade with free virtual Tartan Coins, and settle outcomes through creator
 proposals, community voting and disputes. The currency cannot be purchased,
 sold or cashed out.
 

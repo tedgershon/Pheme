@@ -6,19 +6,16 @@ import {
 } from "../badge-names";
 
 describe("badgeDisplayName", () => {
-  it("renames every banana_baron tier regardless of the stored name", () => {
-    const stored = [
-      "Banana Sprout",
-      "Banana Tree",
-      "Banana Grove",
-      "Banana Mogul",
-      "Banana Baron",
-    ];
+  it.each([
+    [1, "Chanter Novice"],
+    [2, "Apprentice Piper"],
+    [3, "Tartan Piper"],
+    [4, "Pipe Sergeant"],
+    [5, "Pipe Major"],
+  ] as const)("displays tier %i as %s", (tier, expected) => {
     expect(
-      stored.map((name, i) =>
-        badgeDisplayName({ track: "banana_baron", tier: i + 1, name }),
-      ),
-    ).toEqual(["Sprout", "Saver", "Tycoon", "Mogul", "Baron"]);
+      badgeDisplayName({ track: "banana_baron", tier, name: "Stored name" }),
+    ).toBe(expected);
   });
 
   it("keeps the API name for other tracks and unknown tiers", () => {
@@ -33,9 +30,9 @@ describe("badgeDisplayName", () => {
 
 describe("track overrides", () => {
   it("renames the banana_baron track and its description", () => {
-    expect(trackDisplayName("banana_baron", "Banana Baron")).toBe("Baron");
-    expect(trackDescription("banana_baron", "Grow your banana empire")).toBe(
-      "Build your Tartan Coin fortune by growing your balance",
+    expect(trackDisplayName("banana_baron", "Stored track")).toBe("Tartan Pipes");
+    expect(trackDescription("banana_baron", "Stored description")).toBe(
+      "Earn your place in the pipe band by growing your Tartan Coin balance",
     );
   });
 
