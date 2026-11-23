@@ -145,7 +145,6 @@ def cast_dispute_vote(db, p):
         "market_id": market["id"],
         "voter_id": p["p_voter_id"],
         "selected_outcome": p["p_vote"],
-        "created_at": "2026-01-01T00:00:00+00:00",
     }
 
 

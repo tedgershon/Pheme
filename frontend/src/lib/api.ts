@@ -10,6 +10,7 @@ import type {
   BackrollResponse,
   Bet,
   CastVoteRequest,
+  CastVoteResponse,
   ClaimDailyResponse,
   CommunityVote,
   CreateMarketRequest,
@@ -383,7 +384,7 @@ export function getDisputeEligibility(
 export function castDisputeVote(
   marketId: string,
   body: CastVoteRequest,
-): Promise<VoteResponse> {
+): Promise<CastVoteResponse> {
   return apiFetch(`/api/markets/${marketId}/dispute/vote`, {
     method: "POST",
     body: JSON.stringify(body),

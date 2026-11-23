@@ -76,6 +76,7 @@ pnpm lint
 pnpm exec tsc --noEmit
 pnpm test
 pnpm build
+pnpm e2e   # needs Docker and the local Supabase stack; see frontend/README.md
 ```
 
 Use `pnpm format` for frontend formatting (Biome). For documentation-only
@@ -104,10 +105,17 @@ so a failing cell is named by method, path and role. These tests use an
 in-memory database that emulates stored-function preconditions; SQL behavior
 stays in the disposable-database suite above.
 
-Optional schema fuzzing and Playwright coverage are planned in
-[#13](https://github.com/tedgershon/Pheme/issues/13) and the
-[browser testing issues](https://github.com/tedgershon/Pheme/issues/14); they are
-not in CI yet.
+The `e2e` job starts a disposable local Supabase stack, points the backend
+and a production frontend build at it, and runs the Playwright suite in
+`frontend/e2e/`. On failure it uploads `playwright-report` (HTML report, traces
+and server logs). It includes the page-gating tests generated from
+[AUTHZ_MATRIX.md](docs/AUTHZ_MATRIX.md) section 5. As with the API matrix, add
+a section 5 row and its `describePage()` call together; a coverage test fails
+otherwise (see [frontend/e2e/README.md](frontend/e2e/README.md)). The control
+tests cover section 6 the same way: add a 6a–6c row and its
+`describeControl()` call together. Error-message coverage is planned in
+[#17](https://github.com/tedgershon/Pheme/issues/17). Optional schema
+fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) is not in CI yet.
 
 ## 7. Commit, PR and squash-merge format
 

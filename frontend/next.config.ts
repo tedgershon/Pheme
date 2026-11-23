@@ -15,6 +15,9 @@ function getSupabaseHostname() {
 const supabaseHostname = getSupabaseHostname();
 
 const nextConfig: NextConfig = {
+  // The browser suite's dev server uses its own directory so it can run beside
+  // `pnpm dev`, which locks the default one.
+  distDir: process.env.NEXT_DIST_DIR || undefined,
   turbopack: {
     root: process.cwd(),
   },
