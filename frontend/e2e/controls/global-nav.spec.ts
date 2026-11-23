@@ -117,20 +117,37 @@ describeControl("6b", '"Admin Panel" menu link', () => {
   }
 });
 
-describeControl("6b", "Role-preview toggle (planned)", () => {
-  // No role-preview toggle exists yet; the row is marked planned in the matrix.
-  // These document the intended cells and run once #76 builds the toggle.
+describeControl("6b", "Role-preview toggle", () => {
+  // The toggle lives in the account dropdown; anon has no dropdown at all.
+  // Its behavior (what a preview hides and keeps) is in role-preview.spec.ts.
+  const toggle = (page: Page) =>
+    page.getByRole("button", { name: /role preview/i });
+
+  test("anon → hidden", async ({ page, signInAs }) => {
+    await openShell(page, signInAs, "anon");
+    await expectCell("hidden", accountMenu(page), toggle(page));
+  });
+
   for (const [caller, cell] of [
     ["user", "hidden"],
     ["admin", "visible"],
     ["super_admin", "visible"],
   ] as const) {
-    test.fixme(`${caller} → ${cell}`, async ({ page, signInAs }) => {
+    test(`${caller} → ${cell} in the open account menu`, async ({
+      page,
+      signInAs,
+    }) => {
       await openShell(page, signInAs, caller);
-      await expectCell(
-        cell,
-        page.getByRole("button", { name: /role preview/i }),
-      );
+      // Profile is in every open menu, so it proves the menu rendered.
+      const profile = page.getByRole("link", { name: "Profile", exact: true });
+      await expect(async () => {
+        if (!(await profile.isVisible())) await accountMenu(page).click();
+        await expect(profile).toBeVisible({ timeout: 1_000 });
+      }).toPass();
+      await expectCell(cell, toggle(page));
+      if (cell === "visible") {
+        await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
+      }
     });
   }
 });

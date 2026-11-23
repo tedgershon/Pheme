@@ -62,8 +62,12 @@ in `describeControl(section, rowName, ...)`, where `rowName` is the row's first
 cell without backticks. **Add a 6a–6c row and its `describeControl()` call
 together**: `coverage.spec.ts` fails when a row has no call, and a call whose
 name is not a row fails on its own.
-The planned role-preview toggle row runs as `test.fixme` until
-[#76](https://github.com/tedgershon/Pheme/issues/76) builds the toggle.
+`role-preview.spec.ts` covers what the admin role-preview toggle hides and
+keeps (AUTHZ_MATRIX.md section 2): admin-only controls hide, identity overlays
+stay, admin pages send the previewing browser to `/`, a reload or sign-out
+ends the preview, and API requests carry no preview and keep the admin's own
+session. The toggle flips state, so click it only when it is in the opposite
+state.
 
 - `marketIn(state, setup)` (from `controls/market-states.ts`) builds a market in
   `open`, `closed`, `resolved`, `proposed`, `disputed`, `community` or
