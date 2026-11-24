@@ -25,13 +25,13 @@ async function renderedPage(page: Page) {
 
 /**
  * `next dev` serializes request cookies, which include the session, into the
- * page's inline debug data. A production build does not (CI runs one), so the
- * token checks only mean something there.
+ * page's inline debug data. A production build does not (CI and
+ * `pnpm e2e:prod` run one), so the token checks only mean something there.
  */
 function skipOnDevServer(html: string) {
   test.skip(
     /hmr-client|webpack-hmr/.test(html),
-    "Next dev server puts request cookies in the page's debug data; checked on production builds.",
+    "Next dev server puts request cookies in the page's debug data; run `pnpm e2e:prod` to check a production build.",
   );
 }
 
