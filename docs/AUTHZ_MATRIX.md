@@ -556,8 +556,9 @@ Community rewards require a matching atomic settlement receipt; direct calls can
   without a dispute are documented as `404`.
 - Admin pages renamed by purpose: "Approve New Markets" (`/admin/review`),
   "Monitor Disputes" (`/admin/disputes`), "Resolve Markets" (`/admin/resolve`,
-  formerly `/admin/admin-review`; that URL was removed in #96), "Platform Statistics" and
-  "Manage User Roles". The Approved list now keeps markets after they close.
+  formerly `/admin/admin-review`; that URL was removed in #96), "Platform
+  Statistics" and "Manage User Roles". The Approved list now keeps markets
+  after they close.
   Routes, guards and the `admin_review` status are unchanged.
 - #49: multiple dispute submissions per market case, public anonymised
   `GET /{id}/dispute/submissions`, admin `GET /api/admin/markets/disputes`,

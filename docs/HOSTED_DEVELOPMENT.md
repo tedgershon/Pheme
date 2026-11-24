@@ -50,7 +50,7 @@ Use only the basic identity scopes (`openid`, `email`, `profile`).
 | Google authorized JavaScript origin | `http://localhost:3000` |
 | Google authorized redirect URI | `https://PROJECT_REF.supabase.co/auth/v1/callback` |
 | Supabase Auth Site URL | `http://localhost:3000` |
-| Supabase Auth additional redirect URL | `http://localhost:3000/auth/callback` |
+| Supabase Auth additional redirect URL | `http://localhost:3000/sign-in/callback` |
 
 In the hosted Supabase dashboard, open Authentication → Sign In / Providers →
 Google, enter the new client ID/secret, enable Google, and save. Keep nonce checks
@@ -83,7 +83,7 @@ files only; it does not change database data or hosted configuration.
 
 Restart both application servers using the commands in
 [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md#environment-files-and-application-servers).
-Use `http://localhost:3000/auth` for sign-in. Confirm the API's market reads reach
+Use `http://localhost:3000/sign-in` for sign-in. Confirm the API's market reads reach
 the hosted project and browser requests pass the configured localhost CORS check.
 
 ## Deploy to Vercel
@@ -128,7 +128,7 @@ production, Preview must point at a non-production project instead.
   URLs. The pattern must match the whole origin and credentials are allowed,
   so never widen it to all of `vercel.app`. Redeploy the backend afterwards.
 - In Supabase Auth → URL Configuration, add the redirect URLs
-  `https://<frontend-domain>/auth/callback` and
+  `https://<frontend-domain>/sign-in/callback` and
   `https://*-<team-slug>.vercel.app/**`. The Google client is unchanged because
   its redirect URI is the Supabase callback.
 

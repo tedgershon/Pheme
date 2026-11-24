@@ -40,7 +40,7 @@ What each cell checks:
 - `render` / `render-readonly`: the page answers 200 with no redirect, its
   marker heading is visible, and the browser stays on the page. The
   read-only control checks belong to the section 6 suite (#16).
-- `redirect→/auth` / `redirect→/`: **no flash**. The first response to the
+- `redirect→/sign-in` / `redirect→/`: **no flash**. The first response to the
   requested URL must already be a redirect; for `anon`, every redirect body
   must also lack the protected page's marker. The browser then shows the
   destination's marker and none of the protected page's. A client-side
@@ -52,7 +52,7 @@ Removed URLs have no compatibility routes (#96). `sign-in.spec.ts` checks that
 `/auth` and `/auth/callback` return 404, and `admin.spec.ts` that
 `/admin/admin-review` is 404 for an admin and sends everyone else to `/` like
 any `/admin` path.
-`/auth/callback` has no section 5 row. `auth.spec.ts` checks that the proxy
+`/sign-in/callback` has no section 5 row. `sign-in.spec.ts` checks that the proxy
 lets both signed-out and signed-in visitors reach its route handler.
 
 The matrix is the spec. If a page test fails, fix the code. Change a cell only
@@ -136,7 +136,7 @@ To run them locally, build and start the frontend yourself and set
 `PLAYWRIGHT_BASE_URL` and `E2E_API_URL`, as CI does.
 
 `UNAUTHORIZED` is not a message on the page: the client refreshes the session
-and retries once, then sends the user to `/auth` and back afterwards
+and retries once, then sends the user to `/sign-in` and back afterwards
 (AUTHZ_MATRIX.md section 2). `error-toasts/auth-claims.spec.ts` covers both
 outcomes with `changeRequest(page, match, { token, times })`, which rejects
 only the first `times` matching requests when `times` is set.

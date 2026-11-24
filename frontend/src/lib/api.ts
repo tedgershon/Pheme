@@ -194,7 +194,7 @@ async function endRejectedSession() {
   try {
     // "local" revokes only this session (other devices stay signed in) and
     // deletes its cookie. If the logout call itself fails, supabase-js keeps
-    // the cookie; the reason parameter still keeps /auth from bouncing back.
+    // the cookie; the reason parameter still keeps /sign-in from bouncing back.
     await supabase?.auth.signOut({ scope: "local" });
   } catch {
     // Same as above: the redirect below does not depend on the sign-out.
