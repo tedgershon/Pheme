@@ -9,8 +9,9 @@ import {
   NEXT_COOKIE,
   NEXT_COOKIE_MAX_AGE,
   SESSION_EXPIRED,
+  SIGN_IN_PATH,
   safeNextPath,
-} from "@/lib/auth-redirect";
+} from "@/lib/sign-in-redirect";
 import { supabase } from "@/lib/supabase";
 
 /** Keeps the return path for the OAuth callback; `/` clears it. */
@@ -21,7 +22,7 @@ function rememberNext(next: string) {
   document.cookie = `${NEXT_COOKIE}=${encodeURIComponent(next)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
 }
 
-export default function AuthPage() {
+export default function SignInPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [next, setNext] = useState("/");
@@ -69,7 +70,7 @@ export default function AuthPage() {
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}${SIGN_IN_PATH}/callback`,
         },
       });
       if (signInError) throw signInError;

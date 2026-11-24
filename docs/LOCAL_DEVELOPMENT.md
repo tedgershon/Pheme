@@ -89,7 +89,7 @@ Use scopes `openid`, `email` and `profile`.
 - Authorized JavaScript origin: `http://localhost:3000`
 - Authorized redirect URI: `http://127.0.0.1:45321/auth/v1/callback`
 - Supabase site URL: `http://localhost:3000`
-- Supabase additional redirect: `http://localhost:3000/auth/callback`
+- Supabase additional redirect: `http://localhost:3000/sign-in/callback`
 
 The Google callback and the application's callback are different URLs.
 See [Supabase's Google setup guide](https://supabase.com/docs/guides/auth/social-login/auth-google).
@@ -102,7 +102,7 @@ then stop/start Supabase without resetting the database. Keep credentials out
 of Git and chat. The committed configuration leaves Google disabled so the
 base stack and CI can run without an OAuth client.
 
-Visit `/auth` and sign in with the intended Andrew account. Verify the callback
+Visit `/sign-in` and sign in with the intended Andrew account. Verify the callback
 returns to the app, refreshing retains the session, the account has one profile,
 and its initial balance and ledger grant are both 1,000 Tartan Coins.
 

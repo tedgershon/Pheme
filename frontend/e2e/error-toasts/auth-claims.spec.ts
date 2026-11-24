@@ -128,9 +128,9 @@ test("UNAUTHORIZED after a refresh → sign in, then back to the page", async ({
   const response = await claim(page);
 
   expect(response.status()).toBe(401);
-  await page.waitForURL("**/auth?*");
+  await page.waitForURL("**/sign-in?*");
   const landed = new URL(page.url());
-  expect(landed.pathname).toBe("/auth");
+  expect(landed.pathname).toBe("/sign-in");
   expect(landed.searchParams.get("next")).toBe("/portfolio");
   expect(landed.searchParams.get("reason")).toBe("session_expired");
   await expectSafeMessage(
@@ -144,12 +144,12 @@ test("UNAUTHORIZED after a refresh → sign in, then back to the page", async ({
 
   // The local session is gone: the proxy now treats the browser as signed out.
   await page.goto("/portfolio");
-  expect(new URL(page.url()).pathname).toBe("/auth");
+  expect(new URL(page.url()).pathname).toBe("/sign-in");
   expect(new URL(page.url()).searchParams.get("reason")).toBeNull();
 
   // Signing in again returns the user to the page.
   await signInAs("user");
-  await page.goto("/auth?next=%2Fportfolio");
+  await page.goto("/sign-in?next=%2Fportfolio");
   expect(new URL(page.url()).pathname).toBe("/portfolio");
 });
 

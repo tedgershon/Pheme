@@ -26,7 +26,7 @@ export const MATRIX_ROLES: readonly MatrixRole[] = [
 export type PageCell =
   | "render"
   | "render-readonly"
-  | "redirect→/auth"
+  | "redirect→/sign-in"
   | "redirect→/"
   | "404"
   | "not-applicable";
@@ -34,7 +34,7 @@ export type PageCell =
 const CELLS: readonly string[] = [
   "render",
   "render-readonly",
-  "redirect→/auth",
+  "redirect→/sign-in",
   "redirect→/",
   "404",
   "not-applicable",
@@ -79,7 +79,7 @@ const MARKERS: Record<string, string> = {
   "/leaderboard": "Leaderboard",
   "/resolutions": "Resolutions",
   "/rewards": "Rewards",
-  "/auth": "Welcome to Pheme",
+  "/sign-in": "Welcome to Pheme",
   "/admin": "Admin Dashboard",
   "/admin/review": "Approve New Markets",
   "/admin/disputes": "Monitor Disputes",
@@ -93,7 +93,7 @@ function marker(page: Page, name: string) {
 }
 
 function redirectTarget(cell: PageCell): string | null {
-  if (cell === "redirect→/auth") return "/auth";
+  if (cell === "redirect→/sign-in") return "/sign-in";
   if (cell === "redirect→/") return "/";
   return null;
 }
@@ -134,11 +134,6 @@ async function rawChain(request: APIRequestContext, start: string) {
   return hops;
 }
 
-interface PageOptions {
-  /** Visit this URL instead of the route, e.g. an old URL that redirects to it. */
-  visit?: string;
-}
-
 /**
  * One test.describe per route, one test per matrix role.
  *
@@ -148,13 +143,10 @@ interface PageOptions {
  * document response is already a redirect, so a client-side redirect after the
  * protected page was served fails.
  */
-export function describePage(route: string, options: PageOptions = {}) {
+export function describePage(route: string) {
   const row = readPageMatrix().get(route);
-  const title = options.visit
-    ? `${options.visit} (old URL for ${route})`
-    : route;
 
-  test.describe(title, () => {
+  test.describe(route, () => {
     if (!row) {
       test(`is a section 5 route`, () => {
         throw new Error(`${route} has no row in AUTHZ_MATRIX.md section 5`);
@@ -173,7 +165,7 @@ export function describePage(route: string, options: PageOptions = {}) {
         test.skip(cell === "not-applicable", "Cell does not apply");
 
         // Dynamic routes get a real seeded row; its title is the marker.
-        let visit = options.visit ?? route;
+        let visit = route;
         let markerName = MARKERS[route];
         if (route === "/markets/[id]") {
           const market: SeededMarket = await seedMarket();
@@ -184,7 +176,7 @@ export function describePage(route: string, options: PageOptions = {}) {
 
         const target = redirectTarget(cell);
         // Where the browser should end up: the redirect target, or the page.
-        const landedPath = target ?? (options.visit ? route : visit);
+        const landedPath = target ?? visit;
 
         if (role === "anon") {
           const hops = await rawChain(request, visit);
@@ -201,7 +193,7 @@ export function describePage(route: string, options: PageOptions = {}) {
           }
           expect(last.status).toBe(200);
           expect(last.path).toBe(landedPath);
-          if (!target && !options.visit) expect(hops).toHaveLength(1);
+          if (!target) expect(hops).toHaveLength(1);
           return;
         }
 
@@ -223,7 +215,7 @@ export function describePage(route: string, options: PageOptions = {}) {
           await expect(marker(page, MARKERS[target])).toBeVisible();
           await expect(marker(page, markerName)).toHaveCount(0);
         } else {
-          if (!options.visit) expect(chain).toHaveLength(1);
+          expect(chain).toHaveLength(1);
           await expect(marker(page, markerName)).toBeVisible();
         }
         // Once the page has loaded it stays put: no client-side bounce.

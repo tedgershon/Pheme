@@ -23,7 +23,7 @@ guest shell; it does not provide a substitute authenticated backend.
 
 Open `http://localhost:3000` with the backend running separately.
 Configure the Supabase auth provider and allowed callback URL for
-`/auth/callback` on the frontend origin.
+`/sign-in/callback` on the frontend origin.
 
 ## Code layout
 
@@ -36,12 +36,12 @@ Configure the Supabase auth provider and allowed callback URL for
 
 The proxy verifies identity with Supabase Auth `getUser()` before rendering
 protected pages. Anonymous visitors (including demo mode with missing Supabase
-configuration) go to `/auth` from `/markets/create`, `/portfolio`, `/profile`
+configuration) go to `/sign-in?next=<path>` from `/markets/create`, `/portfolio`, `/profile`
 and `/rewards`, and to `/` from `/admin` and its descendants. Admin pages load
 the verified user's role from `profiles`; `/admin/users` requires `super_admin`,
 and other admin pages accept `admin` or `super_admin`. Unreadable roles deny
-access. Signed-in visitors to `/auth` go to `/`; `/auth/callback` remains
-accessible for OAuth. Refreshed/deleted session cookies survive redirects.
+access. Signed-in visitors to `/sign-in` go to its `next` path or `/`;
+`/sign-in/callback` remains accessible for OAuth. Refreshed/deleted session cookies survive redirects.
 
 API authorization still applies independently. Role preview does not change
 the database role or grant page access. An admin or super admin can open the
@@ -141,11 +141,11 @@ every section 6 control against the local stack (see
 another deployment, with the frontend and backend running:
 
 1. In a signed-out/private browser window, visit `/markets/create`, `/portfolio`,
-   `/profile` and `/rewards`. Each should return HTTP 307 to `/auth` before any
+   `/profile` and `/rewards`. Each should return HTTP 307 to `/sign-in` before any
    protected content renders. `/admin`, `/admin/review`, `/admin/stats` and
    `/admin/users` should return 307 to `/`. Use the Network panel with Preserve
    log enabled to inspect the initial response and `Location` header.
-2. Sign in as a regular user. Member pages should render, `/auth` should redirect
+2. Sign in as a regular user. Member pages should render, `/sign-in` should redirect
    to `/`, and admin pages should redirect to `/`. Verify the market form still
    accepts input; avoid creating shared test data solely to test redirects.
 3. With existing operator-approved accounts, confirm an admin can open the

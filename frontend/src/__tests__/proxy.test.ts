@@ -29,8 +29,8 @@ const publicPages = [
   "/markets/example-id",
   "/leaderboard",
   "/resolutions",
-  "/auth",
-  "/auth/callback?code=oauth-code",
+  "/sign-in",
+  "/sign-in/callback?code=oauth-code",
   "/administrator",
   "/portfolio-public",
 ];
@@ -51,7 +51,7 @@ function signIn(role = "user") {
 }
 
 /** The sign-in redirect for a member page, carrying the path but no query. */
-const signInFor = (path: string) => `/auth?next=${encodeURIComponent(path)}`;
+const signInFor = (path: string) => `/sign-in?next=${encodeURIComponent(path)}`;
 
 function expectRedirect(response: Response, destination: string) {
   expect(response.status).toBe(307);
@@ -73,7 +73,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("server page gates (AUTHZ_MATRIX section 5)", () => {
   it.each([...memberPages, "/portfolio/", "/profile/nested"])(
-    "redirects anonymous %s to /auth before rendering, returning to the path",
+    "redirects anonymous %s to /sign-in before rendering, returning to the path",
     async (path) => {
       expectRedirect(
         await proxy(request(`${path}?private=value`)),
@@ -107,24 +107,26 @@ describe("server page gates (AUTHZ_MATRIX section 5)", () => {
   );
 
   it.each(["user", "admin", "super_admin"])(
-    "redirects signed-in %s away from /auth, preserving OAuth callback access",
+    "redirects signed-in %s away from /sign-in, preserving OAuth callback access",
     async (role) => {
       signIn(role);
-      expectRedirect(await proxy(request("/auth?error=old-error")), "/");
-      expectRedirect(await proxy(request("/auth/")), "/");
-      const response = await proxy(request("/auth/callback?code=oauth-code"));
+      expectRedirect(await proxy(request("/sign-in?error=old-error")), "/");
+      expectRedirect(await proxy(request("/sign-in/")), "/");
+      const response = await proxy(
+        request("/sign-in/callback?code=oauth-code"),
+      );
       expect(response.headers.get("x-middleware-next")).toBe("1");
     },
   );
 
-  it("sends a signed-in visitor on /auth to a safe next path", async () => {
+  it("sends a signed-in visitor on /sign-in to a safe next path", async () => {
     signIn();
     expectRedirect(
-      await proxy(request("/auth?next=%2Fportfolio")),
+      await proxy(request("/sign-in?next=%2Fportfolio")),
       "/portfolio",
     );
     expectRedirect(
-      await proxy(request("/auth?next=%2Fmarkets%2Fm-1%3Ftab%3Dbets")),
+      await proxy(request("/sign-in?next=%2Fmarkets%2Fm-1%3Ftab%3Dbets")),
       "/markets/m-1?tab=bets",
     );
     for (const unsafe of [
@@ -133,21 +135,21 @@ describe("server page gates (AUTHZ_MATRIX section 5)", () => {
       "/\\evil.example",
       "/\t/evil.example",
       "@evil.example",
-      "/auth",
-      "/auth/callback?code=x",
+      "/sign-in",
+      "/sign-in/callback?code=x",
     ]) {
       expectRedirect(
-        await proxy(request(`/auth?next=${encodeURIComponent(unsafe)}`)),
+        await proxy(request(`/sign-in?next=${encodeURIComponent(unsafe)}`)),
         "/",
       );
     }
   });
 
-  it("renders /auth for a signed-in visitor whose session the API rejected", async () => {
+  it("renders /sign-in for a signed-in visitor whose session the API rejected", async () => {
     // Auth still accepts the cookie; returning to the page would fail again.
     signIn();
     const response = await proxy(
-      request("/auth?next=%2Fportfolio&reason=session_expired"),
+      request("/sign-in?next=%2Fportfolio&reason=session_expired"),
     );
     expect(response.headers.get("x-middleware-next")).toBe("1");
   });
@@ -183,7 +185,7 @@ describe("server page gates (AUTHZ_MATRIX section 5)", () => {
       for (const path of adminPages) {
         expectRedirect(await proxy(request(path)), "/");
       }
-      expect((await proxy(request("/auth"))).status).toBe(200);
+      expect((await proxy(request("/sign-in"))).status).toBe(200);
       expect((await proxy(request("/markets"))).status).toBe(200);
       expect(createServerClient).not.toHaveBeenCalled();
     },
@@ -233,9 +235,9 @@ describe("server page gates (AUTHZ_MATRIX section 5)", () => {
 describe("cookie refresh and route matching", () => {
   it.each([
     ["/markets", false, null],
-    ["/markets/create", false, "/auth?next=%2Fmarkets%2Fcreate"],
+    ["/markets/create", false, "/sign-in?next=%2Fmarkets%2Fcreate"],
     ["/admin", false, "/"],
-    ["/auth", true, "/"],
+    ["/sign-in", true, "/"],
     ["/admin/users", true, "/"],
   ] as const)(
     "preserves response cookies on %s (signed in: %s)",
@@ -291,7 +293,7 @@ describe("cookie refresh and route matching", () => {
     },
   );
 
-  it.each([...memberPages, ...adminPages, "/auth", "/auth/callback"])(
+  it.each([...memberPages, ...adminPages, "/sign-in", "/sign-in/callback"])(
     "runs the proxy for %s, including client navigation",
     (path) => {
       for (const url of [path, `${path}?_rsc=client-navigation`]) {
