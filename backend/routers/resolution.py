@@ -72,7 +72,7 @@ async def cast_community_vote(
     if not market:
         raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.")
     if market.get("status") != "pending_resolution" or market.get("proposed_outcome") is not None:
-        raise AppError(400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "Market is not in community resolution.")
+        raise AppError(400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "Market is not in its resolution period.")
 
     try:
         result = supabase.rpc("cast_community_vote", {
@@ -88,7 +88,7 @@ async def cast_community_vote(
             raise AppError(
                 400,
                 ErrorCode.MARKET_NOT_PENDING_RESOLUTION,
-                'Market is not in the resolution period.',
+                'Market is not in its resolution period.',
                 original=e,
                 extras=extras,
             ) from e
@@ -96,7 +96,7 @@ async def cast_community_vote(
             raise AppError(
                 409,
                 ErrorCode.RESOLUTION_WINDOW_EXPIRED,
-                'Resolution voting window has expired.',
+                'The resolution window has expired.',
                 original=e,
                 extras=extras,
             ) from e

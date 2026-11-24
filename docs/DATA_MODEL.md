@@ -119,8 +119,7 @@ Represents a single user trade on a market outcome
 Purpose:
 Represents a neutral voter participation record for disputed markets
 
-The historical `staked_amount` column was removed in iteration 011; current
-dispute votes do not require a currency stake.
+Dispute votes do not require a currency stake.
 
 ### CommunityVote (resolution voting)
 

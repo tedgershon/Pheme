@@ -55,9 +55,69 @@ a missing profile
 returns 400 `AUTH_PROFILE_INCOMPLETE`. Profile field/action validation uses
 400 `VALIDATION_FAILED`. Missing and non-owned notification mutations both
 return 404 `NOTIFICATION_NOT_FOUND`; owner success remains 200 with
-`{"status":"ok"}`. Expired community voting returns 409
+`{"status":"ok"}`. An expired dispute or community-voting window returns 409
 `RESOLUTION_WINDOW_EXPIRED`. Betting and claim RPC errors use specific codes
 only for recognized database errors; diagnostic text never becomes the message.
+
+### User-facing messages
+
+The backend is the only source of the `message` a user sees. Each domain code
+has one HTTP status and one message, listed below, whichever route or condition
+raises it. The generic codes `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`,
+`VALIDATION_FAILED` and `INTERNAL_ERROR` instead carry a message that names the
+failing field, resource or action, such as `Failed to place bet.` or
+`Display name must not be empty.`. `VALIDATION_FAILED` is 400 for domain checks
+and 422 for request-schema and dispute-explanation checks; `INTERNAL_ERROR` is
+503 when the database client is not configured and 500 otherwise.
+`MARKET_NOT_DISPUTED` and `RATE_LIMITED` are reserved and not raised.
+
+| Code | Status | Message |
+| --- | --- | --- |
+| `ADMIN_CANNOT_CHANGE_OWN_ROLE` | 400 | Cannot change your own role. |
+| `ADMIN_REQUIRED` | 403 | Admin access required. |
+| `ADMIN_RESOLUTION_CREATOR_RESTRICTED` | 403 | You cannot resolve a market you created. |
+| `AUTH_PROFILE_INCOMPLETE` | 400 | User profile not found. Please complete onboarding. |
+| `BET_CREATOR_RESTRICTED` | 403 | You cannot bet on a market you created. |
+| `BET_INSUFFICIENT_BALANCE` | 409 | Insufficient Tartan Coin balance. |
+| `BET_INVALID_AMOUNT` | 400 | Bet amount must be positive. |
+| `BET_INVALID_OPTION` | 400 | Invalid market option. |
+| `CLAIM_ALREADY_TODAY` | 409 | Already claimed today. |
+| `CLAIM_AT_BALANCE_CAP` | 409 | Balance is at or above the 5,000 coin daily claim cap. |
+| `COMMUNITY_VOTE_CREATOR_RESTRICTED` | 403 | Market creators cannot cast community votes on their own market. |
+| `COMMUNITY_VOTE_DUPLICATE` | 409 | You have already voted on this market's resolution. |
+| `DISPUTE_ALREADY_FILED` | 409 | You have already submitted a concern for this market. |
+| `DISPUTE_BETTOR_RESTRICTED` | 403 | Bettors cannot vote on disputes for markets they bet on. |
+| `DISPUTE_CREATOR_RESTRICTED` | 403 | Market creators cannot file or vote on disputes for their own market. |
+| `DISPUTE_NOT_FOUND` | 404 | No dispute found for this market. |
+| `DISPUTE_VOTE_DUPLICATE` | 409 | You've already voted. |
+| `MARKET_ALREADY_RESOLVED` | 400 | Market is already resolved. |
+| `MARKET_CLOSE_DATE_PASSED` | 409 | Market close date has passed. |
+| `MARKET_NOT_ADMIN_REVIEW` | 400 | Market is not in admin review. |
+| `MARKET_NOT_BINARY` | 400 | Multiple-choice markets can only be resolved as ambiguous here. |
+| `MARKET_NOT_CLOSED` | 400 | Market must be closed before it can be resolved. |
+| `MARKET_NOT_FOUND` | 404 | Market not found. |
+| `MARKET_NOT_MULTICHOICE` | 400 | Market is not a multichoice market. |
+| `MARKET_NOT_OPEN` | 409 | Market is not open for betting. |
+| `MARKET_NOT_PENDING_RESOLUTION` | 400 | Market is not in its resolution period. |
+| `MARKET_NOT_PENDING_REVIEW` | 400 | Market is not pending review. |
+| `NOTIFICATION_NOT_FOUND` | 404 | Notification not found. |
+| `RESOLUTION_NOT_CREATOR` | 403 | Only the market creator can do this. |
+| `RESOLUTION_WINDOW_EXPIRED` | 409 | The resolution window has expired. |
+| `SUPER_ADMIN_REQUIRED` | 403 | Super admin access required. |
+
+[`backend/tests/_user_messages.py`](../backend/tests/_user_messages.py) mirrors
+these messages. `test_endpoint_matrix.py` fails when an `AppError` message is
+missing from it, or when a domain code has a second message or a second status.
+Change a message or status in the router, that file and this table together.
+
+The frontend shows `userMessage` as the backend wrote it and does not reword it
+for any code. Two documented adjustments apply: field errors drop Pydantic's
+`Value error, ` prefix (see Frontend below), and `UNAUTHORIZED` is never shown.
+Checks a page runs before it sends a request are form hints, not API messages:
+an empty or non-numeric bet amount, an empty dispute explanation, and denial
+notes. The bet form's balance check uses the backend's
+`Insufficient Tartan Coin balance.`. Page-state text such as the claim card's
+"Claimed! Come back tomorrow." is not an error message.
 
 Public community-vote and badge reads resolve optional authentication, and
 their local failure handlers capture the signed-in user with the event.
@@ -67,13 +127,12 @@ Anonymous and invalid-token reads remain public.
 
 `frontend/src/lib/api.ts` exposes `ApiError` and `parseApiError`.
 Structured responses expose `code`, `userMessage` and `fieldErrors`.
-Legacy text/malformed responses use `Request failed (<status>).` rather
+Non-envelope text or malformed responses use `Request failed (<status>).` rather
 than displaying the raw body. The `raw` and compatibility `body` properties
 are diagnostic data; do not render them.
 
 Use `parseApiError(error, fallback)` to normalize API errors, cancellations,
-network failures and unknown exceptions. Caller migration is tracked in
-[#7](https://github.com/tedgershon/Pheme/issues/7). Consumers must map full
+network failures and unknown exceptions. Consumers must map full
 backend field paths to their form inputs: paths arrive as `body.<field>` (for
 example `body.title`), and Pydantic messages carry a `Value error, ` prefix.
 `frontend/src/lib/market-form.ts` (`mapFieldErrors`) normalizes both for the
@@ -161,4 +220,6 @@ With `SENTRY_ENVIRONMENT=production`, that route is absent and `/docs`,
 `/redoc` and `/openapi.json` are disabled.
 
 From `frontend/`, run `pnpm test` for the API error-parser and 5xx reporting
-tests. Browser coverage remains planned work.
+tests. `pnpm e2e e2e/error-toasts/` checks, against the real backend, that each
+reachable code shows its message from the table above
+([frontend/e2e/README.md](../frontend/e2e/README.md#error-messages)).

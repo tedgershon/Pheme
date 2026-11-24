@@ -86,8 +86,8 @@ async def create_or_update_profile(
     if not body.andrew_id.strip():
         raise AppError(
             status.HTTP_400_BAD_REQUEST,
-            ErrorCode.AUTH_PROFILE_INCOMPLETE,
-            'andrew_id must not be empty',
+            ErrorCode.VALIDATION_FAILED,
+            'Andrew ID must not be empty.',
         )
 
     with user_auth(supabase, token):

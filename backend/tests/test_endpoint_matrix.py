@@ -18,6 +18,7 @@ from _matrix_cells import MATRIX_CELLS, UNKNOWN_ID, World
 from _matrix_rpc import RPC_HANDLERS
 from _user_messages import (
     DYNAMIC_CODES,
+    GENERIC_CODES,
     UNUSED_CODES,
     USER_FACING_MESSAGES,
     VARIANT_MESSAGES,
@@ -130,14 +131,41 @@ def test_message_catalog_covers_every_error_code():
     assert not set(USER_FACING_MESSAGES) & set(VARIANT_MESSAGES)
 
 
+def _app_error_calls():
+    """Every ``AppError(status, ErrorCode.X, ...)`` call in the backend source."""
+    for path in [*BACKEND.glob("*.py"), *BACKEND.glob("routers/*.py"), *BACKEND.glob("services/*.py")]:
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "AppError" and len(node.args) >= 2:
+                yield node
+
+
+def _status_of(node):
+    """The literal status, or the number in ``status.HTTP_409_CONFLICT``."""
+    arg = node.args[0]
+    return arg.value if isinstance(arg, ast.Constant) else int(arg.attr.split("_")[1])
+
+
+def test_only_generic_codes_have_more_than_one_message():
+    """A domain code has one message (#87); only the generic codes vary by context."""
+    assert set(VARIANT_MESSAGES) <= GENERIC_CODES
+    assert set(DYNAMIC_CODES) <= GENERIC_CODES
+
+
+def test_each_domain_code_has_one_status():
+    """A domain code is raised with one HTTP status on every route (#87)."""
+    statuses = defaultdict(set)
+    for node in _app_error_calls():
+        statuses[node.args[1].attr].add(_status_of(node))
+    varying = {code: sorted(found) for code, found in statuses.items() if len(found) > 1}
+    assert set(varying) <= GENERIC_CODES, varying
+
+
 def test_message_catalog_matches_source_messages():
     """Every constant AppError message in the source is in the catalog (and the reverse)."""
     found = defaultdict(set)
-    for path in [*BACKEND.glob("*.py"), *BACKEND.glob("routers/*.py"), *BACKEND.glob("services/*.py")]:
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-            is_app_error = isinstance(node, ast.Call) and getattr(node.func, "id", None) == "AppError"
-            if is_app_error and len(node.args) >= 3 and isinstance(node.args[2], ast.Constant):
-                found[node.args[1].attr].add(node.args[2].value)
+    for node in _app_error_calls():
+        if len(node.args) >= 3 and isinstance(node.args[2], ast.Constant):
+            found[node.args[1].attr].add(node.args[2].value)
     expected = {
         **{code: {message} for code, message in USER_FACING_MESSAGES.items()},
         **{code: set(messages) for code, messages in VARIANT_MESSAGES.items()},

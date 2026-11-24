@@ -67,7 +67,7 @@ def rpc_endpoint(request, monkeypatch):
     ("backroll", "P0001", "Cannot backroll a resolved market", 400),
     ("approve", "P0001", "Market not found", 404),
     ("approve", "P0001", "Market is not pending review", 400),
-    ("approve", "P0001", "Market close date has passed", 400),
+    ("approve", "P0001", "Market close date has passed", 409),
     ("claim", "P0001", "Already claimed today", 409),
     ("claim", "P0001", "Balance is at or above the daily claim cap of 5000", 409),
     ("propose", "P0001", "Market not found", 404),
@@ -75,7 +75,7 @@ def rpc_endpoint(request, monkeypatch):
     ("propose", "P0001", "Market must be closed before proposing resolution", 400),
     ("dispute_vote", "P0001", "Market creator cannot vote on disputes", 403),
     ("dispute_vote", "P0001", "Users who placed bets cannot vote on disputes", 403),
-    ("dispute_vote", "P0001", "Voting window has expired", 400),
+    ("dispute_vote", "P0001", "Voting window has expired", 409),
     ("dispute_vote", "23505", "A database uniqueness constraint was violated", 409),
     ("admin_resolve", "P0001", "Market not found", 404),
     ("admin_resolve", "P0001", "Market is not in admin_review status", 400),
@@ -213,11 +213,11 @@ def test_successful_rpc_responses_are_preserved(rpc_endpoint):
     case.captured.assert_not_called()
 
 
-@pytest.mark.parametrize("message,status", [
-    ("Market creators cannot place bets on their own markets", 403),
-    ("Market has closed", 409),
+@pytest.mark.parametrize("message,status,safe_message", [
+    ("Market creators cannot place bets on their own markets", 403, "You cannot bet on a market you created."),
+    ("Market has closed", 409, "Market close date has passed."),
 ])
-def test_option_bet_sql_eligibility_errors(message, status):
+def test_option_bet_sql_eligibility_errors(message, status, safe_message):
     database = Mock()
     database.rpc.return_value.execute.side_effect = APIError({"code": "P0001", "message": message, "details": None, "hint": None})
     app = FastAPI()
@@ -229,4 +229,4 @@ def test_option_bet_sql_eligibility_errors(message, status):
     with TestClient(app) as client:
         response = client.post("/api/markets/m1/bets/option", json={"option_id": "o1", "amount": 10})
     assert response.status_code == status
-    assert response.json()["detail"]["message"] == message + "."
+    assert response.json()["detail"]["message"] == safe_message

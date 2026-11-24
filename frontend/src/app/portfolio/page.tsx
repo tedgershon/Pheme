@@ -67,15 +67,11 @@ export default function PortfolioPage() {
     try {
       await claim.mutateAsync();
     } catch (err) {
-      const { code, message } = parseApiError(
+      const { message } = parseApiError(
         err,
         "Failed to claim. Try again later.",
       );
-      if (code === "CLAIM_ALREADY_TODAY") {
-        setClaimError("Already claimed today!");
-      } else {
-        setClaimError(message);
-      }
+      setClaimError(message);
     }
   }
 
