@@ -1,4 +1,4 @@
-// Gap B-2 (AUTHZ_MATRIX.md §3b history, fixed in #9): a user's portfolio shows
+// AUTHZ_MATRIX.md §7g: a user's portfolio shows
 // only their own proposed markets. Another account's pending and denied
 // proposals must not reach the page or the APIs behind it. The admin fixture
 // plays "user B": ownership, not role, decides what the portfolio lists.

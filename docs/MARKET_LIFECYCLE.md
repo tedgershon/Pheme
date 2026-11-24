@@ -68,8 +68,8 @@ Notes:
 - **Approved list:** this is the approval history, holding the latest 50 approved
   markets whatever has happened since. A badge shows each market's current
   status.
-- **Status name:** the database status `admin_review` was kept when its page was
-  renamed to Resolve Markets.
+- **Status name:** the Resolve Markets page lists markets in the database status
+  `admin_review`.
 - **Backroll:** available to admins on the market page for any status except
   `resolved`. It refunds bets placed after a cutoff and, by default, moves the
   market to `closed` with the cutoff as its close time.

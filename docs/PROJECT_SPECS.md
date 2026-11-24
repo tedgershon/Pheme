@@ -82,7 +82,7 @@ that a continuously running scheduler is deployed.
    and active dispute deadline. The first submission opens one market-level
    case; until the case's voting deadline, other non-creators can add one
    concern each (no amendments, no deadline extension, no second case).
-   Neutral dispute voters choose YES/NO; voting no longer requires a stake.
+   Neutral dispute voters choose YES/NO; voting requires no stake.
    After the 48-hour voting deadline, at least three votes and a non-tied majority settle the market;
    otherwise it enters `admin_review`.
 4. Alternatively, the creator explicitly starts community resolution from

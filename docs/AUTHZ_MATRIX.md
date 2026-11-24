@@ -355,8 +355,8 @@ trimming), `403 FORBIDDEN` (JWT subject differs from the submitter).
 `GET /{id}/dispute/submissions` returns `total`, the caller's `has_submitted`
 and a page (`limit` 1-100, default 50) of `{id, explanation, created_at,
 is_mine}` rows, oldest first. Submitters are anonymous to everyone but admins.
-`disputes` stays publicly readable (it exposes the first filer's id, as before)
-but is no longer writable by API roles. `dispute_submissions` has no table
+`disputes` is publicly readable (it exposes the first filer's id) but not
+writable by API roles. `dispute_submissions` has no table
 grants for `anon`/`authenticated` and is reachable only through `list_dispute_submissions` (public, anonymised) and
 `admin_dispute_submissions` (admins only).
 
@@ -438,9 +438,6 @@ There is currently no admin endpoint to view another user's portfolio or transac
 
 ## 8. Known implementation gaps
 
-Gap B-4 (admin resolution queue, dashboard entry and ambiguous refunds) was
-closed by [#31](https://github.com/tedgershon/Pheme/issues/31).
-
 The [mounted-route inventory](../backend/tests/test_authorization_inventory.py)
 checks every application method/path against its required or optional auth
 dependency (including the development-only Sentry endpoint). HTTP tests reject
@@ -456,25 +453,24 @@ memory, so they verify routing, gating, validation and error mapping, not SQL.
 Request-schema failures return `422 VALIDATION_FAILED`, and `/docs`, `/redoc`
 and `/openapi.json` are `404` in production (`test_docs_lockdown.py`).
 
-Observations reconciled by the #12 sweep, which the cells assert:
+Behaviors the cells assert:
 
 - A duplicate dispute vote is `409 DISPUTE_VOTE_DUPLICATE`, consistent with the
-  `409` for a duplicate community vote; the `403` previously shown here was a
-  documentation error. Dispute voting and vote listing for a market with no
+  `409` for a duplicate community vote. Dispute voting and vote listing for a market with no
   dispute return `404 DISPUTE_NOT_FOUND`.
 - State is checked before the creator when proposing resolution: a non-creator
   on a market that is not `closed` gets `400 MARKET_NOT_CLOSED`, and
   `403 RESOLUTION_NOT_CREATOR` once it is `closed`. Starting community
   resolution checks the creator first.
 - Community-resolution start is idempotent (`200`) when already in community
-  resolution. Community-vote expiry is `409` after #6.
+  resolution. Community-vote expiry is `409`.
 - Denying a market without notes is a domain `400 VALIDATION_FAILED`, not a
   schema `422`.
 - Dispute-window and community-window expiry are not matrix cells: the API
   escalates expired markets before reaching the stored function, so those
   responses are covered by the error-mapping tests.
 
-Public community-vote and badge reads now use optional authentication for
+Public community-vote and badge reads use optional authentication for
 attribution. Badges expose earned badge records and definitions, not progress
 statistics; progress and badge-check operations use the authenticated user's ID.
 
@@ -528,45 +524,3 @@ Active/refunded bettors may submit explanations but remain excluded from dispute
 Refunding and deleting a bet does not restore voting neutrality: dispute voting checks both current bets and historical bet-placement ledger entries. Refunded bettors may still file explanations.
 
 Community rewards require a matching atomic settlement receipt; direct calls cannot change the 4% rate or replay credits. The settlement transaction checks the expired community window, three-vote quorum and majority.
-
-## Changelog
-
-- #96: the sign-in page moved from `/auth` to `/sign-in` and its OAuth
-  callback from `/auth/callback` to `/sign-in/callback`, with no redirect from
-  the old URLs, which now return `404`. Cells changed: every `redirect→/auth`
-  is `redirect→/sign-in`, and the `/auth` row is the `/sign-in` row. The
-  `/admin/admin-review` redirect to `/admin/resolve` is removed: admins get
-  `404`, and everyone else is still sent to `/` like any `/admin` path.
-- #76: the role-preview toggle is built (§2, §6b). The §6b row is no longer
-  planned; its cells are unchanged. No page-gating or API cells changed.
-- #16: section 6 is executable as the Playwright control suite with a
-  row-coverage guard. Cells changed: binary and multichoice Place Bet on a
-  market that is not open is `hidden` with a status note (was `disabled`, which
-  the page never rendered); the "Admin" nav link row is the "Admin Panel" link
-  in the account dropdown; the role-preview toggle is marked planned (it was
-  never built); the Promote/Demote cell says super-admin rows, including self,
-  have no button (was "`disabled` for self"); the AMBIGUOUS wording now says
-  multichoice markets show only AMBIGUOUS. Fixed along the way: a dispute vote
-  answered `500` after it was recorded, and a `user` creator could not start
-  community resolution (`500`).
-- #15: section 5 is executable as the Playwright page-gating suite with a
-  row-coverage guard. No cells changed.
-- #12: section 7 is executable as `MATRIX_CELLS` with a route-coverage guard.
-  The duplicate dispute-vote cell is `409` (was `403`), and dispute votes
-  without a dispute are documented as `404`.
-- Admin pages renamed by purpose: "Approve New Markets" (`/admin/review`),
-  "Monitor Disputes" (`/admin/disputes`), "Resolve Markets" (`/admin/resolve`,
-  formerly `/admin/admin-review`; that URL was removed in #96), "Platform
-  Statistics" and "Manage User Roles". The Approved list now keeps markets
-  after they close.
-  Routes, guards and the `admin_review` status are unchanged.
-- #49: multiple dispute submissions per market case, public anonymised
-  `GET /{id}/dispute/submissions`, admin `GET /api/admin/markets/disputes`,
-  `/admin/disputes` page, and a submitter-bound `file_dispute`.
-- Gap B-4 fixed via #31: `/admin/admin-review` queue and dashboard card,
-  `GET /api/admin/markets/admin-review`, AMBIGUOUS refunds, creator exclusion,
-  JWT-bound admin settlement RPC and the `finalize_resolution` admin-review guard.
-- Gap B-3 fixed via PR-13.9.
-- Gap B-2 fixed via PR-13.8 (#9): owner-only proposed-market portfolio endpoint,
-  private list/detail authorization, database SELECT policies for proposals and
-  options, and browser cache reset on session identity changes.
