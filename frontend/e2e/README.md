@@ -8,7 +8,7 @@ in [frontend/README.md](../README.md#running-e2e-tests).
 - `smoke/`: one test per fixture.
 - `page-gating/`: [AUTHZ_MATRIX.md](../../docs/AUTHZ_MATRIX.md) section 5.
 - `controls/`: AUTHZ_MATRIX.md section 6 (control visibility), plus the
-  portfolio isolation check for gap B-2.
+  portfolio isolation check (section 7g).
 - `error-toasts/`: the message a user sees for each reachable `ErrorCode`.
 - `hygiene/`: no session token, other account's Andrew ID or raw error text in
   the rendered page.
@@ -99,10 +99,9 @@ The app has no toast component. A failed action shows its message inline, in an
 element with `role="alert"` (`role="status"` for the success message on
 `/admin/users`), and the text is the backend's own `detail.message`, read by
 `parseApiError`. Give any new inline error message `role="alert"`, or its test
-has nothing to select. The messages are not the wording proposed in the
-retired design: each test asserts what the backend actually returns, which is
-the contract the page shows. The one exception is the claim button, which words
-`CLAIM_ALREADY_TODAY` itself ("Already claimed today!").
+has nothing to select. Each test asserts the message listed for its code in
+[OBSERVABILITY.md](../../docs/OBSERVABILITY.md#user-facing-messages); no page
+rewords a backend message.
 
 Every test in `error-toasts/` makes both assertions through
 `expectSafeMessage()`: the text equals the expected message exactly, and it
