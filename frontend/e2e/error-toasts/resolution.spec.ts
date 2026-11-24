@@ -104,7 +104,7 @@ test("RESOLUTION_WINDOW_EXPIRED → 'The resolution window has expired.'", async
   await expectSafeMessage(page, "The resolution window has expired.");
 });
 
-test("an expired dispute window on a stale page → 'Market is not in pending resolution.'", async ({
+test("an expired dispute window on a stale page → 'Market is not in its resolution period.'", async ({
   page,
   signInAs,
   marketIn,
@@ -118,7 +118,7 @@ test("an expired dispute window on a stale page → 'Market is not in pending re
   const response = await submitDispute(page);
 
   expect(response.status()).toBe(400);
-  await expectSafeMessage(page, "Market is not in pending resolution.");
+  await expectSafeMessage(page, "Market is not in its resolution period.");
 });
 
 test("DISPUTE_BETTOR_RESTRICTED → 'Bettors cannot vote on disputes for markets they bet on.'", async ({

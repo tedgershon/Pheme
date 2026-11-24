@@ -31,7 +31,7 @@ function claim(page: Page) {
   });
 }
 
-test("CLAIM_ALREADY_TODAY → 'Already claimed today!'", async ({
+test("CLAIM_ALREADY_TODAY → 'Already claimed today.'", async ({
   page,
   signInAs,
   apiAs,
@@ -51,8 +51,7 @@ test("CLAIM_ALREADY_TODAY → 'Already claimed today!'", async ({
   const response = await claim(page);
 
   expect(response.status()).toBe(409);
-  // The page words this one itself (the API says "Already claimed today.").
-  await expectSafeMessage(page, "Already claimed today!");
+  await expectSafeMessage(page, "Already claimed today.");
 });
 
 test("CLAIM_AT_BALANCE_CAP → 'Balance is at or above the 5,000 coin daily claim cap.'", async ({
