@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { SESSION_EXPIRED, signInPath } from "./auth-redirect";
 import { supabase } from "./supabase";
 import type {
   AdminDisputeCasePage,
@@ -150,33 +151,83 @@ export function parseApiError(
   return { code: "UNKNOWN", message: fallback, fieldErrors: [] };
 }
 
-async function authHeaders(): Promise<HeadersInit> {
-  const headers: HeadersInit = { "Content-Type": "application/json" };
+async function accessToken(): Promise<string | null> {
   // browser client can't read cookies on the server — skip auth there
   // (server prefetch only hits public endpoints anyway)
-  if (!supabase || typeof window === "undefined") return headers;
-
+  if (!supabase || typeof window === "undefined") return null;
   try {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-
-    if (session?.access_token) {
-      (headers as Record<string, string>).Authorization =
-        `Bearer ${session.access_token}`;
-    }
+    return session?.access_token ?? null;
   } catch {
     // session lookup failed — fall back to unauthenticated request
+    return null;
   }
-  return headers;
 }
 
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const headers = await authHeaders();
-  const res = await fetch(`${API_BASE}${path}`, {
+// Session-expiry handling (#86, docs/AUTHZ_MATRIX.md section 2). A 401 to a
+// request that carried a token means the API rejected the session. The client
+// refreshes it once and retries; if the retry is rejected too, it clears the
+// local session and sends the user to sign in, then back to this page. Shared
+// across concurrent requests, so a burst of 401s refreshes and redirects once.
+let refreshing: Promise<string | null> | null = null;
+let sessionEnded = false;
+
+function refreshAccessToken(): Promise<string | null> {
+  const client = supabase;
+  if (!client || sessionEnded) return Promise.resolve(null);
+  refreshing ??= Promise.resolve()
+    .then(() => client.auth.refreshSession())
+    .then(({ data, error }) => (error ? null : data.session?.access_token))
+    .catch(() => null)
+    .then((token) => token ?? null)
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
+}
+
+async function endRejectedSession() {
+  if (sessionEnded || typeof window === "undefined") return;
+  sessionEnded = true;
+  try {
+    // "local" revokes only this session (other devices stay signed in) and
+    // deletes its cookie. If the logout call itself fails, supabase-js keeps
+    // the cookie; the reason parameter still keeps /auth from bouncing back.
+    await supabase?.auth.signOut({ scope: "local" });
+  } catch {
+    // Same as above: the redirect below does not depend on the sign-out.
+  }
+  window.location.assign(signInPath(window.location.pathname, SESSION_EXPIRED));
+}
+
+function send(
+  path: string,
+  options: RequestInit | undefined,
+  token: string | null,
+) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return fetch(`${API_BASE}${path}`, {
     ...options,
     headers: { ...headers, ...options?.headers },
   });
+}
+
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = await accessToken();
+  let res = await send(path, options, token);
+
+  // Without a token a 401 is ordinary (anonymous browsing): no refresh, no
+  // redirect. A 401 is sent before the handler runs, so a retry is safe.
+  if (res.status === 401 && token) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) res = await send(path, options, refreshed);
+    if (res.status === 401) await endRejectedSession();
+  }
 
   const raw = await res.text();
 

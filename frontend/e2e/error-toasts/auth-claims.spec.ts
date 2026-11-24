@@ -11,6 +11,7 @@ import { serviceClient } from "../support/supabase";
 import {
   actAndAwaitResponse,
   changeRequest,
+  errorAlert,
   expectSafeMessage,
 } from "./helpers";
 
@@ -80,21 +81,76 @@ test("CLAIM_AT_BALANCE_CAP → 'Balance is at or above the 5,000 coin daily clai
   );
 });
 
-test("UNAUTHORIZED → 'Invalid or expired token.'", async ({
+// UNAUTHORIZED is not shown as a message (#86): the client refreshes the
+// session and retries once, then sends the user to sign in and back.
+
+test("UNAUTHORIZED once → the session refreshes and the claim succeeds", async ({
   page,
   signInAs,
   resetDailyClaim,
 }) => {
   await resetDailyClaim("user");
   await signInAs("user");
-  // The session cookie is valid for the page; the API sees a token it rejects.
+  // Only the first claim carries a token the API rejects, like a stale token
+  // after the laptop slept; the retry carries the refreshed one.
+  await changeRequest(page, CLAIM, { token: "not-a-valid-token", times: 1 });
+  await openPortfolio(page);
+
+  const retried = page.waitForResponse(
+    (r) =>
+      r.request().method() === CLAIM.method &&
+      new URL(r.url()).pathname === CLAIM.path &&
+      r.status() !== 401,
+  );
+  const first = await claim(page);
+  expect(first.status()).toBe(401);
+  expect((await retried).status()).toBe(200);
+
+  await expect(
+    page.getByRole("button", { name: /Daily Tartan Coins/ }),
+  ).toHaveCount(0);
+  expect(new URL(page.url()).pathname).toBe("/portfolio");
+  await expect(errorAlert(page)).toHaveCount(0);
+});
+
+test("UNAUTHORIZED after a refresh → sign in, then back to the page", async ({
+  page,
+  signInAs,
+  resetDailyClaim,
+}) => {
+  await resetDailyClaim("user");
+  await signInAs("user");
+  // The session cookie stays valid for the proxy and for a refresh; the API
+  // rejects every token it is sent.
   await changeRequest(page, CLAIM, { token: "not-a-valid-token" });
   await openPortfolio(page);
 
   const response = await claim(page);
 
   expect(response.status()).toBe(401);
-  await expectSafeMessage(page, "Invalid or expired token.");
+  await page.waitForURL("**/auth?*");
+  const landed = new URL(page.url());
+  expect(landed.pathname).toBe("/auth");
+  expect(landed.searchParams.get("next")).toBe("/portfolio");
+  expect(landed.searchParams.get("reason")).toBe("session_expired");
+  await expectSafeMessage(
+    page,
+    "Your session has ended. Sign in again to continue.",
+    page.getByRole("status"),
+  );
+  await expect(
+    page.getByRole("button", { name: "Continue with Google" }),
+  ).toBeVisible();
+
+  // The local session is gone: the proxy now treats the browser as signed out.
+  await page.goto("/portfolio");
+  expect(new URL(page.url()).pathname).toBe("/auth");
+  expect(new URL(page.url()).searchParams.get("reason")).toBeNull();
+
+  // Signing in again returns the user to the page.
+  await signInAs("user");
+  await page.goto("/auth?next=%2Fportfolio");
+  expect(new URL(page.url()).pathname).toBe("/portfolio");
 });
 
 test("AUTH_PROFILE_INCOMPLETE → 'User profile not found. Please complete onboarding.'", async ({

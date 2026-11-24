@@ -48,7 +48,10 @@ plain `HTTPException`. Portfolio and leaderboard need no local error wrapper:
 unexpected failures use the safe 500 path above. Framework errors such as an
 unmatched route or unsupported HTTP method retain FastAPI's default format.
 
-Missing or rejected credentials return 401 `UNAUTHORIZED`; a missing profile
+Missing or rejected credentials return 401 `UNAUTHORIZED`, which the frontend
+handles by refreshing or ending the session rather than showing the message
+([AUTHZ_MATRIX.md §2](AUTHZ_MATRIX.md#rejected-sessions-and-the-return-path));
+a missing profile
 returns 400 `AUTH_PROFILE_INCOMPLETE`. Profile field/action validation uses
 400 `VALIDATION_FAILED`. Missing and non-owned notification mutations both
 return 404 `NOTIFICATION_NOT_FOUND`; owner success remains 200 with

@@ -66,6 +66,8 @@ export interface RequestChange {
   path?: string;
   /** Receives the parsed JSON body and returns the one to send. */
   body?: (body: Record<string, unknown>) => Record<string, unknown>;
+  /** Change only the first `times` matching requests; later ones pass through. */
+  times?: number;
 }
 
 /**
@@ -77,8 +79,13 @@ export async function changeRequest(
   match: RequestMatch,
   change: RequestChange,
 ) {
+  let changed = 0;
   await page.route(`${apiUrl()}/**`, async (route) => {
     if (!matches(route, match)) return route.fallback();
+    if (change.times !== undefined && changed >= change.times) {
+      return route.fallback();
+    }
+    changed += 1;
     const request = route.request();
     const headers = { ...request.headers() };
     if (change.token === null) delete headers.authorization;

@@ -1,6 +1,7 @@
 import { type CookieOptions, createServerClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
+import { safeNextPath, signInPath } from "./lib/auth-redirect";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -29,7 +30,8 @@ export async function proxy(request: NextRequest) {
 
   function anonymousResponse() {
     if (isAdminRoute) return redirectTo("/");
-    if (requiresUser) return redirectTo("/auth");
+    // The path only: query strings are not carried through sign-in.
+    if (requiresUser) return redirectTo(signInPath(pathname));
     return supabaseResponse;
   }
 
@@ -71,7 +73,13 @@ export async function proxy(request: NextRequest) {
 
   if (!user) return anonymousResponse();
 
-  if (pathname === "/auth" || pathname === "/auth/") return redirectTo("/");
+  if (pathname === "/auth" || pathname === "/auth/") {
+    const params = request.nextUrl.searchParams;
+    // The API rejected this session even though Auth accepts its cookie. Show
+    // the sign-in page rather than return to a page that would fail again.
+    if (params.has("reason")) return supabaseResponse;
+    return redirectTo(safeNextPath(params.get("next")));
+  }
 
   if (isAdminRoute) {
     // Role preview and user-editable JWT metadata are presentation only.

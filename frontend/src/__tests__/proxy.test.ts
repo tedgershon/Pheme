@@ -50,6 +50,9 @@ function signIn(role = "user") {
   single.mockResolvedValue({ data: { role }, error: null });
 }
 
+/** The sign-in redirect for a member page, carrying the path but no query. */
+const signInFor = (path: string) => `/auth?next=${encodeURIComponent(path)}`;
+
 function expectRedirect(response: Response, destination: string) {
   expect(response.status).toBe(307);
   expect(response.headers.get("location")).toBe(`${origin}${destination}`);
@@ -70,9 +73,12 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("server page gates (AUTHZ_MATRIX section 5)", () => {
   it.each([...memberPages, "/portfolio/", "/profile/nested"])(
-    "redirects anonymous %s to /auth before rendering",
+    "redirects anonymous %s to /auth before rendering, returning to the path",
     async (path) => {
-      expectRedirect(await proxy(request(`${path}?private=value`)), "/auth");
+      expectRedirect(
+        await proxy(request(`${path}?private=value`)),
+        signInFor(path),
+      );
       expect(from).not.toHaveBeenCalled();
     },
   );
@@ -111,6 +117,41 @@ describe("server page gates (AUTHZ_MATRIX section 5)", () => {
     },
   );
 
+  it("sends a signed-in visitor on /auth to a safe next path", async () => {
+    signIn();
+    expectRedirect(
+      await proxy(request("/auth?next=%2Fportfolio")),
+      "/portfolio",
+    );
+    expectRedirect(
+      await proxy(request("/auth?next=%2Fmarkets%2Fm-1%3Ftab%3Dbets")),
+      "/markets/m-1?tab=bets",
+    );
+    for (const unsafe of [
+      "https://evil.example/",
+      "//evil.example/",
+      "/\\evil.example",
+      "/\t/evil.example",
+      "@evil.example",
+      "/auth",
+      "/auth/callback?code=x",
+    ]) {
+      expectRedirect(
+        await proxy(request(`/auth?next=${encodeURIComponent(unsafe)}`)),
+        "/",
+      );
+    }
+  });
+
+  it("renders /auth for a signed-in visitor whose session the API rejected", async () => {
+    // Auth still accepts the cookie; returning to the page would fail again.
+    signIn();
+    const response = await proxy(
+      request("/auth?next=%2Fportfolio&reason=session_expired"),
+    );
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+
   it.each(["user", "admin", "super_admin"])(
     "enforces the database role for %s on every admin page",
     async (role) => {
@@ -137,7 +178,7 @@ describe("server page gates (AUTHZ_MATRIX section 5)", () => {
     async (env) => {
       vi.stubEnv(env, "");
       for (const path of memberPages) {
-        expectRedirect(await proxy(request(path)), "/auth");
+        expectRedirect(await proxy(request(path)), signInFor(path));
       }
       for (const path of adminPages) {
         expectRedirect(await proxy(request(path)), "/");
@@ -160,7 +201,10 @@ describe("server page gates (AUTHZ_MATRIX section 5)", () => {
       } else {
         getUser.mockRejectedValue(new Error("Network unavailable"));
       }
-      expectRedirect(await proxy(request("/markets/create")), "/auth");
+      expectRedirect(
+        await proxy(request("/markets/create")),
+        signInFor("/markets/create"),
+      );
       expectRedirect(await proxy(request("/admin")), "/");
       expect(from).not.toHaveBeenCalled();
     },
@@ -189,7 +233,7 @@ describe("server page gates (AUTHZ_MATRIX section 5)", () => {
 describe("cookie refresh and route matching", () => {
   it.each([
     ["/markets", false, null],
-    ["/markets/create", false, "/auth"],
+    ["/markets/create", false, "/auth?next=%2Fmarkets%2Fcreate"],
     ["/admin", false, "/"],
     ["/auth", true, "/"],
     ["/admin/users", true, "/"],

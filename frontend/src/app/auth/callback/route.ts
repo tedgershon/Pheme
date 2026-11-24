@@ -1,6 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
+import { NEXT_COOKIE, safeNextPath } from "@/lib/auth-redirect";
+
+function readNext(raw: string | undefined): string {
+  if (!raw) return "/";
+  try {
+    return safeNextPath(decodeURIComponent(raw));
+  } catch {
+    return "/";
+  }
+}
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -8,19 +18,26 @@ export async function GET(request: NextRequest) {
   // 0.0.0.0 is not a valid browser URL, replace with localhost
   const origin = url.origin.replace("0.0.0.0", "localhost");
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
+
+  const cookieStore = await cookies();
+  // Set by the sign-in page; validated so the callback is never an open redirect.
+  const next = readNext(cookieStore.get(NEXT_COOKIE)?.value);
+  cookieStore.delete(NEXT_COOKIE);
+
+  function failed(message: string) {
+    const params = new URLSearchParams({ error: message });
+    if (next !== "/") params.set("next", next);
+    return NextResponse.redirect(`${origin}/auth?${params}`);
+  }
 
   if (code) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.redirect(
-        `${origin}/auth?error=${encodeURIComponent("Auth not configured")}`,
-      );
+      return failed("Auth not configured");
     }
 
-    const cookieStore = await cookies();
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
@@ -73,7 +90,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(
-    `${origin}/auth?error=${encodeURIComponent("Could not authenticate")}`,
-  );
+  return failed("Could not authenticate");
 }

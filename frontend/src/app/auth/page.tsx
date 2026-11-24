@@ -5,15 +5,34 @@ import { PhemeMark } from "@/components/pheme-logo";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { parseApiError } from "@/lib/api";
+import {
+  NEXT_COOKIE,
+  NEXT_COOKIE_MAX_AGE,
+  SESSION_EXPIRED,
+  safeNextPath,
+} from "@/lib/auth-redirect";
 import { supabase } from "@/lib/supabase";
+
+/** Keeps the return path for the OAuth callback; `/` clears it. */
+function rememberNext(next: string) {
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const maxAge = next === "/" ? 0 : NEXT_COOKIE_MAX_AGE;
+  // biome-ignore lint/suspicious/noDocumentCookie: read by the callback route on the server
+  document.cookie = `${NEXT_COOKIE}=${encodeURIComponent(next)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+}
 
 export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [next, setNext] = useState("/");
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
-    const err = new URLSearchParams(window.location.search).get("error");
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("error");
     if (err) setError(err);
+    setNext(safeNextPath(params.get("next")));
+    setSessionExpired(params.get("reason") === SESSION_EXPIRED);
   }, []);
 
   if (!supabase) {
@@ -46,6 +65,7 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
+      rememberNext(next);
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -70,6 +90,11 @@ export default function AuthPage() {
       </div>
 
       <div className="space-y-4 rounded-xl border border-border bg-card p-6">
+        {sessionExpired && !error && (
+          <output className="block rounded-lg bg-muted px-3 py-2 text-sm text-foreground">
+            Your session has ended. Sign in again to continue.
+          </output>
+        )}
         {error && (
           <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
