@@ -79,7 +79,7 @@ describe("a 401 to a signed-in request", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(auth.signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(assign).toHaveBeenCalledWith(
-      "/auth?next=%2Fportfolio&reason=session_expired",
+      "/sign-in?next=%2Fportfolio&reason=session_expired",
     );
   });
 

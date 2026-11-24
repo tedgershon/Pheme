@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
-import { SESSION_EXPIRED, signInPath } from "./auth-redirect";
+import { SESSION_EXPIRED, signInPath } from "./sign-in-redirect";
 import { supabase } from "./supabase";
 import type {
   AdminDisputeCasePage,

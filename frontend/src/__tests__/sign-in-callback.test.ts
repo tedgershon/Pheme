@@ -1,8 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GET } from "../app/auth/callback/route";
-import { NEXT_COOKIE } from "../lib/auth-redirect";
+import { GET } from "../app/sign-in/callback/route";
+import { NEXT_COOKIE } from "../lib/sign-in-redirect";
 
 vi.mock("@supabase/ssr", () => ({ createServerClient: vi.fn() }));
 
@@ -26,7 +26,7 @@ const client = {
 const origin = "https://pheme.example";
 
 function callback(query = "?code=oauth-code") {
-  return GET(new NextRequest(new URL(`/auth/callback${query}`, origin)));
+  return GET(new NextRequest(new URL(`/sign-in/callback${query}`, origin)));
 }
 
 beforeEach(() => {
@@ -85,7 +85,7 @@ describe("OAuth callback return path", () => {
     store.set(NEXT_COOKIE, encodeURIComponent("/portfolio"));
     const response = await callback();
     const location = new URL(response.headers.get("location") ?? "");
-    expect(location.pathname).toBe("/auth");
+    expect(location.pathname).toBe("/sign-in");
     expect(location.searchParams.get("error")).toBe("Could not authenticate");
     expect(location.searchParams.get("next")).toBe("/portfolio");
   });
@@ -93,7 +93,7 @@ describe("OAuth callback return path", () => {
   it("sends a request without a code to the sign-in page", async () => {
     const response = await callback("");
     expect(response.headers.get("location")).toBe(
-      `${origin}/auth?error=Could+not+authenticate`,
+      `${origin}/sign-in?error=Could+not+authenticate`,
     );
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
   });

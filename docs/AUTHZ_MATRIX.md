@@ -58,10 +58,10 @@ An `admin` or `super_admin` can use the role-preview toggle in the account dropd
 
 `401` means the request has no usable identity; `403` means the identity lacks the role or context. Role and context failures never return `401`, because the client treats a `401` as a dead session ([#86](https://github.com/tedgershon/Pheme/issues/86)).
 
-- **Signed-in client, `401` from the API.** `apiFetch` refreshes the Supabase session once and retries the request with the new token. If the refresh fails or the retry also gets `401`, it signs out this session only (`signOut({ scope: "local" })`, which also deletes the cookie) and loads `/auth?next=<current path>&reason=session_expired`. The sign-in page then says the session has ended. Concurrent `401`s share one refresh and one redirect.
+- **Signed-in client, `401` from the API.** `apiFetch` refreshes the Supabase session once and retries the request with the new token. If the refresh fails or the retry also gets `401`, it signs out this session only (`signOut({ scope: "local" })`, which also deletes the cookie) and loads `/sign-in?next=<current path>&reason=session_expired`. The sign-in page then says the session has ended. Concurrent `401`s share one refresh and one redirect.
 - **Request without a token.** A `401` goes to the caller as an ordinary error. Anonymous and demo browsing of public pages never refreshes or redirects.
-- **No redirect loop.** The proxy renders `/auth` with a `reason` parameter even when Auth still accepts the session cookie, so a session the API rejects but Auth accepts stops on the sign-in page instead of bouncing back to the failing page.
-- **Return after sign-in.** Member pages redirect anonymous visitors to `/auth?next=<path>` (path only, no query string). The sign-in page keeps `next` in a 10-minute `pheme-auth-next` cookie for the OAuth round trip, so no Supabase redirect allow-list entry has to match a query string. The callback redirects to it and deletes it. A signed-in visitor on `/auth?next=<path>` is redirected to that path. `next` must be a same-origin path other than `/auth`; anything else becomes `/`. Without `next`, admins land on `/admin` and everyone else on `/`.
+- **No redirect loop.** The proxy renders `/sign-in` with a `reason` parameter even when Auth still accepts the session cookie, so a session the API rejects but Auth accepts stops on the sign-in page instead of bouncing back to the failing page.
+- **Return after sign-in.** Member pages redirect anonymous visitors to `/sign-in?next=<path>` (path only, no query string). The sign-in page keeps `next` in a 10-minute `pheme-auth-next` cookie for the OAuth round trip, so no Supabase redirect allow-list entry has to match a query string. The callback redirects to it and deletes it. A signed-in visitor on `/sign-in?next=<path>` is redirected to that path. `next` must be a same-origin path other than `/sign-in`; anything else becomes `/`. Without `next`, admins land on `/admin` and everyone else on `/`.
 - **Admin pages are unchanged.** Anonymous and unauthorized `/admin/*` requests still redirect to `/` without a return path (§5 policy notes).
 
 ---
@@ -94,10 +94,10 @@ Different surfaces have different "allowed answers." Use these vocabularies, not
 |---|---|
 | `render` | Page fully renders for this role. |
 | `render-readonly` | Page renders, but mutating UI controls are hidden/disabled per the UI-control matrix. |
-| `redirect→/auth` | Server- or client-side redirect to sign-in. **Server-side required for protected pages** (no flash of protected content). |
+| `redirect→/sign-in` | Server- or client-side redirect to sign-in. **Server-side required for protected pages** (no flash of protected content). |
 | `redirect→/` | Redirect to home (e.g., admin role required, user role insufficient). |
 | `404` | Page returns 404 (preferred over 403 for non-existent-from-your-perspective resources). |
-| `not-applicable` | Cell does not apply (e.g., `auth` page for already-signed-in users). |
+| `not-applicable` | Cell does not apply (e.g., sign-in page for already-signed-in users). |
 
 ### 4b. UI Controls (buttons, links, conditional sections)
 
@@ -135,13 +135,13 @@ Routes from `frontend/src/app/`, plus explicitly planned pages. This is intended
 | `/` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Currently reuses market browsing; curated home is planned in issues #18–19. Betting requires auth. |
 | `/markets` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Full market browsing; keep separate from the planned curated home. |
 | `/markets/[id]` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Detail page. Bet/resolve/dispute controls per UI matrix. |
-| `/markets/create` | `redirect→/auth` | `redirect→/auth` | `render` | `render` | `render` | Anonymous/demo cannot create markets; the proxy redirects before rendering. |
-| `/portfolio` | `redirect→/auth` | `redirect→/auth` | `render` | `render` | `render` | Shows current user's bets only. |
-| `/profile` | `redirect→/auth` | `redirect→/auth` | `render` | `render` | `render` | Own profile only; no `/profile/[id]` route exists. |
+| `/markets/create` | `redirect→/sign-in` | `redirect→/sign-in` | `render` | `render` | `render` | Anonymous/demo cannot create markets; the proxy redirects before rendering. |
+| `/portfolio` | `redirect→/sign-in` | `redirect→/sign-in` | `render` | `render` | `render` | Shows current user's bets only. |
+| `/profile` | `redirect→/sign-in` | `redirect→/sign-in` | `render` | `render` | `render` | Own profile only; no `/profile/[id]` route exists. |
 | `/leaderboard` | `render` | `render` | `render` | `render` | `render` | Public ranking. |
 | `/resolutions` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Voting controls require auth. |
-| `/rewards` | `redirect→/auth` | `redirect→/auth` | `render` | `render` | `render` | Per-user badge progress. |
-| `/auth` | `render` | `render` | `redirect→/` | `redirect→/` | `redirect→/` | Sign-in page; redirect already-signed-in users (to a safe `next` path when given). With `reason=session_expired` it renders for everyone (§2 rejected sessions). |
+| `/rewards` | `redirect→/sign-in` | `redirect→/sign-in` | `render` | `render` | `render` | Per-user badge progress. |
+| `/sign-in` | `render` | `render` | `redirect→/` | `redirect→/` | `redirect→/` | Sign-in page; redirect already-signed-in users (to a safe `next` path when given). With `reason=session_expired` it renders for everyone (§2 rejected sessions). |
 | `/admin` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Admin landing. |
 | `/admin/review` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Approve New Markets": `pending_review` queue, plus the latest 50 approved markets (any later status, shown as a badge) and 50 denied. |
 | `/admin/disputes` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Monitor Disputes": view-only dispute cases (`disputed`, and `admin_review` with a case) and their submissions. |
@@ -158,10 +158,10 @@ Page gates are enforced in [`src/proxy.ts`](../frontend/src/proxy.ts) before
 rendering: Supabase Auth `getUser()` validates identity, and admin routes read
 `profiles.role` for that identity. `/admin/users` (including descendants) requires
 `super_admin`; other admin routes accept `admin` or `super_admin`. Anonymous
-member pages redirect to `/auth?next=<path>`; anonymous/unauthorized admin
+member pages redirect to `/sign-in?next=<path>`; anonymous/unauthorized admin
 requests redirect to `/`. Missing Supabase configuration is anonymous, and
 identity or role lookup failures cannot grant protected access. Signed-in
-`/auth` requests redirect to a safe `next` path or `/`, except with a `reason`
+`/sign-in` requests redirect to a safe `next` path or `/`, except with a `reason`
 parameter (§2 rejected sessions); the OAuth callback remains accessible. Session-cookie updates are preserved
 on redirects. Client-side visibility/preview controls supplement these checks;
 API authorization remains independent.

@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
-import { NEXT_COOKIE, safeNextPath } from "@/lib/auth-redirect";
+import {
+  NEXT_COOKIE,
+  SIGN_IN_PATH,
+  safeNextPath,
+} from "@/lib/sign-in-redirect";
 
 function readNext(raw: string | undefined): string {
   if (!raw) return "/";
@@ -27,7 +31,7 @@ export async function GET(request: NextRequest) {
   function failed(message: string) {
     const params = new URLSearchParams({ error: message });
     if (next !== "/") params.set("next", next);
-    return NextResponse.redirect(`${origin}/auth?${params}`);
+    return NextResponse.redirect(`${origin}${SIGN_IN_PATH}?${params}`);
   }
 
   if (code) {

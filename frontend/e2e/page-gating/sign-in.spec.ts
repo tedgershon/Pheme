@@ -2,7 +2,7 @@ import { expect, test } from "../fixtures";
 import { localStack } from "../support/local-stack";
 import { describePage } from "./matrix";
 
-describePage("/auth");
+describePage("/sign-in");
 
 // Return after sign-in (AUTHZ_MATRIX section 2). The OAuth round trip itself
 // needs Google; route-handler unit tests cover the callback's use of the cookie.
@@ -13,7 +13,7 @@ test.describe("return after sign-in", () => {
   }) => {
     await page.goto("/portfolio");
     const landed = new URL(page.url());
-    expect(landed.pathname).toBe("/auth");
+    expect(landed.pathname).toBe("/sign-in");
     expect(landed.searchParams.get("next")).toBe("/portfolio");
 
     // Stop at the provider: only the cookie written before leaving matters.
@@ -43,10 +43,10 @@ test.describe("return after sign-in", () => {
     baseURL,
   }) => {
     await signInAs("user");
-    await page.goto("/auth?next=%2Fleaderboard");
+    await page.goto("/sign-in?next=%2Fleaderboard");
     expect(new URL(page.url()).pathname).toBe("/leaderboard");
 
-    await page.goto("/auth?next=%2F%2Fevil.example%2F");
+    await page.goto("/sign-in?next=%2F%2Fevil.example%2F");
     const landed = new URL(page.url());
     expect(landed.origin).toBe(new URL(baseURL as string).origin);
     expect(landed.pathname).toBe("/");
@@ -56,11 +56,13 @@ test.describe("return after sign-in", () => {
 // The OAuth callback has no section 5 row: the proxy must let every visitor
 // through to the route handler (section 5 policy notes). Without a code the
 // handler itself redirects to the sign-in page with an error.
-test.describe("/auth/callback", () => {
-  const handlerRedirect = /^\/auth\?error=/;
+test.describe("/sign-in/callback", () => {
+  const handlerRedirect = /^\/sign-in\?error=/;
 
   test("anon reaches the route handler", async ({ request }) => {
-    const response = await request.get("/auth/callback", { maxRedirects: 0 });
+    const response = await request.get("/sign-in/callback", {
+      maxRedirects: 0,
+    });
     expect(response.status()).toBe(307);
     const location = new URL(response.headers().location, response.url());
     expect(location.pathname + location.search).toMatch(handlerRedirect);
@@ -72,11 +74,28 @@ test.describe("/auth/callback", () => {
   }) => {
     await signInAs("user");
     // context.request sends the browser context's session cookies.
-    const response = await context.request.get("/auth/callback", {
+    const response = await context.request.get("/sign-in/callback", {
       maxRedirects: 0,
     });
     expect(response.status()).toBe(307);
     const location = new URL(response.headers().location, response.url());
     expect(location.pathname + location.search).toMatch(handlerRedirect);
+  });
+});
+
+// #96 moved sign-in from /auth with no redirect or alias: nothing depended on
+// the old URLs. A 404 here keeps a compatibility route from creeping back.
+test.describe("removed /auth routes", () => {
+  for (const path of ["/auth", "/auth?next=%2Fportfolio", "/auth/callback"]) {
+    test(`anon gets 404 for ${path}`, async ({ request }) => {
+      const response = await request.get(path, { maxRedirects: 0 });
+      expect(response.status()).toBe(404);
+    });
+  }
+
+  test("a signed-in user gets 404 for /auth", async ({ context, signInAs }) => {
+    await signInAs("user");
+    const response = await context.request.get("/auth", { maxRedirects: 0 });
+    expect(response.status()).toBe(404);
   });
 });

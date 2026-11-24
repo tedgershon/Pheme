@@ -18,6 +18,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { useMe } from "@/lib/query/queries/auth";
 import { isAdminRole } from "@/lib/role-preview";
 import { useSession } from "@/lib/SessionProvider";
+import { SIGN_IN_PATH } from "@/lib/sign-in-redirect";
 import { useUiStore } from "@/lib/stores/uiStore";
 import { useClickOutside } from "@/lib/use-click-outside";
 import { cn } from "@/lib/utils";
@@ -45,7 +46,7 @@ export function UserMenu() {
   if (isDemo) {
     return (
       <Link
-        href="/auth"
+        href={SIGN_IN_PATH}
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
           "px-4",

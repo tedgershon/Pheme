@@ -1,7 +1,7 @@
 import { type CookieOptions, createServerClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
-import { safeNextPath, signInPath } from "./lib/auth-redirect";
+import { SIGN_IN_PATH, safeNextPath, signInPath } from "./lib/sign-in-redirect";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -73,7 +73,8 @@ export async function proxy(request: NextRequest) {
 
   if (!user) return anonymousResponse();
 
-  if (pathname === "/auth" || pathname === "/auth/") {
+  // Exact match: the OAuth callback below it must stay reachable.
+  if (pathname === SIGN_IN_PATH || pathname === `${SIGN_IN_PATH}/`) {
     const params = request.nextUrl.searchParams;
     // The API rejected this session even though Auth accepts its cookie. Show
     // the sign-in page rather than return to a page that would fail again.

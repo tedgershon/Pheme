@@ -26,7 +26,7 @@ export const MATRIX_ROLES: readonly MatrixRole[] = [
 export type PageCell =
   | "render"
   | "render-readonly"
-  | "redirect→/auth"
+  | "redirect→/sign-in"
   | "redirect→/"
   | "404"
   | "not-applicable";
@@ -34,7 +34,7 @@ export type PageCell =
 const CELLS: readonly string[] = [
   "render",
   "render-readonly",
-  "redirect→/auth",
+  "redirect→/sign-in",
   "redirect→/",
   "404",
   "not-applicable",
@@ -79,7 +79,7 @@ const MARKERS: Record<string, string> = {
   "/leaderboard": "Leaderboard",
   "/resolutions": "Resolutions",
   "/rewards": "Rewards",
-  "/auth": "Welcome to Pheme",
+  "/sign-in": "Welcome to Pheme",
   "/admin": "Admin Dashboard",
   "/admin/review": "Approve New Markets",
   "/admin/disputes": "Monitor Disputes",
@@ -93,7 +93,7 @@ function marker(page: Page, name: string) {
 }
 
 function redirectTarget(cell: PageCell): string | null {
-  if (cell === "redirect→/auth") return "/auth";
+  if (cell === "redirect→/sign-in") return "/sign-in";
   if (cell === "redirect→/") return "/";
   return null;
 }
