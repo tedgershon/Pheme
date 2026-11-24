@@ -92,6 +92,8 @@ See [MIGRATIONS.md](docs/MIGRATIONS.md) for the disposable project and cleanup.
 [ci.yml](.github/workflows/ci.yml) runs backend Ruff and pytest, plus frontend
 Biome, TypeScript, Vitest and the Next.js build on PRs and pushes to `main`.
 It also runs fresh-database and legacy-upgrade checks in disposable Supabase.
+The database and browser jobs pull Supabase images from `ghcr.io` because
+Public ECR has rejected pulls from GitHub-hosted runners with `Data limit exceeded`.
 Keep `backend/requirements.txt` and `frontend/pnpm-lock.yaml` consistent with
 dependency changes. Backend requirements are installed directly; frontend CI
 uses `pnpm install --frozen-lockfile`.

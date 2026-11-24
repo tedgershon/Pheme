@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+env:
+  SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
+
 jobs:
   database:
     name: Database (bootstrap and legacy upgrade)
