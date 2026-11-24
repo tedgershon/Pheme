@@ -450,7 +450,7 @@ async def file_dispute(
                 ) from exc
             if "expired" in msg:
                 raise AppError(
-                    400, ErrorCode.RESOLUTION_WINDOW_EXPIRED, "The resolution window has expired.",
+                    409, ErrorCode.RESOLUTION_WINDOW_EXPIRED, "The resolution window has expired.",
                     original=exc, extras=extras,
                 ) from exc
             if "unique" in msg or "duplicate" in msg:
@@ -586,7 +586,7 @@ async def cast_vote(
                 ) from exc
             if "expired" in msg:
                 raise AppError(
-                    400, ErrorCode.RESOLUTION_WINDOW_EXPIRED, "The resolution window has expired.",
+                    409, ErrorCode.RESOLUTION_WINDOW_EXPIRED, "The resolution window has expired.",
                     original=exc, extras=extras,
                 ) from exc
             if exc.code == "23505" or "unique" in msg or "duplicate" in msg:

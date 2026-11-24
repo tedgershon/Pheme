@@ -551,7 +551,7 @@ async def review_market(
         close_at = _parse_dt(market.get("close_at"))
         if close_at and close_at <= datetime.now(tz=UTC):
             raise AppError(
-                400,
+                409,
                 ErrorCode.MARKET_CLOSE_DATE_PASSED,
                 "Market close date has passed.",
             )
@@ -583,7 +583,7 @@ async def review_market(
                     raise AppError(400, ErrorCode.MARKET_NOT_PENDING_REVIEW, "Market is not pending review.", original=e) from e
                 if "close date has passed" in msg:
                     raise AppError(
-                        400,
+                        409,
                         ErrorCode.MARKET_CLOSE_DATE_PASSED,
                         "Market close date has passed.",
                         original=e,

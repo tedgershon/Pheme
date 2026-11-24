@@ -326,7 +326,7 @@ or account changes, including private market details and admin review results.
 | PUT | `/users/{id}/role` | `401` / `403` | `403` | `200`; `400` if target=self |
 | POST | `/markets/{id}/backroll` | `401` / `403` | `200` if `M.status != 'resolved'` else `400` | same |
 | GET | `/markets/review` | `401` / `403` | `200` | `200` |
-| POST | `/markets/{id}/review` | `401` / `403` | `200` if `M.status='pending_review'` else `400` | same |
+| POST | `/markets/{id}/review` | `401` / `403` | `200` if `M.status='pending_review'` else `400`; `409` once `close_at` has passed | same |
 | GET | `/markets/admin-review` | `401` / `403` | `200` | `200` |
 | GET | `/markets/disputes` | `401` / `403` | `200` | `200` |
 | POST | `/markets/{id}/resolve` | `401` / `403` | `200` if `M.status='admin_review'`; `400` for other states or YES/NO on multichoice; `403` if `creator(M)` | same |
@@ -345,7 +345,7 @@ opens the market's single dispute case: the market becomes `disputed` and the
 deadline has not passed, any other non-creator can add one concern; it never
 moves a deadline or creates a second case. Responses: `403
 DISPUTE_CREATOR_RESTRICTED` (creator), `409 DISPUTE_ALREADY_FILED` (the caller
-already submitted; submissions cannot be amended), `400
+already submitted; submissions cannot be amended), `409
 RESOLUTION_WINDOW_EXPIRED` (window closed), `400
 MARKET_NOT_PENDING_RESOLUTION` (any other state, including `admin_review`),
 `422 VALIDATION_FAILED` (explanation not 1 to 1,000 characters after
@@ -463,7 +463,7 @@ Behaviors the cells assert:
   `403 RESOLUTION_NOT_CREATOR` once it is `closed`. Starting community
   resolution checks the creator first.
 - Community-resolution start is idempotent (`200`) when already in community
-  resolution. Community-vote expiry is `409`.
+  resolution. An expired dispute or community-vote window is `409`.
 - Denying a market without notes is a domain `400 VALIDATION_FAILED`, not a
   schema `422`.
 - Dispute-window and community-window expiry are not matrix cells: the API

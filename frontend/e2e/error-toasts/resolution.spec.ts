@@ -92,7 +92,7 @@ test("RESOLUTION_WINDOW_EXPIRED → 'The resolution window has expired.'", async
   // demand, so the response is the backend's own, canned.
   await signInAs("user");
   const market = await marketIn("proposed");
-  await mockApi(page, DISPUTE, 400, {
+  await mockApi(page, DISPUTE, 409, {
     detail: {
       code: "RESOLUTION_WINDOW_EXPIRED",
       message: "The resolution window has expired.",

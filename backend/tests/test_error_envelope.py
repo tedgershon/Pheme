@@ -98,7 +98,7 @@ def test_app_error_capture_does_not_leak_tags_or_extras(sentry_events):
     ("resolve", {"outcome": "YES"}, "XX000", "Unexpected failure", 500, "INTERNAL_ERROR", {"outcome": "YES"}),
     ("dispute/vote", {"vote": "NO"}, "P0001", "Creator cannot vote", 403, "DISPUTE_CREATOR_RESTRICTED", {"dispute_id": "d1", "vote": "NO"}),
     ("dispute/vote", {"vote": "NO"}, "P0001", "Bettor cannot vote", 403, "DISPUTE_BETTOR_RESTRICTED", {"dispute_id": "d1", "vote": "NO"}),
-    ("dispute/vote", {"vote": "NO"}, "P0001", "Voting window expired", 400, "RESOLUTION_WINDOW_EXPIRED", {"dispute_id": "d1", "vote": "NO"}),
+    ("dispute/vote", {"vote": "NO"}, "P0001", "Voting window expired", 409, "RESOLUTION_WINDOW_EXPIRED", {"dispute_id": "d1", "vote": "NO"}),
     ("dispute/vote", {"vote": "NO"}, "23505", "Constraint violation", 409, "DISPUTE_VOTE_DUPLICATE", {"dispute_id": "d1", "vote": "NO"}),
     ("dispute/vote", {"vote": "NO"}, "XX000", "Unexpected failure", 500, "INTERNAL_ERROR", {"dispute_id": "d1", "vote": "NO"}),
     ("dispute", {"explanation": "Please review the outcome."}, None, "Unexpected failure", 500, "INTERNAL_ERROR", {}),

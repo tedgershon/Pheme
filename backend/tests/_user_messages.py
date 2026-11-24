@@ -8,15 +8,16 @@ docs/OBSERVABILITY.md in the same change.
 * ``USER_FACING_MESSAGES``: codes with exactly one wording; matrix cells assert it
   verbatim. Every domain code belongs here (#87).
 * ``VARIANT_MESSAGES``: generic codes raised with a message that names the failing
-  action or resource. Only ``CONTEXT_MESSAGE_CODES`` may appear here.
+  action or resource. Only ``GENERIC_CODES`` may appear here.
 * ``DYNAMIC_CODES``: generic codes whose message embeds request-specific text, so
   only the code is asserted.
 * ``UNUSED_CODES``: reserved for planned work; nothing raises them yet.
 """
 
-# Generic codes whose message depends on where they are raised. Every other code
-# has a single message (docs/OBSERVABILITY.md, "User-facing messages").
-CONTEXT_MESSAGE_CODES = {"FORBIDDEN", "INTERNAL_ERROR", "NOT_FOUND", "UNAUTHORIZED", "VALIDATION_FAILED"}
+# Generic codes whose message and HTTP status depend on where they are raised.
+# Every other code has one message and one status (docs/OBSERVABILITY.md,
+# "User-facing messages").
+GENERIC_CODES = {"FORBIDDEN", "INTERNAL_ERROR", "NOT_FOUND", "UNAUTHORIZED", "VALIDATION_FAILED"}
 
 USER_FACING_MESSAGES = {
     "ADMIN_CANNOT_CHANGE_OWN_ROLE": "Cannot change your own role.",
