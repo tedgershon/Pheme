@@ -145,7 +145,7 @@ Routes from `frontend/src/app/`, plus explicitly planned pages. This is intended
 | `/admin` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | Admin landing. |
 | `/admin/review` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Approve New Markets": `pending_review` queue, plus the latest 50 approved markets (any later status, shown as a badge) and 50 denied. |
 | `/admin/disputes` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Monitor Disputes": view-only dispute cases (`disputed`, and `admin_review` with a case) and their submissions. |
-| `/admin/resolve` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Resolve Markets": the admin resolution queue (`admin_review` status) with evidence, loading, empty and error states. The old `/admin/admin-review` URL redirects here. |
+| `/admin/resolve` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Resolve Markets": the admin resolution queue (`admin_review` status) with evidence, loading, empty and error states. |
 | `/admin/stats` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | `render` | "Platform Statistics": cumulative stats. |
 | `/admin/users` | `redirect→/` | `redirect→/` | `redirect→/` | `redirect→/` | `render` | "Manage User Roles": super admin only. |
 
@@ -531,6 +531,12 @@ Community rewards require a matching atomic settlement receipt; direct calls can
 
 ## Changelog
 
+- #96: the sign-in page moved from `/auth` to `/sign-in` and its OAuth
+  callback from `/auth/callback` to `/sign-in/callback`, with no redirect from
+  the old URLs, which now return `404`. Cells changed: every `redirect→/auth`
+  is `redirect→/sign-in`, and the `/auth` row is the `/sign-in` row. The
+  `/admin/admin-review` redirect to `/admin/resolve` is removed: admins get
+  `404`, and everyone else is still sent to `/` like any `/admin` path.
 - #76: the role-preview toggle is built (§2, §6b). The §6b row is no longer
   planned; its cells are unchanged. No page-gating or API cells changed.
 - #16: section 6 is executable as the Playwright control suite with a
@@ -550,7 +556,7 @@ Community rewards require a matching atomic settlement receipt; direct calls can
   without a dispute are documented as `404`.
 - Admin pages renamed by purpose: "Approve New Markets" (`/admin/review`),
   "Monitor Disputes" (`/admin/disputes`), "Resolve Markets" (`/admin/resolve`,
-  formerly `/admin/admin-review`, which redirects), "Platform Statistics" and
+  formerly `/admin/admin-review`; that URL was removed in #96), "Platform Statistics" and
   "Manage User Roles". The Approved list now keeps markets after they close.
   Routes, guards and the `admin_review` status are unchanged.
 - #49: multiple dispute submissions per market case, public anonymised

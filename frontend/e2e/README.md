@@ -48,9 +48,10 @@ What each cell checks:
 - `404`: the response status is 404.
 - `not-applicable`: skipped.
 
-The old resolution-queue URL `/admin/admin-review` is tested with
-`describePage("/admin/resolve", { visit: "/admin/admin-review" })`; it must gate
-like `/admin/resolve` after its `next.config.ts` redirect.
+Removed URLs have no compatibility routes (#96). `sign-in.spec.ts` checks that
+`/auth` and `/auth/callback` return 404, and `admin.spec.ts` that
+`/admin/admin-review` is 404 for an admin and sends everyone else to `/` like
+any `/admin` path.
 `/auth/callback` has no section 5 row. `auth.spec.ts` checks that the proxy
 lets both signed-out and signed-in visitors reach its route handler.
 
