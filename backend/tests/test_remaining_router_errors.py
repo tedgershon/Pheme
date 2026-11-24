@@ -165,7 +165,7 @@ def test_notification_owner_and_missing_contract(method, suffix, role, sentry_ev
 
 
 @pytest.mark.parametrize("method,payload,code", [
-    ("POST", {"andrew_id": " ", "display_name": "Name"}, "AUTH_PROFILE_INCOMPLETE"),
+    ("POST", {"andrew_id": " ", "display_name": "Name"}, "VALIDATION_FAILED"),
     ("POST", {"andrew_id": "name", "display_name": " "}, "VALIDATION_FAILED"),
     ("PATCH", {"display_name": "X" * 33}, "VALIDATION_FAILED"),
     ("PATCH", {"display_name": "<script>"}, "VALIDATION_FAILED"),

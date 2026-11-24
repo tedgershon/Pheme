@@ -64,7 +64,7 @@ def test_missing_resources_have_specific_safe_errors(market_api, method, path, b
 
 @pytest.mark.parametrize("creator,status,expected,code,message", [
     ("u2", "closed", 403, "RESOLUTION_NOT_CREATOR", "Only the market creator can do this."),
-    ("u1", "open", 400, "MARKET_NOT_CLOSED", "Community resolution can only be started for closed markets."),
+    ("u1", "open", 400, "MARKET_NOT_CLOSED", "Market must be closed before it can be resolved."),
     ("u1", "closed", 500, "INTERNAL_ERROR", "Failed to start community resolution."),
 ])
 def test_community_resolution_errors_preserve_status(market_api, creator, status, expected, code, message):
@@ -109,14 +109,14 @@ def test_community_resolution_start_is_a_guarded_server_write(market_api, monkey
 
 @pytest.mark.parametrize("message,status,code,safe_message", [
     ("Market not found", 404, "MARKET_NOT_FOUND", "Market not found."),
-    ("Market is not in pending_resolution status", 400, "MARKET_NOT_PENDING_RESOLUTION", "Market is not in pending resolution."),
-    ("Market creator cannot file disputes", 403, "DISPUTE_CREATOR_RESTRICTED", "Market creator cannot file disputes."),
-    ("A creator proposal and dispute deadline are required", 400, "MARKET_NOT_PENDING_RESOLUTION", "A creator proposal with a dispute deadline is required."),
+    ("Market is not in pending_resolution status", 400, "MARKET_NOT_PENDING_RESOLUTION", "Market is not in its resolution period."),
+    ("Market creator cannot file disputes", 403, "DISPUTE_CREATOR_RESTRICTED", "Market creators cannot file or vote on disputes for their own market."),
+    ("A creator proposal and dispute deadline are required", 400, "MARKET_NOT_PENDING_RESOLUTION", "Market is not in its resolution period."),
     ("Dispute window has expired", 400, "RESOLUTION_WINDOW_EXPIRED", "The resolution window has expired."),
     ("duplicate key violates unique constraint", 409, "DISPUTE_ALREADY_FILED", "You have already submitted a concern for this market."),
     ("You have already submitted a concern for this market", 409, "DISPUTE_ALREADY_FILED", "You have already submitted a concern for this market."),
     ("Dispute submission window has expired", 400, "RESOLUTION_WINDOW_EXPIRED", "The resolution window has expired."),
-    ("Market is not in pending_resolution or disputed status", 400, "MARKET_NOT_PENDING_RESOLUTION", "Market is not in pending resolution."),
+    ("Market is not in pending_resolution or disputed status", 400, "MARKET_NOT_PENDING_RESOLUTION", "Market is not in its resolution period."),
     ("Dispute not found", 404, "DISPUTE_NOT_FOUND", "No dispute found for this market."),
     ("Explanation must be 1 to 1000 characters", 422, "VALIDATION_FAILED", "Explanation must be 1 to 1000 characters."),
     ("Disputes can only be filed as the signed-in user", 403, "FORBIDDEN", "Disputes can only be filed as yourself."),

@@ -212,7 +212,7 @@ async def backroll_market(
         if "not found" in msg:
             raise AppError(404, ErrorCode.MARKET_NOT_FOUND, "Market not found.", original=e) from e
         if "resolved" in msg:
-            raise AppError(400, ErrorCode.MARKET_ALREADY_RESOLVED, "Cannot backroll a resolved market.", original=e) from e
+            raise AppError(400, ErrorCode.MARKET_ALREADY_RESOLVED, "Market is already resolved.", original=e) from e
         raise AppError(500, ErrorCode.INTERNAL_ERROR, "Backroll failed.", original=e) from e
 
 
@@ -553,7 +553,7 @@ async def review_market(
             raise AppError(
                 400,
                 ErrorCode.MARKET_CLOSE_DATE_PASSED,
-                "Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
+                "Market close date has passed.",
             )
 
         updates = {}
@@ -585,7 +585,7 @@ async def review_market(
                     raise AppError(
                         400,
                         ErrorCode.MARKET_CLOSE_DATE_PASSED,
-                        "Market close date has passed. Pending markets are automatically denied and can no longer be updated.",
+                        "Market close date has passed.",
                         original=e,
                     ) from e
                 raise AppError(

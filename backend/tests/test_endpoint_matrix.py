@@ -17,6 +17,7 @@ import pytest
 from _matrix_cells import MATRIX_CELLS, UNKNOWN_ID, World
 from _matrix_rpc import RPC_HANDLERS
 from _user_messages import (
+    CONTEXT_MESSAGE_CODES,
     DYNAMIC_CODES,
     UNUSED_CODES,
     USER_FACING_MESSAGES,
@@ -128,6 +129,12 @@ def test_message_catalog_covers_every_error_code():
     catalogued = set(USER_FACING_MESSAGES) | set(VARIANT_MESSAGES) | set(DYNAMIC_CODES) | UNUSED_CODES
     assert catalogued == {code.value for code in ErrorCode}
     assert not set(USER_FACING_MESSAGES) & set(VARIANT_MESSAGES)
+
+
+def test_only_generic_codes_have_more_than_one_message():
+    """A domain code has one message (#87); only the generic codes vary by context."""
+    assert set(VARIANT_MESSAGES) <= CONTEXT_MESSAGE_CODES
+    assert set(DYNAMIC_CODES) <= CONTEXT_MESSAGE_CODES
 
 
 def test_message_catalog_matches_source_messages():

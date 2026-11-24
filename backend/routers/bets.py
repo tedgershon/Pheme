@@ -81,7 +81,7 @@ async def place_bet(
             raise AppError(
                 409,
                 ErrorCode.MARKET_CLOSE_DATE_PASSED,
-                'Market has closed.',
+                'Market close date has passed.',
                 original=exc,
                 extras={'market_id': market_id},
             ) from exc
@@ -149,7 +149,7 @@ async def place_multichoice_bet(
             raise AppError(
                 403,
                 ErrorCode.BET_CREATOR_RESTRICTED,
-                'Market creators cannot place bets on their own markets.',
+                'You cannot bet on a market you created.',
                 original=exc,
                 extras={'market_id': market_id},
             ) from exc
@@ -157,7 +157,7 @@ async def place_multichoice_bet(
             raise AppError(
                 409,
                 ErrorCode.MARKET_CLOSE_DATE_PASSED,
-                'Market has closed.',
+                'Market close date has passed.',
                 original=exc,
                 extras={'market_id': market_id},
             ) from exc
@@ -213,7 +213,7 @@ async def place_multichoice_bet(
             raise AppError(
                 status.HTTP_400_BAD_REQUEST,
                 ErrorCode.BET_INVALID_OPTION,
-                'Option does not belong to this market.',
+                'Invalid market option.',
                 original=exc,
                 extras={'market_id': market_id},
             ) from exc

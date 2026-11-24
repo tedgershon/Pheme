@@ -213,11 +213,11 @@ def test_successful_rpc_responses_are_preserved(rpc_endpoint):
     case.captured.assert_not_called()
 
 
-@pytest.mark.parametrize("message,status", [
-    ("Market creators cannot place bets on their own markets", 403),
-    ("Market has closed", 409),
+@pytest.mark.parametrize("message,status,safe_message", [
+    ("Market creators cannot place bets on their own markets", 403, "You cannot bet on a market you created."),
+    ("Market has closed", 409, "Market close date has passed."),
 ])
-def test_option_bet_sql_eligibility_errors(message, status):
+def test_option_bet_sql_eligibility_errors(message, status, safe_message):
     database = Mock()
     database.rpc.return_value.execute.side_effect = APIError({"code": "P0001", "message": message, "details": None, "hint": None})
     app = FastAPI()
@@ -229,4 +229,4 @@ def test_option_bet_sql_eligibility_errors(message, status):
     with TestClient(app) as client:
         response = client.post("/api/markets/m1/bets/option", json={"option_id": "o1", "amount": 10})
     assert response.status_code == status
-    assert response.json()["detail"]["message"] == message + "."
+    assert response.json()["detail"]["message"] == safe_message

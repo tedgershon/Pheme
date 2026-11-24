@@ -333,7 +333,7 @@ async def propose_resolution(
                 ) from exc
             if "closed" in msg:
                 raise AppError(
-                    400, ErrorCode.MARKET_NOT_CLOSED, "Market must be closed before proposing resolution.",
+                    400, ErrorCode.MARKET_NOT_CLOSED, "Market must be closed before it can be resolved.",
                     original=exc, extras=extras,
                 ) from exc
             raise AppError(
@@ -364,7 +364,7 @@ async def start_community_resolution(
         if market.get("status") != "closed":
             raise AppError(
                 400, ErrorCode.MARKET_NOT_CLOSED,
-                "Community resolution can only be started for closed markets.",
+                "Market must be closed before it can be resolved.",
             )
 
         update_payload: dict[str, str | None] = {
@@ -424,13 +424,13 @@ async def file_dispute(
             msg = str(exc).lower()
             extras = {"market_id": market_id}
             if "creator cannot" in msg:
-                raise AppError(403, ErrorCode.DISPUTE_CREATOR_RESTRICTED, "Market creator cannot file disputes.", original=exc, extras=extras) from exc
+                raise AppError(403, ErrorCode.DISPUTE_CREATOR_RESTRICTED, "Market creators cannot file or vote on disputes for their own market.", original=exc, extras=extras) from exc
             if "signed-in user" in msg:
                 raise AppError(403, ErrorCode.FORBIDDEN, "Disputes can only be filed as yourself.", original=exc, extras=extras) from exc
             if "explanation must be" in msg:
                 raise AppError(422, ErrorCode.VALIDATION_FAILED, "Explanation must be 1 to 1000 characters.", original=exc, extras=extras) from exc
             if "proposal and dispute deadline" in msg:
-                raise AppError(400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "A creator proposal with a dispute deadline is required.", original=exc, extras=extras) from exc
+                raise AppError(400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "Market is not in its resolution period.", original=exc, extras=extras) from exc
             if "already submitted" in msg:
                 raise AppError(
                     409, ErrorCode.DISPUTE_ALREADY_FILED, "You have already submitted a concern for this market.",
@@ -445,7 +445,7 @@ async def file_dispute(
                 ) from exc
             if "pending_resolution" in msg:
                 raise AppError(
-                    400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "Market is not in pending resolution.",
+                    400, ErrorCode.MARKET_NOT_PENDING_RESOLUTION, "Market is not in its resolution period.",
                     original=exc, extras=extras,
                 ) from exc
             if "expired" in msg:
@@ -575,7 +575,7 @@ async def cast_vote(
             extras = {"market_id": market_id, "dispute_id": dispute.data["id"], "vote": body.vote}
             if "creator" in msg:
                 raise AppError(
-                    403, ErrorCode.DISPUTE_CREATOR_RESTRICTED, "Market creator cannot vote on disputes.",
+                    403, ErrorCode.DISPUTE_CREATOR_RESTRICTED, "Market creators cannot file or vote on disputes for their own market.",
                     original=exc, extras=extras,
                 ) from exc
             if "bets" in msg or "bettor" in msg:
