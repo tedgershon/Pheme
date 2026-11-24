@@ -130,9 +130,9 @@ response so a test can also assert the status.
 
 `hygiene/no-leaks.spec.ts` checks pages for a JWT. `next dev` copies request
 cookies, which include the session, into the page's inline debug data, so
-those tests skip themselves on a dev server and run on production builds (CI).
-To run them locally, build and start the frontend yourself and set
-`PLAYWRIGHT_BASE_URL` and `E2E_API_URL`, as CI does.
+those tests skip themselves on a dev server and run on production builds. Run
+them locally with `pnpm e2e:prod`, which builds and serves the frontend as CI
+does (see [frontend/README.md](../README.md#running-e2e-tests)).
 
 `UNAUTHORIZED` is not a message on the page: the client refreshes the session
 and retries once, then sends the user to `/sign-in` and back afterwards

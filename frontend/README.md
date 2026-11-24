@@ -84,19 +84,31 @@ backend virtual environment as described in
 ```sh
 npx --no-install supabase start   # from the repository root, with Docker running
 pnpm e2e                          # all browser tests
+pnpm e2e:prod                     # all browser tests on a production build, as in CI
 pnpm e2e e2e/page-gating/         # one directory or file
 pnpm e2e:ui                       # Playwright UI mode, to step through tests
 pnpm e2e:debug                    # headed, with the inspector
 ```
 
 `pnpm e2e` reads the local stack's keys from `supabase status`, then starts its
-own backend on port 8100 and frontend on port 3100 with those keys. It reuses
-servers that are already listening on those ports. Your usual dev servers on
+own backend on port 8100 and frontend (`next dev`) on port 3100 with those
+keys, and stops them when the run ends. It reuses servers that are already
+listening on those ports. Before any test, it checks that the backend accepts a
+local session and allows the frontend's origin (CORS), and stops with a message
+naming the port if a leftover server does not. Your usual dev servers on
 3000/8000 can keep running against the hosted project. The frontend server
 builds into `.next-e2e/` so it does not collide with `pnpm dev`. It uses
 `../.venv` for Python; set `E2E_PYTHON` to use another interpreter. If a local
 database predates recent migrations, apply them with
 `npx --no-install supabase migration up --local`.
+
+`pnpm e2e:prod` does the same with a production build: it runs `next build`
+into `.next-e2e/` with the local stack's keys, then `next start` on port 3100.
+The build takes a few minutes. Run it before opening a PR that touches what
+pages render; the session-token checks in `e2e/hygiene/` skip on `next dev`
+and run only here and in CI. It never reuses a frontend on port 3100, since
+that could be a dev server or an older build; stop it first. Arguments pass
+through as with `pnpm e2e`, for example `pnpm e2e:prod e2e/hygiene/`.
 
 To test servers you started yourself, set `PLAYWRIGHT_BASE_URL` and
 `E2E_API_URL`; both must use the local stack. CI does this with a production

@@ -8,12 +8,31 @@ import { localStack, REPO_ROOT } from "./e2e/support/local-stack";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3100";
 const apiURL = process.env.E2E_API_URL ?? "http://localhost:8100";
 process.env.E2E_API_URL = apiURL;
+process.env.E2E_BASE_URL = baseURL;
 
 const stack = localStack();
 
 // CI and custom URLs bring their own servers; local runs start them here with
 // the local stack in the environment, which overrides the apps' .env files.
 const managedServers = !process.env.CI && !process.env.PLAYWRIGHT_BASE_URL;
+
+// `pnpm e2e:prod` serves a production build instead of `next dev`, as CI does.
+// The session-token checks in hygiene/ only run on a production build.
+const productionBuild =
+  managedServers && process.env.npm_lifecycle_event === "e2e:prod";
+const frontendPort = new URL(baseURL).port;
+
+const frontendEnv = {
+  // Its own build directory, so it can run beside `pnpm dev`.
+  NEXT_DIST_DIR: ".next-e2e",
+  NEXT_PUBLIC_SUPABASE_URL: stack.supabaseUrl,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
+  NEXT_PUBLIC_API_URL: apiURL,
+  NEXT_PUBLIC_SENTRY_DSN: "",
+  SENTRY_DSN: "",
+  // A token in the shell would make the production build upload source maps.
+  SENTRY_AUTH_TOKEN: "",
+};
 
 function python() {
   if (process.env.E2E_PYTHON) return process.env.E2E_PYTHON;
@@ -45,6 +64,27 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: managedServers
     ? [
+        // Frontend first: Playwright starts these in order and does not stop
+        // the earlier ones when a later one cannot start (such as a taken port).
+        productionBuild
+          ? {
+              command: `pnpm exec next build && pnpm exec next start --hostname localhost --port ${frontendPort}`,
+              url: baseURL,
+              // A server already on this port is a dev server or an older
+              // build, so stop with Playwright's "already used" error instead.
+              reuseExistingServer: false,
+              timeout: 600_000,
+              // Show the build's progress; it takes a few minutes.
+              stdout: "pipe",
+              env: frontendEnv,
+            }
+          : {
+              command: `pnpm exec next dev --hostname localhost --port ${frontendPort}`,
+              url: baseURL,
+              reuseExistingServer: true,
+              timeout: 180_000,
+              env: frontendEnv,
+            },
         {
           command: `"${python()}" -m uvicorn main:app --host 127.0.0.1 --port ${new URL(apiURL).port}`,
           cwd: path.join(REPO_ROOT, "backend"),
@@ -60,21 +100,6 @@ export default defineConfig({
             CORS_ORIGIN_REGEX: "",
             SENTRY_DSN: "",
             SENTRY_ENVIRONMENT: "e2e",
-          },
-        },
-        {
-          command: `pnpm exec next dev --hostname localhost --port ${new URL(baseURL).port}`,
-          url: baseURL,
-          reuseExistingServer: true,
-          timeout: 180_000,
-          env: {
-            // Its own build directory, so it can run beside `pnpm dev`.
-            NEXT_DIST_DIR: ".next-e2e",
-            NEXT_PUBLIC_SUPABASE_URL: stack.supabaseUrl,
-            NEXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
-            NEXT_PUBLIC_API_URL: apiURL,
-            NEXT_PUBLIC_SENTRY_DSN: "",
-            SENTRY_DSN: "",
           },
         },
       ]

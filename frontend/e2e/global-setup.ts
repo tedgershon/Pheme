@@ -64,4 +64,24 @@ export default async function globalSetup() {
         "Point it at the local Supabase stack (see frontend/README.md).",
     );
   }
+
+  // A backend left running from another setup can accept the session but not
+  // the frontend's origin; the browser then fails every API call with
+  // net::ERR_FAILED. Send the preflight the browser would send.
+  const origin = new URL(process.env.E2E_BASE_URL as string).origin;
+  const preflight = await fetch(`${apiURL}/api/auth/me`, {
+    method: "OPTIONS",
+    headers: {
+      Origin: origin,
+      "Access-Control-Request-Method": "GET",
+      "Access-Control-Request-Headers": "authorization",
+    },
+  });
+  if (preflight.headers.get("access-control-allow-origin") !== origin) {
+    throw new Error(
+      `The backend at ${apiURL} does not allow requests from ${origin} (CORS preflight HTTP ${preflight.status}). ` +
+        `It is probably a server left running with other settings: stop whatever listens on port ${new URL(apiURL).port} ` +
+        "so the suite starts its own, or set its CORS_ORIGINS to include that origin.",
+    );
+  }
 }
