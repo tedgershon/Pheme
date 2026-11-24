@@ -134,6 +134,8 @@ those tests skip themselves on a dev server and run on production builds (CI).
 To run them locally, build and start the frontend yourself and set
 `PLAYWRIGHT_BASE_URL` and `E2E_API_URL`, as CI does.
 
-Known gaps these tests document rather than hide:
-
-- `UNAUTHORIZED` is shown as text; the page does not send the user to `/auth`.
+`UNAUTHORIZED` is not a message on the page: the client refreshes the session
+and retries once, then sends the user to `/auth` and back afterwards
+(AUTHZ_MATRIX.md section 2). `error-toasts/auth-claims.spec.ts` covers both
+outcomes with `changeRequest(page, match, { token, times })`, which rejects
+only the first `times` matching requests when `times` is set.

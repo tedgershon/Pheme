@@ -192,11 +192,12 @@ async function endRejectedSession() {
   if (sessionEnded || typeof window === "undefined") return;
   sessionEnded = true;
   try {
-    // Local only: the server session is already unusable, and a network
-    // sign-out could fail and leave the cookie that the proxy still accepts.
+    // "local" revokes only this session (other devices stay signed in) and
+    // deletes its cookie. If the logout call itself fails, supabase-js keeps
+    // the cookie; the reason parameter still keeps /auth from bouncing back.
     await supabase?.auth.signOut({ scope: "local" });
   } catch {
-    // The reason parameter keeps /auth from bouncing back here regardless.
+    // Same as above: the redirect below does not depend on the sign-out.
   }
   window.location.assign(signInPath(window.location.pathname, SESSION_EXPIRED));
 }
