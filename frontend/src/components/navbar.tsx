@@ -13,7 +13,7 @@ import { useSession } from "@/lib/SessionProvider";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/", label: "Markets" },
+  { href: "/markets", label: "Markets" },
   { href: "/resolutions", label: "Resolutions" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
