@@ -13,7 +13,7 @@ export function CategoryFilter({
   onSelect: (category: string | null) => void;
 }) {
   return (
-    <div className="border-b border-border">
+    <div className="border-b border-border" data-testid="category-filter">
       <div className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 py-2.5">
         <Button
           variant={selected === null ? "default" : "outline"}

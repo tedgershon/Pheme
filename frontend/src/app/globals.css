@@ -153,6 +153,24 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* The home page's featured market: an ink surface in the logo's navy. Pair it
+   with the .dark class so every other token switches to its dark value; the
+   overrides below retune muted surfaces for navy and lighten Yes/No so small
+   text keeps 4.5:1 contrast. */
+.featured-surface {
+  --feature-ink: #182c4b;
+  --card: var(--feature-ink);
+  --card-foreground: #ffffff;
+  --foreground: #ffffff;
+  --muted: color-mix(in srgb, #ffffff 9%, var(--feature-ink));
+  --muted-foreground: #b9c3d3;
+  --border: rgb(255 255 255 / 12%);
+  --success: #8cc0b3;
+  --danger: #ff7a82;
+  background-color: var(--card);
+  color: var(--card-foreground);
+}
+
 .market-card-open {
   border: 1px solid transparent;
   background:

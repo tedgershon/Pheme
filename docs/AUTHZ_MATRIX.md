@@ -132,8 +132,8 @@ Routes from `frontend/src/app/`, plus explicitly planned pages. This is intended
 
 | Path | `anon` | `demo` | `user` | `admin` | `super_admin` | Notes |
 |---|---|---|---|---|---|---|
-| `/` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Currently reuses market browsing; curated home is planned in issues #18–19. Betting requires auth. |
-| `/markets` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Full market browsing; keep separate from the planned curated home. |
+| `/` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Curated dashboard with a featured open market and capped open/pending-resolution cards; market reads are public, betting requires auth. |
+| `/markets` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Full market browsing with category filtering and open, pending-resolution and closed sections. |
 | `/markets/[id]` | `render-readonly` | `render-readonly` | `render` | `render` | `render` | Detail page. Bet/resolve/dispute controls per UI matrix. |
 | `/markets/create` | `redirect→/sign-in` | `redirect→/sign-in` | `render` | `render` | `render` | Anonymous/demo cannot create markets; the proxy redirects before rendering. |
 | `/portfolio` | `redirect→/sign-in` | `redirect→/sign-in` | `render` | `render` | `render` | Shows current user's bets only. |

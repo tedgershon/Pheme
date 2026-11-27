@@ -1,24 +1,17 @@
 import Link from "next/link";
+import { CloseCountdown } from "@/components/close-countdown";
+import {
+  getMarketPool,
+  getOutcomes,
+  OutcomeRows,
+} from "@/components/market-outcomes";
 import { getOptionColor } from "@/components/probability-chart";
 import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { calendarDaysUntilClose } from "@/lib/datetime";
 import type { Market } from "@/lib/types";
 import { getMarketProbability, isMarketOpen } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-function formatCloseDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return "—";
-  const diff = date.getTime() - Date.now();
-  if (diff < 0) return "Closed";
-  const days = calendarDaysUntilClose(dateStr);
-  if (days === 0) return "Closes today";
-  if (days === 1) return "Closes tomorrow";
-  if (days <= 7) return `Closes in ${days} days`;
-  return `Closes ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-}
 
 function StatusDot({ market }: { market: Market }) {
   const { status } = market;
@@ -69,7 +62,15 @@ function getMultichoiceLeader(market: Market) {
   return { label: leader.label, pct, totalPool };
 }
 
-export function MarketCard({ market }: { market: Market }) {
+export function MarketCard({
+  market,
+  variant = "default",
+}: {
+  market: Market;
+  variant?: "default" | "compact";
+}) {
+  if (variant === "compact") return <CompactMarketCard market={market} />;
+
   const isMultichoice = market.market_type === "multichoice";
   const probability = getMarketProbability(market);
   const isOpen = isMarketOpen(market);
@@ -155,7 +156,7 @@ export function MarketCard({ market }: { market: Market }) {
                   <TartanCoin size={14} />
                   {totalPool.toLocaleString()} pool
                 </span>
-                <span>{formatCloseDate(market.close_at)}</span>
+                <CloseCountdown closeAt={market.close_at} />
               </div>
             </div>
           </CardContent>
@@ -224,11 +225,53 @@ export function MarketCard({ market }: { market: Market }) {
                 <TartanCoin size={14} />
                 {total.toLocaleString()} pool
               </span>
-              <span>{formatCloseDate(market.close_at)}</span>
+              <CloseCountdown closeAt={market.close_at} />
             </div>
           </div>
         </CardContent>
       </Card>
+    </Link>
+  );
+}
+
+const COMPACT_OUTCOMES = 2;
+
+/**
+ * Home-page card: category, question, two outcome rows, then pool and close
+ * date. Every card puts each piece in the same place so a grid scans quickly.
+ */
+function CompactMarketCard({ market }: { market: Market }) {
+  const outcomes = getOutcomes(market);
+  const pool = getMarketPool(market);
+  const hiddenOutcomes = outcomes.length - COMPACT_OUTCOMES;
+
+  return (
+    <Link
+      href={`/markets/${market.id}`}
+      className="group flex h-full min-w-0 flex-col rounded-xl border bg-card p-4 text-card-foreground shadow-xs transition-[border-color,box-shadow] hover:border-foreground/20 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
+      <p className="truncate text-xs font-semibold text-muted-foreground">
+        {market.category}
+      </p>
+      <h3 className="mt-1 line-clamp-3 min-h-[2lh] break-words text-[0.9375rem] font-bold leading-snug group-hover:underline">
+        {market.title}
+      </h3>
+      <OutcomeRows
+        outcomes={outcomes.slice(0, COMPACT_OUTCOMES)}
+        className="mt-auto pt-4"
+      />
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1 tabular-nums">
+          <TartanCoin size={13} />
+          {pool > 0
+            ? `${pool.toLocaleString("en-US")} pool`
+            : "No predictions yet"}
+          {hiddenOutcomes > 0 && (
+            <span className="ml-1">· +{hiddenOutcomes} more</span>
+          )}
+        </span>
+        <CloseCountdown closeAt={market.close_at} icon emphasizeSoon />
+      </div>
     </Link>
   );
 }

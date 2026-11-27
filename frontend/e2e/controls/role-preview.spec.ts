@@ -178,16 +178,24 @@ test.describe("role preview", () => {
     await expect(heading(page, "Manage User Roles")).toBeVisible();
     await markDocument(page);
 
-    // Leave client-side, preview on "/", then go back to /admin/users
-    // client-side: the page's own guard sends the previewing browser to "/".
+    // Leave client-side through the home logo, preview on "/", then go back
+    // to /admin/users client-side: the page guard sends preview users to "/".
     await expect(async () => {
-      if (!page.url().endsWith("/")) await navLink(page, "Markets").click();
-      await expect(heading(page, "Markets")).toBeVisible({ timeout: 1_000 });
+      if (!page.url().endsWith("/")) {
+        await page
+          .getByRole("link", {
+            name: "Pheme at Carnegie Mellon University, home",
+          })
+          .click();
+      }
+      await expect(heading(page, "What's happening at CMU?")).toBeVisible({
+        timeout: 1_000,
+      });
     }).toPass();
     await setPreview(page, true);
     await page.goBack();
     await expect(page).toHaveURL((url) => url.pathname === "/", NAV);
-    await expect(heading(page, "Markets")).toBeVisible();
+    await expect(heading(page, "What's happening at CMU?")).toBeVisible();
     await expectCell("hidden", heading(page, "Manage User Roles"));
     await expect(previewBar(page)).toBeVisible();
     expect(await documentMarked(page)).toBe(true);
