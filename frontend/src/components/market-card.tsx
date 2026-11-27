@@ -1,3 +1,4 @@
+import { ArrowUpRight, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { getOptionColor } from "@/components/probability-chart";
 import { TartanCoin } from "@/components/tartan-coin";
@@ -69,7 +70,36 @@ function getMultichoiceLeader(market: Market) {
   return { label: leader.label, pct, totalPool };
 }
 
-export function MarketCard({ market }: { market: Market }) {
+export function MarketCard({
+  market,
+  variant = "default",
+}: {
+  market: Market;
+  variant?: "default" | "compact" | "list";
+}) {
+  if (variant === "list") {
+    return (
+      <Link
+        href={`/markets/${market.id}`}
+        className="group flex min-w-0 items-center justify-between gap-3 rounded-md py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <div className="min-w-0 space-y-1">
+          <h3 className="break-words text-sm font-bold leading-snug group-hover:underline">
+            {market.title}
+          </h3>
+          <p className="break-words text-xs text-muted-foreground">
+            {market.category}
+          </p>
+        </div>
+        <ChevronRight
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground"
+        />
+      </Link>
+    );
+  }
+  if (variant === "compact") return <CompactMarketCard market={market} />;
+
   const isMultichoice = market.market_type === "multichoice";
   const probability = getMarketProbability(market);
   const isOpen = isMarketOpen(market);
@@ -229,6 +259,63 @@ export function MarketCard({ market }: { market: Market }) {
           </div>
         </CardContent>
       </Card>
+    </Link>
+  );
+}
+
+function CompactMarketCard({ market }: { market: Market }) {
+  const isBinary = market.market_type === "binary";
+  const leader = isBinary ? null : getMultichoiceLeader(market);
+  const probability = getMarketProbability(market);
+  const pool = isBinary
+    ? market.yes_pool_total + market.no_pool_total
+    : (leader?.totalPool ?? 0);
+
+  return (
+    <Link
+      href={`/markets/${market.id}`}
+      className="group flex h-full min-w-0 flex-col gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:border-brand-accent/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <p className="break-words text-xs font-bold text-muted-foreground">
+          {market.category}
+        </p>
+        <ArrowUpRight
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground group-hover:text-brand-tint-foreground"
+        />
+      </div>
+      <h3 className="mb-auto break-words text-base font-extrabold leading-snug group-hover:underline">
+        {market.title}
+      </h3>
+      {isBinary ? (
+        <div className="grid grid-cols-2 gap-2 text-sm font-bold tabular-nums">
+          <span className="flex flex-wrap justify-between gap-x-2 rounded-md bg-success/10 px-2.5 py-1.5 text-success">
+            <span>Yes</span> {probability}%
+          </span>
+          <span className="flex flex-wrap justify-between gap-x-2 rounded-md bg-danger/10 px-2.5 py-1.5 text-danger">
+            <span>No</span> {100 - probability}%
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-2 rounded-md bg-muted px-2.5 py-1.5 text-sm">
+          <span className="min-w-0 break-words">
+            {leader && pool > 0 ? leader.label : "Multiple outcomes"}
+          </span>
+          {leader && pool > 0 && (
+            <span className="shrink-0 font-bold tabular-nums">
+              {leader.pct}%
+            </span>
+          )}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t pt-2.5 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <TartanCoin size={13} />
+          {pool.toLocaleString("en-US")} pool
+        </span>
+        <span>{formatCloseDate(market.close_at)}</span>
+      </div>
     </Link>
   );
 }

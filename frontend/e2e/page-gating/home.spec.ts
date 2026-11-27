@@ -37,6 +37,11 @@ test("home shows a featured market and capped open and pending sections", async 
   await expect(
     page.getByRole("heading", { name: "Featured Market" }),
   ).toBeVisible();
+  const featured = page.getByRole("region", { name: "Featured Market" });
+  await expect(featured.getByText("Current outlook")).toBeVisible();
+  await expect(
+    featured.getByRole("link", { name: "View market" }),
+  ).toHaveAttribute("href", /^\/markets\/[^/]+$/);
   await expect(page.getByTestId("home-open-market-card")).toHaveCount(6);
   await expect(page.getByTestId("home-pending-market-card")).toHaveCount(3);
   await expect(page.getByText(resolved.title)).toHaveCount(0);
@@ -47,8 +52,19 @@ test("home shows a featured market and capped open and pending sections", async 
     page.getByRole("heading", { name: "Resolved Markets" }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("link", { name: "Browse all markets →" }),
+    page.getByRole("link", { name: "Browse all markets", exact: true }),
   ).toHaveAttribute("href", "/markets");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    featured.getByRole("link", { name: "View market" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Pending Resolution" }),
+  ).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390);
 });
 
 test("markets route retains full browsing and category filtering", async ({
@@ -103,6 +119,6 @@ test("signed-in users see the home dashboard and browse link", async ({
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Browse all markets →" }),
+    page.getByRole("link", { name: "Browse all markets", exact: true }),
   ).toHaveAttribute("href", "/markets");
 });

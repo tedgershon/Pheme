@@ -1,22 +1,16 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, CalendarDays } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-import {
-  getOptionColor,
-  ProbabilityChart,
-} from "@/components/probability-chart";
+import { ProbabilityChart } from "@/components/probability-chart";
 import { TartanCoin } from "@/components/tartan-coin";
-import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
 import {
   betsForMarketQuery,
   hotMarketsQuery,
 } from "@/lib/query/queries/markets";
 import type { Bet, Market, PricePoint } from "@/lib/types";
-import { getMarketProbability } from "@/lib/types";
+import { getMarketProbability, isMarketOpen } from "@/lib/types";
 
 // exported because the markets page's FeaturedMarket also uses it
 export function buildPriceHistory(bets: Bet[]): PricePoint[] {
@@ -40,164 +34,136 @@ export function buildPriceHistory(bets: Bet[]): PricePoint[] {
   return points;
 }
 
-export function MarketOptions({ market }: { market: Market }) {
-  if (market.market_type === "multichoice" && market.options) {
-    const opts = market.options;
-    const totalPool = opts.reduce((s, o) => s + o.pool_total, 0);
-    const sorted = [...opts].sort((a, b) => b.pool_total - a.pool_total);
-    const top = sorted.slice(0, 3);
+const campusDate = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  timeZone: "America/New_York",
+});
 
-    return (
-      <div className="space-y-2">
-        {top.map((opt) => {
-          const pct =
-            totalPool > 0 ? Math.round((opt.pool_total / totalPool) * 100) : 0;
-          const originalIdx = opts.findIndex((o) => o.id === opt.id);
-          return (
-            <div key={opt.id} className="flex items-center gap-3">
-              <span
-                className="h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: getOptionColor(originalIdx) }}
-              />
-              <span className="flex-1 font-medium">{opt.label}</span>
-              <span className="text-lg font-bold">{pct}%</span>
-            </div>
-          );
-        })}
-        {sorted.length > 3 && (
-          <span className="text-sm text-muted-foreground">
-            +{sorted.length - 3} more options
-          </span>
-        )}
-      </div>
-    );
-  }
-
+function MarketOutlook({
+  market,
+  pool,
+  history,
+}: {
+  market: Market;
+  pool: number;
+  history: PricePoint[];
+}) {
   const probability = getMarketProbability(market);
+  const isBinary = market.market_type === "binary";
+  const options = [...(market.options ?? [])].sort(
+    (a, b) => b.pool_total - a.pool_total,
+  );
+
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-3">
-        <span className="h-3 w-3 shrink-0 rounded-full bg-success" />
-        <span className="flex-1 font-medium text-success">Yes</span>
-        <span className="text-lg font-bold">{probability}%</span>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="h-3 w-3 shrink-0 rounded-full bg-danger" />
-        <span className="flex-1 font-medium text-danger">No</span>
-        <span className="text-lg font-bold">{100 - probability}%</span>
-      </div>
+    <div className="flex min-w-0 flex-col justify-center gap-4 rounded-xl bg-card p-4 text-card-foreground sm:p-5">
+      <p className="text-sm font-bold">Current outlook</p>
+      {isBinary ? (
+        <>
+          <div className="grid grid-cols-2 gap-2 tabular-nums">
+            <div className="rounded-lg bg-success/10 p-3 text-success">
+              <p className="text-xs font-bold">Yes</p>
+              <p className="text-2xl font-extrabold">{probability}%</p>
+            </div>
+            <div className="rounded-lg bg-danger/10 p-3 text-danger">
+              <p className="text-xs font-bold">No</p>
+              <p className="text-2xl font-extrabold">{100 - probability}%</p>
+            </div>
+          </div>
+          {history.length > 1 && (
+            <div className="min-w-0">
+              <p className="mb-1 text-xs text-muted-foreground">
+                Yes chance over time
+              </p>
+              <ProbabilityChart data={history} />
+            </div>
+          )}
+        </>
+      ) : options.length > 0 && pool > 0 ? (
+        <ul className="space-y-2">
+          {options.slice(0, 3).map((option) => (
+            <li
+              key={option.id}
+              className="flex justify-between gap-3 rounded-lg bg-muted px-3 py-2 text-sm"
+            >
+              <span className="min-w-0 break-words">{option.label}</span>
+              <span className="shrink-0 font-bold tabular-nums">
+                {Math.round((option.pool_total / pool) * 100)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">No predictions yet.</p>
+      )}
+      <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <TartanCoin size={14} />
+        {pool.toLocaleString("en-US")} in the pool
+      </p>
     </div>
   );
 }
 
-export function HottestMarketDisplay() {
-  const { data: hotMarkets = [], isLoading } = useQuery(hotMarketsQuery());
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const market = hotMarkets[currentIndex];
-
-  const isBinary = market?.market_type === "binary";
+export function HottestMarketDisplay({
+  fallbackMarket,
+}: {
+  fallbackMarket: Market;
+}) {
+  const { data: hotMarkets, isPending } = useQuery(hotMarketsQuery());
+  const market = hotMarkets?.find(isMarketOpen) ?? fallbackMarket;
+  const isBinary = market.market_type === "binary";
   const { data: bets = [] } = useQuery({
-    ...betsForMarketQuery(market?.id ?? ""),
-    enabled: !!market && isBinary,
+    ...betsForMarketQuery(market.id),
+    enabled: isBinary && !isPending,
   });
-  const chartData = isBinary ? buildPriceHistory(bets) : [];
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center rounded-xl border bg-card p-12">
-        <Spinner className="size-6" />
-      </div>
-    );
-  }
-
-  if (hotMarkets.length === 0 || !market) {
-    return (
-      <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
-        No active markets yet. Be the first to create one!
-      </div>
-    );
-  }
-
-  const total = hotMarkets.length;
-  const volume = market.yes_pool_total + market.no_pool_total;
+  const pool = isBinary
+    ? market.yes_pool_total + market.no_pool_total
+    : (market.options ?? []).reduce(
+        (sum, option) => sum + option.pool_total,
+        0,
+      );
 
   return (
-    <Link href={`/markets/${market.id}`} className="block">
-      <div className="relative rounded-xl border bg-card p-6 transition-colors hover:bg-accent/50">
-        {/* biome-ignore lint: click handler stops navigation to parent Link */}
-        <div
-          className="absolute top-4 right-4 z-10 flex items-center gap-2 text-sm text-muted-foreground"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-            }
-          }}
+    <section
+      aria-labelledby="home-feature-heading"
+      className="grid gap-5 rounded-2xl bg-linear-to-br from-[#631427] to-[#300d1b] p-4 text-white shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-8 lg:p-8"
+    >
+      <div className="flex min-w-0 flex-col items-start justify-center gap-4">
+        <h2
+          id="home-feature-heading"
+          className="text-xs font-extrabold uppercase tracking-widest text-rose-200"
         >
-          <button
-            type="button"
-            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-            disabled={currentIndex === 0}
-            className="rounded p-1 hover:bg-accent disabled:opacity-30"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span>
-            {currentIndex + 1} of {total}
+          Featured Market
+        </h2>
+        <h3 className="max-w-xl break-words text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl xl:text-4xl">
+          {market.title}
+        </h3>
+        {market.description && (
+          <p className="line-clamp-3 max-w-lg break-words text-sm leading-relaxed text-rose-100/90">
+            {market.description}
+          </p>
+        )}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-rose-100">
+          <span className="break-words">{market.category}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
+            <time dateTime={market.close_at}>
+              Closes {campusDate.format(new Date(market.close_at))}
+            </time>
           </span>
-          <button
-            type="button"
-            onClick={() => setCurrentIndex((i) => Math.min(total - 1, i + 1))}
-            disabled={currentIndex === total - 1}
-            className="rounded p-1 hover:bg-accent disabled:opacity-30"
-          >
-            <ChevronRight size={16} />
-          </button>
         </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <div>
-              <Badge variant="outline" className="mb-2">
-                {market.category}
-              </Badge>
-              <h2 className="text-2xl font-bold leading-tight">
-                {market.title}
-              </h2>
-            </div>
-
-            <MarketOptions market={market} />
-
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <TartanCoin size={16} />
-              <span>{volume.toLocaleString()} vol</span>
-            </div>
-
-            {market.description && (
-              <div>
-                <h4 className="text-sm font-semibold">Description</h4>
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {market.description}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center">
-            {isBinary && chartData.length > 0 ? (
-              <ProbabilityChart data={chartData} />
-            ) : (
-              <div className="flex h-[280px] w-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
-                {isBinary ? "No bet history yet" : "Multichoice market"}
-              </div>
-            )}
-          </div>
-        </div>
+        <Link
+          href={`/markets/${market.id}`}
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-extrabold text-[#631427] transition-colors hover:bg-rose-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+        >
+          View market <ArrowRight aria-hidden="true" className="size-4" />
+        </Link>
       </div>
-    </Link>
+      <MarketOutlook
+        market={market}
+        pool={pool}
+        history={isBinary ? buildPriceHistory(bets) : []}
+      />
+    </section>
   );
 }
