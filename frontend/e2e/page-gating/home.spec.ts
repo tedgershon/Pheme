@@ -86,7 +86,7 @@ test("markets route retains full browsing and category filtering", async ({
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Browser test category" }).click();
-  await expect(page.getByText(open.title)).toBeVisible();
+  await expect(page.getByText(open.title).first()).toBeVisible();
 });
 
 test("signed-in users see the home dashboard and browse link", async ({
@@ -97,7 +97,10 @@ test("signed-in users see the home dashboard and browse link", async ({
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Welcome to Pheme" }),
+    page.getByRole("heading", {
+      level: 1,
+      name: "What's happening at CMU?",
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Browse all markets →" }),

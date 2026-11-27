@@ -22,7 +22,9 @@ export default function HomeClient() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Welcome to Pheme</h1>
+      <h1 className="text-3xl font-bold tracking-tight">
+        What&apos;s happening at CMU?
+      </h1>
 
       {openMarkets.length > 0 ? (
         <section aria-label="Featured market" className="space-y-3">

@@ -71,7 +71,7 @@ export function readPageMatrix(): Map<string, Record<MatrixRole, PageCell>> {
 
 /** Heading that only the page itself renders (never the shared shell). */
 const MARKERS: Record<string, string> = {
-  "/": "Welcome to Pheme",
+  "/": "What's happening at CMU?",
   "/markets": "Markets",
   "/markets/create": "Create a Market",
   "/portfolio": "Portfolio",

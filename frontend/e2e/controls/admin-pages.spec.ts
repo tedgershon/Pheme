@@ -230,7 +230,10 @@ describeControl("6c", "Search Users input (/admin/users)", () => {
     await signInAs("admin");
     await page.goto("/admin/users");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Markets" }),
+      page.getByRole("heading", {
+        level: 1,
+        name: "What's happening at CMU?",
+      }),
     ).toBeVisible();
     await expectCell("hidden", page.getByPlaceholder("Search by Andrew ID..."));
     // §6d: the search API is super-admin only.
