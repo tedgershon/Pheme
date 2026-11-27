@@ -79,3 +79,25 @@ requires hosted project credentials. Install Python test dependencies with
 
 Keep balance writes in SQL transactions and use the shared lifecycle service
 rather than introducing a separate settlement path.
+
+## Run Schemathesis locally
+
+From `backend/`, install the development requirements and opt in to the
+OpenAPI response and anonymous access checks:
+
+```sh
+pip install -r requirements-dev.txt
+SCHEMATHESIS=1 pytest tests/test_schemathesis.py -v
+```
+
+In PowerShell, set `$env:SCHEMATHESIS = '1'` before running pytest and use
+`Remove-Item Env:SCHEMATHESIS` afterward to restore the default skip.
+
+The suite calls FastAPI in process with the in-memory database and Sentry
+transport. Update `PUBLIC_ENDPOINTS` in `tests/test_schemathesis.py` when an
+operation becomes public in [the authorization matrix](../docs/AUTHZ_MATRIX.md#7-api-endpoint-matrix).
+
+In GitHub Actions, set the repository variable `SCHEMATHESIS` to `1` or
+select **Run the optional backend schema checks** when manually running CI.
+The soft gate runs after the regular backend job and uploads its own JUnit
+report. Failures appear in the job log and do not block merge.
