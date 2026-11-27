@@ -1,16 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CalendarDays } from "lucide-react";
+import { ArrowRight, Clock3, Flame } from "lucide-react";
 import Link from "next/link";
+import { formatCloseDate } from "@/components/market-card";
+import {
+  getMarketPool,
+  getOutcomes,
+  OutcomeRows,
+} from "@/components/market-outcomes";
 import { ProbabilityChart } from "@/components/probability-chart";
 import { TartanCoin } from "@/components/tartan-coin";
-import {
-  betsForMarketQuery,
-  hotMarketsQuery,
-} from "@/lib/query/queries/markets";
+import { betsForMarketQuery } from "@/lib/query/queries/markets";
 import type { Bet, Market, PricePoint } from "@/lib/types";
-import { getMarketProbability, isMarketOpen } from "@/lib/types";
 
 // exported because the markets page's FeaturedMarket also uses it
 export function buildPriceHistory(bets: Bet[]): PricePoint[] {
@@ -34,136 +36,114 @@ export function buildPriceHistory(bets: Bet[]): PricePoint[] {
   return points;
 }
 
-const campusDate = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "America/New_York",
-});
+// A line through one or two predictions says nothing about a trend.
+const MIN_CHART_POINTS = 3;
+const FEATURED_OUTCOMES = 4;
 
-function MarketOutlook({
-  market,
-  pool,
-  history,
-}: {
-  market: Market;
-  pool: number;
-  history: PricePoint[];
-}) {
-  const probability = getMarketProbability(market);
-  const isBinary = market.market_type === "binary";
-  const options = [...(market.options ?? [])].sort(
-    (a, b) => b.pool_total - a.pool_total,
-  );
-
-  return (
-    <div className="flex min-w-0 flex-col justify-center gap-4 rounded-xl bg-card p-4 text-card-foreground sm:p-5">
-      <p className="text-sm font-bold">Current outlook</p>
-      {isBinary ? (
-        <>
-          <div className="grid grid-cols-2 gap-2 tabular-nums">
-            <div className="rounded-lg bg-success/10 p-3 text-success">
-              <p className="text-xs font-bold">Yes</p>
-              <p className="text-2xl font-extrabold">{probability}%</p>
-            </div>
-            <div className="rounded-lg bg-danger/10 p-3 text-danger">
-              <p className="text-xs font-bold">No</p>
-              <p className="text-2xl font-extrabold">{100 - probability}%</p>
-            </div>
-          </div>
-          {history.length > 1 && (
-            <div className="min-w-0">
-              <p className="mb-1 text-xs text-muted-foreground">
-                Yes chance over time
-              </p>
-              <ProbabilityChart data={history} />
-            </div>
-          )}
-        </>
-      ) : options.length > 0 && pool > 0 ? (
-        <ul className="space-y-2">
-          {options.slice(0, 3).map((option) => (
-            <li
-              key={option.id}
-              className="flex justify-between gap-3 rounded-lg bg-muted px-3 py-2 text-sm"
-            >
-              <span className="min-w-0 break-words">{option.label}</span>
-              <span className="shrink-0 font-bold tabular-nums">
-                {Math.round((option.pool_total / pool) * 100)}%
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">No predictions yet.</p>
-      )}
-      <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-        <TartanCoin size={14} />
-        {pool.toLocaleString("en-US")} in the pool
-      </p>
-    </div>
-  );
-}
-
-export function HottestMarketDisplay({
-  fallbackMarket,
-}: {
-  fallbackMarket: Market;
-}) {
-  const { data: hotMarkets, isPending } = useQuery(hotMarketsQuery());
-  const market = hotMarkets?.find(isMarketOpen) ?? fallbackMarket;
+/**
+ * The home page's lead market: question and context on the left, live
+ * outcomes (and the Yes-chance chart once there is enough activity) on the
+ * right. Stacks to question, outcomes, then the call to action on phones.
+ */
+export function FeaturedMarket({ market }: { market: Market }) {
   const isBinary = market.market_type === "binary";
   const { data: bets = [] } = useQuery({
     ...betsForMarketQuery(market.id),
-    enabled: isBinary && !isPending,
+    enabled: isBinary,
   });
-  const pool = isBinary
-    ? market.yes_pool_total + market.no_pool_total
-    : (market.options ?? []).reduce(
-        (sum, option) => sum + option.pool_total,
-        0,
-      );
+  const history = isBinary ? buildPriceHistory(bets) : [];
+  const outcomes = getOutcomes(market);
+  const hiddenOutcomes = outcomes.length - FEATURED_OUTCOMES;
+  const pool = getMarketPool(market);
 
   return (
     <section
       aria-labelledby="home-feature-heading"
-      className="grid gap-5 rounded-2xl bg-linear-to-br from-[#631427] to-[#300d1b] p-4 text-white shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-8 lg:p-8"
+      className="dark featured-surface @container rounded-2xl p-5 shadow-md sm:p-6"
     >
-      <div className="flex min-w-0 flex-col items-start justify-center gap-4">
-        <h2
-          id="home-feature-heading"
-          className="text-xs font-extrabold uppercase tracking-widest text-rose-200"
-        >
-          Featured Market
-        </h2>
-        <h3 className="max-w-xl break-words text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl xl:text-4xl">
-          {market.title}
-        </h3>
-        {market.description && (
-          <p className="line-clamp-3 max-w-lg break-words text-sm leading-relaxed text-rose-100/90">
-            {market.description}
-          </p>
-        )}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-rose-100">
-          <span className="break-words">{market.category}</span>
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
-            <time dateTime={market.close_at}>
-              Closes {campusDate.format(new Date(market.close_at))}
-            </time>
-          </span>
+      <div className="grid gap-5 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] @2xl:gap-x-8">
+        <div className="min-w-0 @2xl:col-start-1 @2xl:row-start-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+            <h2
+              id="home-feature-heading"
+              className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-white"
+            >
+              <Flame aria-hidden="true" className="size-3.5 text-amber-300" />
+              Featured Market
+            </h2>
+            <span className="text-muted-foreground">{market.category}</span>
+          </div>
+          <h3 className="mt-3 text-balance break-words text-2xl font-bold leading-tight tracking-tight @2xl:text-[1.75rem]">
+            {market.title}
+          </h3>
+          {market.description && (
+            <p className="mt-2 line-clamp-2 break-words text-sm leading-relaxed text-muted-foreground">
+              {market.description}
+            </p>
+          )}
         </div>
-        <Link
-          href={`/markets/${market.id}`}
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-extrabold text-[#631427] transition-colors hover:bg-rose-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-        >
-          View market <ArrowRight aria-hidden="true" className="size-4" />
-        </Link>
+
+        <div className="min-w-0 @2xl:col-start-2 @2xl:row-span-2 @2xl:row-start-1">
+          <OutcomeRows
+            outcomes={outcomes.slice(0, FEATURED_OUTCOMES)}
+            size="lg"
+          />
+          {hiddenOutcomes > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              +{hiddenOutcomes} more outcomes
+            </p>
+          )}
+          {history.length >= MIN_CHART_POINTS && (
+            <figure className="mt-4 hidden @lg:block">
+              <figcaption className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span
+                  aria-hidden="true"
+                  className="size-2 rounded-full bg-success"
+                />
+                Yes chance over time
+              </figcaption>
+              <div className="h-48">
+                <ProbabilityChart data={history} />
+              </div>
+            </figure>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 @2xl:col-start-1 @2xl:row-start-2 @2xl:self-end">
+          <Link
+            href={`/markets/${market.id}`}
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-white px-4 text-sm font-bold text-(--feature-ink) transition-[transform,box-shadow,background-color] duration-100 [box-shadow:0_4px_0_rgb(255_255_255/30%)] hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-y-0.5 active:[box-shadow:0_2px_0_rgb(255_255_255/30%)] [&_svg]:size-4"
+          >
+            View market <ArrowRight aria-hidden="true" />
+          </Link>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 tabular-nums">
+              <TartanCoin size={15} />
+              {pool > 0
+                ? `${pool.toLocaleString("en-US")} pool`
+                : "No predictions yet"}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Clock3 aria-hidden="true" className="size-4" />
+              {formatCloseDate(market.close_at)}
+            </span>
+          </div>
+        </div>
       </div>
-      <MarketOutlook
-        market={market}
-        pool={pool}
-        history={isBinary ? buildPriceHistory(bets) : []}
-      />
     </section>
+  );
+}
+
+export function FeaturedMarketSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="dark featured-surface h-80 rounded-2xl p-6 shadow-md motion-safe:animate-pulse"
+    >
+      <div className="h-5 w-32 rounded-full bg-muted" />
+      <div className="mt-4 h-8 w-3/4 rounded-md bg-muted" />
+      <div className="mt-6 h-11 w-full max-w-md rounded-md bg-muted" />
+      <div className="mt-2 h-11 w-full max-w-md rounded-md bg-muted" />
+    </div>
   );
 }

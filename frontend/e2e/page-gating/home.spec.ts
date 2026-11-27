@@ -38,12 +38,19 @@ test("home shows a featured market and capped open and pending sections", async 
     page.getByRole("heading", { name: "Featured Market" }),
   ).toBeVisible();
   const featured = page.getByRole("region", { name: "Featured Market" });
-  await expect(featured.getByText("Current outlook")).toBeVisible();
+  await expect(featured.getByText("Yes", { exact: true })).toBeVisible();
+  await expect(featured.getByText("No", { exact: true })).toBeVisible();
   await expect(
     featured.getByRole("link", { name: "View market" }),
   ).toHaveAttribute("href", /^\/markets\/[^/]+$/);
+  // Seven open markets: one is featured and the grid shows the next six.
   await expect(page.getByTestId("home-open-market-card")).toHaveCount(6);
   await expect(page.getByTestId("home-pending-market-card")).toHaveCount(3);
+  await expect(
+    page
+      .getByRole("region", { name: "Pending Resolution" })
+      .getByRole("link", { name: /All resolutions/ }),
+  ).toHaveAttribute("href", "/resolutions");
   await expect(page.getByText(resolved.title)).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Closed Markets" }),
