@@ -9,9 +9,10 @@ from dependencies import (
     user_auth,
 )
 from observability import AppError, ErrorCode
+from schemas.errors import error_responses
 from supabase import Client
 
-router = APIRouter(prefix="/api/notifications", tags=["notifications"])
+router = APIRouter(prefix="/api/notifications", tags=["notifications"], responses=error_responses(400, 401))
 
 
 @router.get("")
@@ -64,7 +65,7 @@ async def mark_notifications_read(
     return {"status": "ok"}
 
 
-@router.post("/{notification_id}/read")
+@router.post("/{notification_id}/read", responses=error_responses(404))
 async def mark_single_read(
     notification_id: str,
     current_user: Annotated[dict, Depends(get_current_user)],
@@ -83,7 +84,7 @@ async def mark_single_read(
     return {"status": "ok"}
 
 
-@router.delete("/{notification_id}")
+@router.delete("/{notification_id}", responses=error_responses(404))
 async def delete_notification(
     notification_id: str,
     current_user: Annotated[dict, Depends(get_current_user)],

@@ -10,6 +10,7 @@ from dependencies import (
 )
 from observability import AppError, ErrorCode
 from schemas.dispute import CastVoteRequest
+from schemas.errors import error_responses
 from services.market_state_machine import normalize_market_state, normalize_markets
 from supabase import Client
 
@@ -60,7 +61,7 @@ async def list_resolution_markets(
     return (community_result.data or []) + enriched_disputed
 
 
-@router.post("/{market_id}/community-vote")
+@router.post("/{market_id}/community-vote", responses=error_responses(400, 401, 403, 404, 409))
 async def cast_community_vote(
     market_id: str,
     body: CastVoteRequest,

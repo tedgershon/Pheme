@@ -20,6 +20,7 @@ from routers import (
     resolution,
     rewards,
 )
+from schemas.errors import error_responses
 
 init_observability()
 
@@ -30,6 +31,7 @@ app = FastAPI(
     docs_url=None if is_production else "/docs",
     redoc_url=None if is_production else "/redoc",
     openapi_url=None if is_production else "/openapi.json",
+    responses=error_responses(422),
 )
 
 
@@ -90,6 +92,6 @@ def health_check():
 # Gated to development to avoid exposing an arbitrary 500-trigger in prod.
 if get_settings().sentry_environment == "development":
 
-    @app.post("/api/__sentry-test")
+    @app.post("/api/__sentry-test", responses=error_responses(400, 401, 403, 500))
     def _sentry_test(_current_user: Annotated[dict, Depends(require_admin)]) -> dict:
         raise RuntimeError("sentry-test: intentional failure for verification")

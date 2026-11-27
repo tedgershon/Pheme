@@ -12,10 +12,11 @@ from dependencies import (
 )
 from observability import AppError, ErrorCode
 from schemas.dispute import ClaimResponse
+from schemas.errors import error_responses
 from schemas.user import CreateProfileRequest, UpdateProfileRequest, UserProfileResponse
 from supabase import Client
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(prefix="/api/auth", tags=["auth"], responses=error_responses(400, 401))
 
 TRACK_KEYS = ("steel_baron", "oracle", "architect", "degen", "whale")
 TRACK_SET = set(TRACK_KEYS)
@@ -249,7 +250,7 @@ async def update_profile(
     return result.data[0]
 
 
-@router.post("/claim-daily", response_model=ClaimResponse)
+@router.post("/claim-daily", response_model=ClaimResponse, responses=error_responses(409))
 async def claim_daily_tartan_coins(
     current_user: Annotated[dict, Depends(get_current_user)],
     supabase: Annotated[Client, Depends(get_supabase_client)],

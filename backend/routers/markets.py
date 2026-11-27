@@ -26,6 +26,7 @@ from schemas.dispute import (
     FileDisputeRequest,
     VoteResponse,
 )
+from schemas.errors import error_responses
 from schemas.market import (
     CreateMarketRequest,
     MarketResponse,
@@ -214,7 +215,7 @@ async def get_top_markets(
     return _attach_options(transitioned, supabase)
 
 
-@router.get("/{market_id}", response_model=MarketResponse)
+@router.get("/{market_id}", response_model=MarketResponse, responses=error_responses(404))
 async def get_market(
     market_id: str,
     supabase: Annotated[Client, Depends(get_supabase_client)],
@@ -238,7 +239,9 @@ async def get_market(
         return _attach_options(markets, supabase)[0]
 
 
-@router.post("", response_model=MarketResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=MarketResponse, status_code=status.HTTP_201_CREATED, responses=error_responses(400, 401)
+)
 async def create_market(
     body: CreateMarketRequest,
     current_user: Annotated[dict, Depends(get_current_user)],
@@ -300,7 +303,9 @@ async def create_market(
 # ── Resolution Flow ──────────────────────────────────────────
 
 
-@router.post("/{market_id}/resolve", response_model=ProposeResolutionResponse)
+@router.post(
+    "/{market_id}/resolve", response_model=ProposeResolutionResponse, responses=error_responses(400, 401, 403, 404)
+)
 async def propose_resolution(
     market_id: str,
     body: ProposeResolutionRequest,
@@ -342,7 +347,9 @@ async def propose_resolution(
             ) from exc
 
 
-@router.post("/{market_id}/community-resolution", response_model=MarketResponse)
+@router.post(
+    "/{market_id}/community-resolution", response_model=MarketResponse, responses=error_responses(400, 401, 403, 404)
+)
 async def start_community_resolution(
     market_id: str,
     current_user: Annotated[dict, Depends(get_current_user)],
@@ -395,7 +402,9 @@ async def start_community_resolution(
 # ── Disputes ─────────────────────────────────────────────────
 
 
-@router.post("/{market_id}/dispute", response_model=DisputeSubmissionResponse)
+@router.post(
+    "/{market_id}/dispute", response_model=DisputeSubmissionResponse, responses=error_responses(400, 401, 403, 404, 409)
+)
 async def file_dispute(
     market_id: str,
     body: FileDisputeRequest,
@@ -464,7 +473,7 @@ async def file_dispute(
             ) from exc
 
 
-@router.get("/{market_id}/dispute", response_model=DisputeResponse)
+@router.get("/{market_id}/dispute", response_model=DisputeResponse, responses=error_responses(404))
 async def get_dispute(
     market_id: str,
     supabase: Annotated[Client, Depends(get_supabase_client)],
@@ -503,7 +512,9 @@ async def list_dispute_submissions(
     return result.data
 
 
-@router.get("/{market_id}/dispute/eligibility", response_model=DisputeEligibility)
+@router.get(
+    "/{market_id}/dispute/eligibility", response_model=DisputeEligibility, responses=error_responses(400, 401, 404)
+)
 async def get_dispute_eligibility(
     market_id: str,
     current_user: Annotated[dict, Depends(get_current_user)],
@@ -545,7 +556,9 @@ async def get_dispute_eligibility(
     }
 
 
-@router.post("/{market_id}/dispute/vote", response_model=CastVoteResponse)
+@router.post(
+    "/{market_id}/dispute/vote", response_model=CastVoteResponse, responses=error_responses(400, 401, 403, 404, 409)
+)
 async def cast_vote(
     market_id: str,
     body: CastVoteRequest,
@@ -600,7 +613,7 @@ async def cast_vote(
             ) from exc
 
 
-@router.get("/{market_id}/dispute/votes", response_model=list[VoteResponse])
+@router.get("/{market_id}/dispute/votes", response_model=list[VoteResponse], responses=error_responses(404))
 async def list_votes(
     market_id: str,
     supabase: Annotated[Client, Depends(get_supabase_client)],
