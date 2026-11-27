@@ -119,8 +119,9 @@ tests cover section 6 the same way: add a 6a–6c row and its
 `frontend/e2e/error-toasts/` and `frontend/e2e/hygiene/` check what users see
 when an action fails and that no token, other account's Andrew ID or raw error
 text reaches the page. Add a test there when you add an `ErrorCode` a user can
-reach, and give any new inline error message `role="alert"`. Optional schema
-fuzzing ([#13](https://github.com/tedgershon/Pheme/issues/13)) is not in CI yet.
+reach, and give any new inline error message `role="alert"`.
+[Optional Schemathesis checks](backend/README.md#run-schemathesis-locally) run
+after backend pytest when enabled in GitHub Actions.
 
 ## 7. Commit, PR and squash-merge format
 

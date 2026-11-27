@@ -8,6 +8,7 @@ from dependencies import (
     get_supabase_client,
 )
 from observability import AppError, ErrorCode
+from schemas.errors import error_responses
 from supabase import Client
 
 router = APIRouter(prefix="/api", tags=["rewards"])
@@ -104,7 +105,7 @@ def _build_track_progress(
     return result
 
 
-@router.get("/rewards")
+@router.get("/rewards", responses=error_responses(400, 401))
 async def get_user_rewards(
     current_user: Annotated[dict, Depends(get_current_user)],
     supabase: Annotated[Client, Depends(get_supabase_client)],
@@ -167,7 +168,7 @@ async def get_user_badges(
     return result.data or []
 
 
-@router.post("/rewards/check")
+@router.post("/rewards/check", responses=error_responses(400, 401))
 async def check_badges(
     current_user: Annotated[dict, Depends(get_current_user)],
     supabase: Annotated[Client, Depends(get_supabase_client)],

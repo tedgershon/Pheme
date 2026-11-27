@@ -30,6 +30,7 @@ from schemas.admin import (
     UpdateRoleResponse,
     UserSearchResult,
 )
+from schemas.errors import error_responses
 from schemas.market import (
     ResolveMarketRequest,
     ResolveMarketResponse,
@@ -40,7 +41,7 @@ from supabase import Client
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(prefix="/api/admin", tags=["admin"], responses=error_responses(400, 401, 403))
 EASTERN_TZ = ZoneInfo("America/New_York")
 
 
@@ -136,7 +137,7 @@ async def search_users(
     return result.data or []
 
 
-@router.put("/users/{user_id}/role", response_model=UpdateRoleResponse)
+@router.put("/users/{user_id}/role", response_model=UpdateRoleResponse, responses=error_responses(404))
 async def update_user_role(
     user_id: str,
     body: UpdateRoleRequest,
@@ -191,7 +192,7 @@ async def update_user_role(
     return result.data[0]
 
 
-@router.post("/markets/{market_id}/backroll")
+@router.post("/markets/{market_id}/backroll", responses=error_responses(404))
 async def backroll_market(
     market_id: str,
     body: BackrollRequest,
@@ -220,6 +221,7 @@ async def backroll_market(
     "/markets/{market_id}/resolve",
     response_model=ResolveMarketResponse,
     response_model_exclude_none=True,
+    responses=error_responses(404),
 )
 async def admin_resolve_market(
     market_id: str,
@@ -530,7 +532,7 @@ async def list_markets_for_review(
         }
 
 
-@router.post("/markets/{market_id}/review")
+@router.post("/markets/{market_id}/review", responses=error_responses(404, 409))
 async def review_market(
     market_id: str,
     body: ReviewMarketRequest,

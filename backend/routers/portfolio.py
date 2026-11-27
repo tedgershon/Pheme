@@ -9,11 +9,12 @@ from dependencies import (
     user_auth,
 )
 from schemas.bet import BetResponse
+from schemas.errors import error_responses
 from schemas.market import MarketResponse
 from schemas.transaction import TransactionResponse
 from supabase import Client
 
-router = APIRouter(prefix="/api", tags=["portfolio"])
+router = APIRouter(prefix="/api", tags=["portfolio"], responses=error_responses(400, 401))
 
 
 @router.get("/portfolio/proposed-markets", response_model=list[MarketResponse])

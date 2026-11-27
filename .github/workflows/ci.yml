@@ -5,6 +5,12 @@ on:
     branches: [main, 'backend/**']
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      schemathesis:
+        description: Run the optional backend schema checks
+        type: boolean
+        default: false
 
 env:
   SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
@@ -42,7 +48,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
 
       - name: Install dependencies
         run: |
@@ -60,6 +68,48 @@ jobs:
         with:
           name: backend-pytest-report
           path: backend/pytest-report.xml
+          if-no-files-found: ignore
+
+  schemathesis:
+    name: Schemathesis (soft gate)
+    needs: backend
+    if: ${{ vars.SCHEMATHESIS == '1' || inputs.schemathesis }}
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    env:
+      SCHEMATHESIS: '1'
+      SENTRY_ENVIRONMENT: test
+      SENTRY_DSN: ''
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Check the OpenAPI contract and anonymous access
+        run: pytest tests/test_schemathesis.py -v --junitxml=schemathesis-report.xml
+
+      - name: Report soft-gate failures
+        if: failure()
+        run: echo '::warning::Schemathesis soft gate failed. See the job log and test report.'
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-schemathesis-report
+          path: backend/schemathesis-report.xml
           if-no-files-found: ignore
 
   frontend:

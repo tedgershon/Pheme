@@ -16,6 +16,7 @@ from schemas.bet import (
     PlaceBetResponse,
     PlaceMultichoiceBetRequest,
 )
+from schemas.errors import error_responses
 from supabase import Client
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ router = APIRouter(prefix="/api/markets", tags=["bets"])
 
 @router.post(
     "/{market_id}/bets",
+    responses=error_responses(400, 401, 403, 404, 409),
     response_model=PlaceBetResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -124,6 +126,7 @@ async def place_bet(
 
 @router.post(
     "/{market_id}/bets/option",
+    responses=error_responses(400, 401, 403, 404, 409),
     response_model=PlaceBetResponse,
     status_code=status.HTTP_201_CREATED,
 )
