@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, ChartLine, Flame } from "lucide-react";
+import { ArrowRight, ChartLine } from "lucide-react";
 import Link from "next/link";
 import { CloseCountdown } from "@/components/close-countdown";
+import { FireIcon } from "@/components/fire-icon";
 import {
   getMarketPool,
   getOutcomes,
@@ -69,7 +70,7 @@ export function FeaturedMarket({ market }: { market: Market }) {
               id="home-feature-heading"
               className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-white"
             >
-              <Flame aria-hidden="true" className="size-3.5 text-amber-300" />
+              <FireIcon className="size-4" />
               Hot Market
             </h2>
             <span className="text-muted-foreground">{market.category}</span>
@@ -94,35 +95,29 @@ export function FeaturedMarket({ market }: { market: Market }) {
               +{hiddenOutcomes} more outcomes
             </p>
           )}
-          {isBinary && (
-            <figure className="mt-4 hidden @lg:block">
-              <figcaption className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span
-                  aria-hidden="true"
-                  className="size-2 rounded-full bg-success"
-                />
-                Yes chance over time
-              </figcaption>
-              <div className="h-48">
-                {history.length >= MIN_CHART_POINTS ? (
-                  <ProbabilityChart data={history} />
-                ) : (
-                  // Same footprint as the chart, so the card keeps its shape.
-                  <div className="flex h-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed text-center text-sm text-muted-foreground">
-                    {!betsPending && (
-                      <>
-                        <ChartLine aria-hidden="true" className="size-5" />
-                        <p>
-                          Chart appears after {MIN_CHART_POINTS} predictions
-                        </p>
-                        <p className="text-xs">{history.length} so far</p>
-                      </>
-                    )}
-                  </div>
+          {isBinary &&
+            (history.length >= MIN_CHART_POINTS ? (
+              <figure className="relative mt-4 hidden h-52 @lg:block">
+                <figcaption className="absolute top-0 left-0 z-10 inline-flex items-center gap-1.5 rounded-md bg-card/85 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+                  <span
+                    aria-hidden="true"
+                    className="size-2 rounded-full bg-success"
+                  />
+                  Chance of Yes
+                </figcaption>
+                <ProbabilityChart data={history} />
+              </figure>
+            ) : (
+              // Same footprint as the chart, so the card keeps its shape.
+              <div className="mt-4 hidden h-52 flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed text-center text-sm text-muted-foreground @lg:flex">
+                {!betsPending && (
+                  <>
+                    <ChartLine aria-hidden="true" className="size-5" />
+                    <p>Chart appears after {MIN_CHART_POINTS} predictions</p>
+                  </>
                 )}
               </div>
-            </figure>
-          )}
+            ))}
         </div>
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3 @2xl:col-start-1 @2xl:row-start-2 @2xl:self-end">

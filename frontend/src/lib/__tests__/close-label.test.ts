@@ -32,12 +32,12 @@ describe("formatTimeUntilClose", () => {
     );
   });
 
-  it("shows the date from 30 days out, with the year when it differs", () => {
+  it("shows the month and day from 30 days out, without the year", () => {
     expect(formatTimeUntilClose("2026-12-29T17:00:00Z", now)).toBe(
       "Closes Dec 29",
     );
-    expect(formatTimeUntilClose("2027-03-01T17:00:00Z", now)).toBe(
-      "Closes Mar 1, 2027",
+    expect(formatTimeUntilClose("2027-05-21T17:00:00Z", now)).toBe(
+      "Closes May 21",
     );
   });
 

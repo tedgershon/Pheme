@@ -48,11 +48,9 @@ export function formatTimeUntilClose(closeAt: string, now = Date.now()) {
     const days = Math.max(1, Math.round(ms / DAY_MS));
     return `Closes in ${days} ${days === 1 ? "day" : "days"}`;
   }
-  const sameYear = close.getFullYear() === new Date(now).getFullYear();
   return `Closes ${close.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    ...(sameYear ? {} : { year: "numeric" }),
   })}`;
 }
 
