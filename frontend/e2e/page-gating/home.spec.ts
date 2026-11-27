@@ -34,16 +34,18 @@ test("home shows a featured market and capped open and pending sections", async 
     page.getByRole("heading", { level: 1, name: /Markets/ }),
   ).toHaveCount(0);
   await expect(page.getByTestId("category-filter")).toHaveCount(0);
-  await expect(
-    page.getByRole("heading", { name: "Featured Market" }),
-  ).toBeVisible();
-  const featured = page.getByRole("region", { name: "Featured Market" });
+  await expect(page.getByRole("heading", { name: "Hot Market" })).toBeVisible();
+  const featured = page.getByRole("region", { name: "Hot Market" });
   await expect(featured.getByText("Yes", { exact: true })).toBeVisible();
   await expect(featured.getByText("No", { exact: true })).toBeVisible();
   await expect(
     featured.getByRole("link", { name: "View market" }),
   ).toHaveAttribute("href", /^\/markets\/[^/]+$/);
-  // Seven open markets: one is featured and the grid shows the next six.
+  // Seeded markets have no bets, so the chart slot explains what it needs.
+  await expect(
+    featured.getByText("Chart appears after 3 predictions"),
+  ).toBeVisible();
+  // Seven open markets: one is the hot market and the grid shows the next six.
   await expect(page.getByTestId("home-open-market-card")).toHaveCount(6);
   await expect(page.getByTestId("home-pending-market-card")).toHaveCount(3);
   await expect(

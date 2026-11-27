@@ -17,18 +17,43 @@ export function datetimeLocalToIso(value: string): string {
   return new Date(value).toISOString();
 }
 
-function startOfLocalDayMs(d: Date): number {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+/** Under a day to close, labels count down in hours and minutes. */
+export function closesWithinADay(closeAt: string, now = Date.now()): boolean {
+  const ms = new Date(closeAt).getTime() - now;
+  return ms > 0 && ms < DAY_MS;
 }
 
-/** Calendar days from local today to the close instant's local calendar day. */
-export function calendarDaysUntilClose(dateStr: string): number {
-  const close = new Date(dateStr);
-  if (Number.isNaN(close.getTime())) return 0;
-  const now = new Date();
-  return Math.round(
-    (startOfLocalDayMs(close) - startOfLocalDayMs(now)) / 86400000,
-  );
+/**
+ * A market's close label: hours and minutes under a day ("Closes in 5h 12m"),
+ * whole days under 30 days ("Closes in 3 days"), otherwise the date.
+ */
+export function formatTimeUntilClose(closeAt: string, now = Date.now()) {
+  const close = new Date(closeAt);
+  const ms = close.getTime() - now;
+  if (Number.isNaN(ms)) return "—";
+  if (ms <= 0) return "Closed";
+  if (ms < HOUR_MS) {
+    return `Closes in ${Math.max(1, Math.floor(ms / MINUTE_MS))}m`;
+  }
+  if (ms < DAY_MS) {
+    const hours = Math.floor(ms / HOUR_MS);
+    const minutes = Math.floor((ms % HOUR_MS) / MINUTE_MS);
+    return `Closes in ${hours}h ${minutes}m`;
+  }
+  if (ms < 30 * DAY_MS) {
+    const days = Math.max(1, Math.round(ms / DAY_MS));
+    return `Closes in ${days} ${days === 1 ? "day" : "days"}`;
+  }
+  const sameYear = close.getFullYear() === new Date(now).getFullYear();
+  return `Closes ${close.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  })}`;
 }
 
 export function parseDateTimeLocal(value: string) {

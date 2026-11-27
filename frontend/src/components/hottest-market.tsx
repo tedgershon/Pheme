@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Clock3, Flame } from "lucide-react";
+import { ArrowRight, ChartLine, Flame } from "lucide-react";
 import Link from "next/link";
-import { formatCloseDate } from "@/components/market-card";
+import { CloseCountdown } from "@/components/close-countdown";
 import {
   getMarketPool,
   getOutcomes,
@@ -41,13 +41,14 @@ const MIN_CHART_POINTS = 3;
 const FEATURED_OUTCOMES = 4;
 
 /**
- * The home page's lead market: question and context on the left, live
- * outcomes (and the Yes-chance chart once there is enough activity) on the
- * right. Stacks to question, outcomes, then the call to action on phones.
+ * The home page's hot market (most coins staked): question and context on the
+ * left, live outcomes and the Yes-chance chart on the right. Until a binary
+ * market has enough predictions to chart, a placeholder holds the chart's
+ * place. Stacks to question, outcomes, then the call to action on phones.
  */
 export function FeaturedMarket({ market }: { market: Market }) {
   const isBinary = market.market_type === "binary";
-  const { data: bets = [] } = useQuery({
+  const { data: bets = [], isPending: betsPending } = useQuery({
     ...betsForMarketQuery(market.id),
     enabled: isBinary,
   });
@@ -69,7 +70,7 @@ export function FeaturedMarket({ market }: { market: Market }) {
               className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-white"
             >
               <Flame aria-hidden="true" className="size-3.5 text-amber-300" />
-              Featured Market
+              Hot Market
             </h2>
             <span className="text-muted-foreground">{market.category}</span>
           </div>
@@ -93,7 +94,7 @@ export function FeaturedMarket({ market }: { market: Market }) {
               +{hiddenOutcomes} more outcomes
             </p>
           )}
-          {history.length >= MIN_CHART_POINTS && (
+          {isBinary && (
             <figure className="mt-4 hidden @lg:block">
               <figcaption className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span
@@ -103,7 +104,22 @@ export function FeaturedMarket({ market }: { market: Market }) {
                 Yes chance over time
               </figcaption>
               <div className="h-48">
-                <ProbabilityChart data={history} />
+                {history.length >= MIN_CHART_POINTS ? (
+                  <ProbabilityChart data={history} />
+                ) : (
+                  // Same footprint as the chart, so the card keeps its shape.
+                  <div className="flex h-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed text-center text-sm text-muted-foreground">
+                    {!betsPending && (
+                      <>
+                        <ChartLine aria-hidden="true" className="size-5" />
+                        <p>
+                          Chart appears after {MIN_CHART_POINTS} predictions
+                        </p>
+                        <p className="text-xs">{history.length} so far</p>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </figure>
           )}
@@ -123,10 +139,11 @@ export function FeaturedMarket({ market }: { market: Market }) {
                 ? `${pool.toLocaleString("en-US")} pool`
                 : "No predictions yet"}
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Clock3 aria-hidden="true" className="size-4" />
-              {formatCloseDate(market.close_at)}
-            </span>
+            <CloseCountdown
+              closeAt={market.close_at}
+              icon
+              className="gap-1.5"
+            />
           </div>
         </div>
       </div>

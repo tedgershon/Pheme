@@ -1,5 +1,5 @@
-import { Clock3 } from "lucide-react";
 import Link from "next/link";
+import { CloseCountdown } from "@/components/close-countdown";
 import {
   getMarketPool,
   getOutcomes,
@@ -9,22 +9,9 @@ import { getOptionColor } from "@/components/probability-chart";
 import { TartanCoin } from "@/components/tartan-coin";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { calendarDaysUntilClose } from "@/lib/datetime";
 import type { Market } from "@/lib/types";
 import { getMarketProbability, isMarketOpen } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-export function formatCloseDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return "—";
-  const diff = date.getTime() - Date.now();
-  if (diff < 0) return "Closed";
-  const days = calendarDaysUntilClose(dateStr);
-  if (days === 0) return "Closes today";
-  if (days === 1) return "Closes tomorrow";
-  if (days <= 7) return `Closes in ${days} days`;
-  return `Closes ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-}
 
 function StatusDot({ market }: { market: Market }) {
   const { status } = market;
@@ -169,7 +156,7 @@ export function MarketCard({
                   <TartanCoin size={14} />
                   {totalPool.toLocaleString()} pool
                 </span>
-                <span>{formatCloseDate(market.close_at)}</span>
+                <CloseCountdown closeAt={market.close_at} />
               </div>
             </div>
           </CardContent>
@@ -238,7 +225,7 @@ export function MarketCard({
                 <TartanCoin size={14} />
                 {total.toLocaleString()} pool
               </span>
-              <span>{formatCloseDate(market.close_at)}</span>
+              <CloseCountdown closeAt={market.close_at} />
             </div>
           </div>
         </CardContent>
@@ -257,8 +244,6 @@ function CompactMarketCard({ market }: { market: Market }) {
   const outcomes = getOutcomes(market);
   const pool = getMarketPool(market);
   const hiddenOutcomes = outcomes.length - COMPACT_OUTCOMES;
-  const closingSoon =
-    isMarketOpen(market) && calendarDaysUntilClose(market.close_at) <= 1;
 
   return (
     <Link
@@ -285,15 +270,7 @@ function CompactMarketCard({ market }: { market: Market }) {
             <span className="ml-1">· +{hiddenOutcomes} more</span>
           )}
         </span>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1",
-            closingSoon && "font-semibold text-brand-tint-foreground",
-          )}
-        >
-          <Clock3 aria-hidden="true" className="size-3.5" />
-          {formatCloseDate(market.close_at)}
-        </span>
+        <CloseCountdown closeAt={market.close_at} icon emphasizeSoon />
       </div>
     </Link>
   );
