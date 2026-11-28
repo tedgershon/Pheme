@@ -12,9 +12,9 @@ _warned_no_service_role = False
 def _db_for_notifications(supabase: Client) -> Client:
     """Prefer service-role client so inserts/queries are not blocked by RLS.
 
-    Used only by the non-lifecycle paths (reminders, etc) — the three
-    market-lifecycle notify_* functions now call a SECURITY DEFINER RPC
-    that doesn't need service-role at all.
+    Used for reminders. Approval, denial and closure use the lifecycle RPC.
+    Settlement and badge notifications are emitted by the database functions
+    that record the corresponding credits and awards.
     """
     from dependencies import get_supabase_service_client
 

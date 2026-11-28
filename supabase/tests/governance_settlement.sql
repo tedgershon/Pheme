@@ -17,6 +17,8 @@ SELECT pg_temp.check_true((SELECT status='pending_resolution' AND yes_pool_total
 SELECT pg_temp.check_true((SELECT tartan_coin_balance=900 FROM profiles WHERE id='90000000-0000-0000-0000-000000000002'),'failure rolls payout back');
 SELECT pg_temp.check_true((SELECT count(*)=2 AND sum(amount)=-200 FROM transactions WHERE market_id='91000000-0000-0000-0000-000000000001'),'failure rolls ledger back');
 SELECT pg_temp.check_true((SELECT count(*)=0 FROM private.community_settlements WHERE market_id='91000000-0000-0000-0000-000000000001'),'failure removes receipt');
+SELECT pg_temp.check_true(NOT EXISTS (SELECT FROM notifications WHERE market_id='91000000-0000-0000-0000-000000000001'),
+ 'failure rolls back settlement notifications, including a payout prepared before the reward failed');
 DROP TRIGGER injected_reward_failure ON transactions;
 SELECT finalize_resolution('91000000-0000-0000-0000-000000000001','YES');
 SELECT finalize_resolution('91000000-0000-0000-0000-000000000001','YES');
@@ -25,4 +27,7 @@ SELECT pg_temp.reject_sql($q$SELECT distribute_voter_rewards('91000000-0000-0000
 SELECT pg_temp.check_true((SELECT tartan_coin_balance=1104 FROM profiles WHERE id='90000000-0000-0000-0000-000000000002'),'payout and 4 percent reward paid once');
 SELECT pg_temp.check_true((SELECT tartan_coin_balance=904 FROM profiles WHERE id='90000000-0000-0000-0000-000000000003'),'winning voter reward independent of bet side');
 SELECT pg_temp.check_true((SELECT count(*)=5 AND sum(amount)=8 FROM transactions WHERE market_id='91000000-0000-0000-0000-000000000001'),'exactly one payout and two rewards');
+SELECT pg_temp.check_true((SELECT count(*) FILTER (WHERE type='market_resolved')=4
+ AND count(*) FILTER (WHERE type='payout_received')=1 FROM notifications
+ WHERE market_id='91000000-0000-0000-0000-000000000001'), 'creator, bettors and voters notified once; only the bet winner receives a payout notice');
 ROLLBACK;

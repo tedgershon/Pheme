@@ -41,6 +41,10 @@ SELECT pg_temp.check_true((SELECT status='resolved' AND resolved_outcome='AMBIGU
  AND yes_pool_total=100 AND no_pool_total=75 FROM markets WHERE id='91000000-0000-0000-0000-000000000001'),'ambiguous outcome stored; pools kept as history');
 SELECT pg_temp.check_true((SELECT resolved_by_admin FROM disputes WHERE market_id='91000000-0000-0000-0000-000000000001'),'dispute marked admin-resolved');
 SELECT pg_temp.check_true((SELECT count(*)=2 AND sum(amount)=175 FROM transactions WHERE market_id='91000000-0000-0000-0000-000000000001' AND transaction_type='refund'),'one refund entry per bettor');
+SELECT pg_temp.check_true((SELECT count(*)=2 AND sum((metadata->>'amount')::numeric)=175
+ AND bool_and(metadata @> '{"outcome":"AMBIGUOUS", "is_refund":true}')
+ FROM notifications WHERE market_id='91000000-0000-0000-0000-000000000001' AND type='payout_received'),
+ 'admin refunds notify both bettors of their own totals');
 SELECT pg_temp.check_true((SELECT sum(amount)=0 FROM transactions WHERE market_id='91000000-0000-0000-0000-000000000001'),'market ledger nets to zero');
 SELECT pg_temp.check_true((SELECT tartan_coin_balance=900 FROM profiles WHERE id='90000000-0000-0000-0000-000000000003'),'NO bettor refunded; market 3 stake still open');
 
@@ -61,6 +65,9 @@ SELECT pg_temp.check_true((SELECT pool_total=30 FROM market_options WHERE id='92
 SELECT admin_resolve_market('91000000-0000-0000-0000-000000000003','YES','90000000-0000-0000-0000-000000000006');
 SELECT pg_temp.check_true((SELECT status='resolved' AND resolved_outcome='YES' FROM markets WHERE id='91000000-0000-0000-0000-000000000003'),'YES outcome stored');
 SELECT pg_temp.check_true((SELECT count(*)=1 AND sum(amount)=200 FROM transactions WHERE market_id='91000000-0000-0000-0000-000000000003' AND transaction_type='payout'),'winner paid full pool once');
+SELECT pg_temp.check_true((SELECT count(*) FILTER (WHERE type='market_resolved')=3
+ AND count(*) FILTER (WHERE type='payout_received' AND metadata @> '{"outcome":"YES", "amount":200}')=1
+ FROM notifications WHERE market_id='91000000-0000-0000-0000-000000000003'), 'admin YES uses the same resolution and payout delivery');
 SELECT pg_temp.check_true((SELECT tartan_coin_balance=1100 FROM profiles WHERE id='90000000-0000-0000-0000-000000000002'),'bettor wallet: 1000-125-100-30+125+30+200');
 SELECT pg_temp.check_true((SELECT tartan_coin_balance=900 FROM profiles WHERE id='90000000-0000-0000-0000-000000000003'),'losing bettor not paid');
 SELECT pg_temp.check_true(current_setting('pheme.admin_resolution',true)='','admin marker cleared after settlement');

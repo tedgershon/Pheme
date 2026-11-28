@@ -138,10 +138,9 @@ Mill Foreman (10,000), Mill Owner (20,000), and Steel Baron (50,000 Tartan Coins
 - The leaderboard supports net-worth gain (balance plus unresolved stakes minus
   grants/claims) and a weekly payout-based view. Those measures are different;
   do not label gross payouts as net prediction returns.
-- In-app notifications cover market review, closure and reminders through the
-  menu. Full history, settlement/badge events and email delivery are tracked in
-  [#34](https://github.com/tedgershon/Pheme/issues/34),
-  [#35](https://github.com/tedgershon/Pheme/issues/35) and
+- The notification menu shows market review, closure, reminders, settlement,
+  payouts and badge awards. Full history and email delivery are tracked in
+  [#34](https://github.com/tedgershon/Pheme/issues/34) and
   [#33](https://github.com/tedgershon/Pheme/issues/33).
 - Home currently reuses market browsing. Distinct home/browse layouts remain
   in [#18](https://github.com/tedgershon/Pheme/issues/18) and

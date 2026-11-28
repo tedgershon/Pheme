@@ -23,6 +23,8 @@ def verify(psql, read_sql):
         list(pool.map(lambda _: psql(f"SET statement_timeout='15s'; SELECT admin_backroll_market('{option_market}','{admin}',now()-interval '1 hour',false);"), range(6)))
     assert psql(f"SELECT count(*) FROM transactions WHERE market_id='{market}' AND transaction_type='payout'") == '1'
     assert psql(f"SELECT count(*) FROM transactions WHERE market_id='{market}' AND transaction_type='resolution_vote_reward'") == '3'
+    assert psql(f"SELECT count(*) FROM notifications WHERE market_id='{market}' AND type='market_resolved'") == '4'
+    assert psql(f"SELECT count(*) FROM notifications WHERE market_id='{market}' AND type='payout_received'") == '1'
     assert psql(f"SELECT count(*) FROM transactions WHERE market_id='{option_market}' AND transaction_type='payout'") == '1'
     assert psql(f"SELECT tartan_coin_balance=1001.33 FROM profiles WHERE id='{bettor}'") == 't'
     assert psql(f"SELECT sum(amount)=0 FROM transactions WHERE market_id='{option_market}'") == 't'
@@ -49,6 +51,7 @@ def verify(psql, read_sql):
     with ThreadPoolExecutor(max_workers=6) as pool:
         assert sum(pool.map(admin_resolve, range(6))) == 1
     assert psql(f"SELECT count(*) FROM transactions WHERE market_id='{review_market}' AND transaction_type='refund'") == '2'
+    assert psql(f"SELECT count(*) FROM notifications WHERE market_id='{review_market}' AND type='payout_received'") == '2'
     assert psql(f"SELECT sum(amount)=0 FROM transactions WHERE market_id='{review_market}'") == 't'
     assert psql(f"SELECT resolved_outcome FROM markets WHERE id='{review_market}'") == 'AMBIGUOUS'
     # Concurrent submissions and retries: one case, one submission per user.
@@ -74,6 +77,17 @@ def verify(psql, read_sql):
     assert psql(f"SELECT count(*) FROM disputes WHERE market_id='{dispute_market}'") == '1'
     assert psql(f"SELECT count(*) FROM dispute_submissions WHERE market_id='{dispute_market}'") == str(len(filers))
     assert psql(f"SELECT status FROM markets WHERE id='{dispute_market}'") == 'disputed'
+
+    # Concurrent badge checks must report an award only for the caller that wrote it.
+    psql(f"UPDATE profiles SET tartan_coin_balance=5000 WHERE id='{bettor}'")
+
+    def check_badges(_):
+        return psql(f"SET statement_timeout='15s'; SELECT jsonb_array_length(check_and_award_badges('{bettor}'));")
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        assert sorted(pool.map(check_badges, range(6))) == ['0', '0', '0', '0', '0', '1']
+    assert psql(f"SELECT count(*) FROM notifications WHERE user_id='{bettor}' AND type='badge_earned'") == '1'
+
     psql("""
         DELETE FROM dispute_submissions WHERE market_id::text LIKE '91000000-%';
         DELETE FROM disputes WHERE market_id::text LIKE '91000000-%';
