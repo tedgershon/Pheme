@@ -15,6 +15,8 @@ archived history and test fixtures. Do not sort or replay them.
 | `20261117000100` | Dispute submissions (#49): `dispute_submissions` table with existing explanations copied in; `file_dispute` accepts later submissions into an open case and binds the submitter to the JWT; `list_dispute_submissions` (public, anonymised) and `admin_dispute_submissions` (admin) functions. Removes client INSERT on `disputes` (cases open only through `file_dispute`). No wallet or status changes. |
 | `20261118000000` | Profile photo removal (#65): `Users can delete own avatar` DELETE policy on `storage.objects`, limited to the user's own `avatars/<user id>/` folder like the upload/update policies. No data changes. |
 | `20261123000000` | Renames the wallet column, daily claim RPC, leaderboard balance fields and badge stats key to the Tartan Coin and Steel Baron names. Updates existing badge definitions, earned track keys and equipped badge maps in place. |
+| `20261127000000` | Adds binary settlement outcome, payout and refund notifications to the settlement engine, using the existing lifecycle notification deduplication key. |
+| `20261127000100` | Adds badge award notifications and a user/track/tier deduplication index. Concurrent badge checks report only the tiers they record. |
 
 Never edit an applied version. Add a new timestamped file for future changes.
 The baseline contains initial `CREATE TABLE` statements and must **never** be
@@ -277,3 +279,16 @@ use `claim_daily_tartan_coins(uuid)` and the `steel_baron` badge track key.
 Verify a previously equipped balance badge still appears on the leaderboard and
 the same profile balance appears in the wallet. Badge UUIDs, tier thresholds,
 ledger amounts and claim eligibility carry over.
+
+## Deploying settlement and badge notifications (#35)
+
+After merge, review the [linked-project dry run](HOSTED_DEVELOPMENT.md#connect-and-migrate)
+and apply `20261127000000_settlement_notifications.sql` followed by
+`20261127000100_badge_award_notifications.sql`. The existing API and
+notification menu can display the new events as soon as the migrations apply.
+The migrations start delivery for future settlements and badge awards.
+
+On hosted development, resolve a binary market with two bettors on opposite
+sides. Check that both see the outcome and market link, and that the winner
+sees the amount credited to their wallet. Run a badge check for an eligible
+account and repeat it to confirm the earned tier appears once.

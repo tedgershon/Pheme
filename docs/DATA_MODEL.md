@@ -202,10 +202,17 @@ Append-only audit log tracking wallet-affecting events
 Purpose:
 Stores in-app notifications for users
 
-Lifecycle notifications use a partial unique index and the
-`create_market_notification` RPC to deduplicate by user, type and market.
-Defined types do not imply all producers exist: settlement, payout and badge
-events are tracked in [#35](https://github.com/tedgershon/Pheme/issues/35).
+Market events use the lifecycle insert and its partial unique index to
+deduplicate by user, type and market. Settlement sends the outcome to the
+creator, current bettors, community and dispute voters, and dispute submitters.
+It sends each credited bettor one notice with their total settlement payout or
+stake refund. Both event types carry the market ID for the notification link.
+The database supplies the outcome and the recipient's own credit amount.
+
+Badge award checks send one notice per recorded tier, deduplicated by user,
+track and tier. Settlement and badge notices commit with the corresponding
+database changes. Delivery errors are logged while the wallet credit or badge
+award can still commit. Signed-in users can read only their own notices.
 
 ### BadgeDefinition
 
